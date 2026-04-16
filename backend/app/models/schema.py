@@ -53,3 +53,25 @@ class Favorite(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     ts_code: Mapped[str] = mapped_column(String(12), unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class StockPool(Base):
+    __tablename__ = "stock_pool"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(30), unique=True)
+    description: Mapped[str | None] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class StockPoolItem(Base):
+    __tablename__ = "stock_pool_item"
+    __table_args__ = (
+        Index("ix_pool_item_unique", "pool_id", "ts_code", unique=True),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    pool_id: Mapped[int] = mapped_column(index=True)
+    ts_code: Mapped[str] = mapped_column(String(12))
+    added_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
