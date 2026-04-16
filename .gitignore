@@ -1,2 +1,7 @@
 .superpowers/
 .DS_Store
+__pycache__/
+*.pyc
+.venv/
+.env
+node_modules/
