@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers.quotes import router as quotes_router
+from app.routers.pools import router as pools_router
 
 
 def create_app() -> FastAPI:
@@ -13,6 +14,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.include_router(quotes_router)
+    app.include_router(pools_router)
 
     @app.get("/api/health")
     async def health():
