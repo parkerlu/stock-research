@@ -1,4 +1,4 @@
-export type AppMode = "quote" | "pool";
+export type AppMode = "quote" | "pool" | "strategy";
 
 interface Props {
   mode: AppMode;
@@ -21,6 +21,12 @@ export function NavBar({ mode, onModeChange }: Props) {
           onClick={() => onModeChange("pool")}
         >
           股票池
+        </button>
+        <button
+          className={mode === "strategy" ? "active" : ""}
+          onClick={() => onModeChange("strategy")}
+        >
+          策略
         </button>
       </div>
     </nav>

@@ -8,8 +8,8 @@
   --text-secondary: #888;
   --text-muted: #555;
   --accent: #4cc9f0;
-  --up: #4caf50;
-  --down: #e94560;
+  --up: #e94560;
+  --down: #4caf50;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -280,6 +280,29 @@ body {
 .chart-body { flex: 1; padding: 8px; min-height: 0; }
 .main-chart { border-radius: 6px; overflow: hidden; }
 
+.chart-loading {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(20, 20, 32, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  z-index: 50;
+  color: var(--text-secondary);
+  font-size: 13px;
+  border-radius: 6px;
+}
+.chart-loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 .linked-view {
   display: flex;
   gap: 8px;
@@ -498,3 +521,214 @@ body {
 .dialog-results li.empty { color: var(--text-muted); cursor: default; justify-content: center; }
 .dialog-results .code { color: var(--accent); }
 .dialog-results .industry { color: var(--text-muted); font-size: 10px; }
+
+/* Strategy Panel */
+.strategy-panel {
+  width: 100%;
+  background: var(--bg-secondary);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.strategy-panel-header {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.strategy-panel-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.strategy-panel-body {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+.strategy-loading,
+.strategy-empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 24px;
+  font-size: 12px;
+}
+
+/* Factory Control */
+.factory-control {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.factory-run-btn {
+  background: var(--accent);
+  color: #000;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.factory-run-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.factory-status {
+  flex: 1;
+  min-width: 0;
+}
+.factory-progress-bar {
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+.factory-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+.factory-progress-text {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.factory-error {
+  color: var(--up);
+}
+
+/* Strategy Table */
+.strategy-list-wrap {
+  overflow: auto;
+}
+.strategy-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.strategy-table th {
+  text-align: left;
+  padding: 6px 8px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  font-weight: normal;
+  position: sticky;
+  top: 0;
+  background: var(--bg-secondary);
+}
+.strategy-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--bg-primary);
+}
+.strategy-table tr:hover {
+  background: var(--bg-tertiary);
+}
+.pinned-row {
+  background: rgba(76, 201, 240, 0.05);
+}
+.strategy-name-cell {
+  color: var(--accent);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pin-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--accent);
+  padding: 0 2px;
+}
+.report-btn {
+  background: var(--bg-tertiary);
+  border: none;
+  color: var(--text-primary);
+  padding: 2px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+}
+.report-btn:hover {
+  background: var(--accent);
+  color: #000;
+}
+
+/* Report Dialog */
+.report-dialog {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 680px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.report-body {
+  padding: 14px;
+  overflow-y: auto;
+}
+.report-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.metric-card {
+  background: var(--bg-tertiary);
+  padding: 8px 10px;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.metric-label {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.metric-value {
+  font-size: 16px;
+  font-weight: 600;
+}
+.report-error,
+.report-loading {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.report-trades h4,
+.report-equity h4 {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+.trades-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.trades-table th {
+  text-align: left;
+  padding: 4px 6px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  font-weight: normal;
+}
+.trades-table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--bg-primary);
+}
+.equity-chart-placeholder {
+  background: var(--bg-tertiary);
+  padding: 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+}
