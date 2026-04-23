@@ -1,5 +1,8 @@
+import { useEffect, useState } from "react";
 import { useQuoteStore } from "../../stores/quoteStore";
 import type { Timeframe } from "../../types/quote";
+import type { IndicatorMeta } from "../../types/indicator";
+import { listIndicators } from "../../api/indicators";
 
 const TIMEFRAMES: { label: string; value: Timeframe }[] = [
   { label: "日", value: "1d" },
@@ -29,19 +32,31 @@ const MAIN_PANE_INDICATORS = new Set(["MA", "EMA", "BOLL", "SAR"]);
 
 interface Props {
   activeIndicators: string[];
+  activeTdxIndicators: string[];
   onToggleIndicator: (name: string, isMainPane: boolean) => void;
+  onToggleTdxIndicator: (name: string) => void;
   onSelectOverlay: (type: string) => void;
 }
 
 export function Toolbar({
   activeIndicators,
+  activeTdxIndicators,
   onToggleIndicator,
+  onToggleTdxIndicator,
   onSelectOverlay,
 }: Props) {
   const timeframe = useQuoteStore((s) => s.timeframe);
   const setTimeframe = useQuoteStore((s) => s.setTimeframe);
   const linkedMode = useQuoteStore((s) => s.linkedMode);
   const toggleLinkedMode = useQuoteStore((s) => s.toggleLinkedMode);
+
+  const [tdxIndicators, setTdxIndicators] = useState<IndicatorMeta[]>([]);
+
+  useEffect(() => {
+    listIndicators()
+      .then(setTdxIndicators)
+      .catch(() => setTdxIndicators([]));
+  }, []);
 
   return (
     <div className="chart-toolbar">
@@ -89,6 +104,27 @@ export function Toolbar({
           </span>
         ))}
       </div>
+
+      {tdxIndicators.length > 0 && (
+        <>
+          <div className="toolbar-divider" />
+          <div className="toolbar-group dropdown-container">
+            <button className="dropdown-trigger">🔮 TDX 指标 ▾</button>
+            <div className="dropdown-menu">
+              {tdxIndicators.map((ind) => (
+                <label key={ind.name} className="indicator-item">
+                  <input
+                    type="checkbox"
+                    checked={activeTdxIndicators.includes(ind.name)}
+                    onChange={() => onToggleTdxIndicator(ind.name)}
+                  />
+                  {ind.label}
+                </label>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="toolbar-divider" />
 
