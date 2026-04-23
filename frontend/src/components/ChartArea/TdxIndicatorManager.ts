@@ -34,6 +34,8 @@ function registerOnce(result: IndicatorResult): string {
     name: kcName,
     shortName: result.label,
     calcParams: [],
+    minValue: result.y_axis_range?.[0] ?? null,
+    maxValue: result.y_axis_range?.[1] ?? null,
     figures: result.lines.map((l) => ({
       key: l.name,
       title: `${l.name}: `,
@@ -97,6 +99,40 @@ function registerOnce(result: IndicatorResult): string {
           const coord = Array.isArray(point) ? point[0] : point;
           if (coord?.x === undefined) continue;
           ctx.fillRect(coord.x - barWidth / 2, top, barWidth, height);
+        }
+        ctx.restore();
+      }
+
+      // Markers (DRAWICON)
+      for (const marker of current.markers) {
+        const point = chart.convertToPixel(
+          { timestamp: marker.timestamp, value: marker.value },
+          { paneId: indicator.paneId, absolute: false }
+        );
+        const coord = Array.isArray(point) ? point[0] : point;
+        if (coord?.x === undefined || coord?.y === undefined) continue;
+
+        ctx.save();
+        ctx.fillStyle = marker.color;
+        const r = 5;
+        if (marker.icon === "triangle_up") {
+          ctx.beginPath();
+          ctx.moveTo(coord.x, coord.y - r);
+          ctx.lineTo(coord.x - r, coord.y + r);
+          ctx.lineTo(coord.x + r, coord.y + r);
+          ctx.closePath();
+          ctx.fill();
+        } else if (marker.icon === "triangle_down") {
+          ctx.beginPath();
+          ctx.moveTo(coord.x, coord.y + r);
+          ctx.lineTo(coord.x - r, coord.y - r);
+          ctx.lineTo(coord.x + r, coord.y - r);
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          ctx.beginPath();
+          ctx.arc(coord.x, coord.y, 3, 0, Math.PI * 2);
+          ctx.fill();
         }
         ctx.restore();
       }
