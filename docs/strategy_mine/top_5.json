@@ -1,0 +1,137 @@
+[
+  {
+    "id": "E07_ml_zhunbei_v06",
+    "family": "E07_ml_zhunbei",
+    "params": {
+      "buy_threshold": 0.5728134836681583,
+      "atr_mult": 2.361090556200501,
+      "trail_activation": 0.09783425730829542,
+      "time_stop": 91
+    },
+    "passed": true,
+    "stocks_traded": 982,
+    "full": {
+      "n_trades": 3984,
+      "win_rate": 0.7525100401606426,
+      "avg_ret": 0.09568400293450419,
+      "max_loss": -0.10000000000000009,
+      "total_ret": 381.2050676910647
+    },
+    "oos": {
+      "n_trades": 402,
+      "win_rate": 0.8731343283582089,
+      "avg_ret": 0.09527331810914554,
+      "max_loss": -0.10000000000000009,
+      "total_ret": 38.29987387987651
+    },
+    "composite": 2567.4444974956646
+  },
+  {
+    "id": "E07_ml_zhunbei_v11",
+    "family": "E07_ml_zhunbei",
+    "params": {
+      "buy_threshold": 0.5722364628726435,
+      "atr_mult": 1.3101889891870901,
+      "trail_activation": 0.10848481779275307,
+      "time_stop": 84
+    },
+    "passed": true,
+    "stocks_traded": 982,
+    "full": {
+      "n_trades": 3936,
+      "win_rate": 0.786839430894309,
+      "avg_ret": 0.06251369003709224,
+      "max_loss": -0.10000000000000009,
+      "total_ret": 246.05388398599507
+    },
+    "oos": {
+      "n_trades": 405,
+      "win_rate": 0.8814814814814815,
+      "avg_ret": 0.07028419168237036,
+      "max_loss": -0.10000000000000009,
+      "total_ret": 28.465097631359995
+    },
+    "composite": 2472.529916266607
+  },
+  {
+    "id": "F03_ml_ji_kdj_v00",
+    "family": "F03_ml_ji_kdj",
+    "params": {
+      "buy_threshold": 0.460016011973676,
+      "trail_pct": 0.015,
+      "trail_activation": 0.09098912677678653,
+      "time_stop": 73
+    },
+    "passed": true,
+    "stocks_traded": 945,
+    "full": {
+      "n_trades": 3045,
+      "win_rate": 0.8656814449917898,
+      "avg_ret": 0.07405658719965028,
+      "max_loss": -0.10000000000000009,
+      "total_ret": 225.5023080229351
+    },
+    "oos": {
+      "n_trades": 549,
+      "win_rate": 0.912568306010929,
+      "avg_ret": 0.08378064204305193,
+      "max_loss": -0.10000000000000009,
+      "total_ret": 45.995572481635506
+    },
+    "composite": 2354.9357707088075
+  },
+  {
+    "id": "A10_mlkdj_v08",
+    "family": "A10_mlkdj",
+    "params": {
+      "buy_threshold": 0.5159454332411365,
+      "atr_mult": 2.7289083159110508,
+      "trail_activation": 0.14528333116310238,
+      "time_stop": 93
+    },
+    "passed": true,
+    "stocks_traded": 932,
+    "full": {
+      "n_trades": 2992,
+      "win_rate": 0.7613636363636364,
+      "avg_ret": 0.12341480021637562,
+      "max_loss": -0.10000000000000009,
+      "total_ret": 369.25708224739583
+    },
+    "oos": {
+      "n_trades": 452,
+      "win_rate": 0.8207964601769911,
+      "avg_ret": 0.1224298865173147,
+      "max_loss": -0.10000000000000009,
+      "total_ret": 55.33830870582625
+    },
+    "composite": 2239.1132984937394
+  },
+  {
+    "id": "A10_mlkdj_v05",
+    "family": "A10_mlkdj",
+    "params": {
+      "buy_threshold": 0.5348425319514786,
+      "atr_mult": 2.9737725021841057,
+      "trail_activation": 0.045831747096552265,
+      "time_stop": 88
+    },
+    "passed": true,
+    "stocks_traded": 918,
+    "full": {
+      "n_trades": 2662,
+      "win_rate": 0.759954921111946,
+      "avg_ret": 0.13226559391892928,
+      "max_loss": -0.10000000000000009,
+      "total_ret": 352.0910110121897
+    },
+    "oos": {
+      "n_trades": 371,
+      "win_rate": 0.8113207547169812,
+      "avg_ret": 0.12261796345856592,
+      "max_loss": -0.10000000000000009,
+      "total_ret": 45.49126444312795
+    },
+    "composite": 2091.1970902991766
+  }
+]
