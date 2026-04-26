@@ -12,21 +12,19 @@ from .ml_direct import (
     MLDirectTop1TightLock,
     MLDirectTop2MidGreedy,
     MLDirectTop3HighGreedy,
-    Mined426_1,
-    Mined426_2,
-    Mined426_3,
-    Mined426_4,
-    Mined426_5,
+)
+from .mined_426_v2 import (
+    Mined426V2_1, Mined426V2_2, Mined426V2_3, Mined426V2_4, Mined426V2_5,
 )
 
 TEMPLATE_REGISTRY: dict[str, type] = {
-    # 🏆 Mined-426 — output of 50-family × 20-param mining (2026-04-26).
-    # All pass: win ≥ 75%, avg ≥ 6%, max_loss ≤ 10%, total ≥ 10%, IS+OOS.
-    "426-1": Mined426_1,  # 准备+ATR (75% win, +9.6% avg, OOS 87% win)
-    "426-2": Mined426_2,  # 准备+ATR tight (79% win, +6.3% avg, OOS 88% win)
-    "426-3": Mined426_3,  # 急买+KDJ (87% win, +7.4% avg, OOS 91% win)
-    "426-4": Mined426_4,  # KDJ+ATR (76% win, +12.3% avg, OOS 82% win)
-    "426-5": Mined426_5,  # KDJ+ATR wide (76% win, +13.2% avg, OOS 81% win)
+    # 🏆 Mined-426 V2 — diverse top 5 (50 concept-orthogonal families × 20 LHS).
+    # 5 conceptually different signal sources; pairwise Jaccard ≤ 17.7%.
+    "426-1": Mined426V2_1,  # KDJ K/D 金叉  | IS 75.9% win, +12.0% avg | OOS 83.1%
+    "426-2": Mined426V2_2,  # BB 下轨反弹    | IS 75.4% win, +6.4% avg  | OOS 83.6%
+    "426-3": Mined426V2_3,  # 动力线 上穿 0.5 | IS 83.4% win, +6.7% avg  | OOS 86.3%
+    "426-4": Mined426V2_4,  # RSI 上穿 30    | IS 91.0% win, +6.0% avg  | OOS 89.9%
+    "426-5": Mined426V2_5,  # 买卖很准 准备首发| IS 77.9% win, +6.6% avg  | OOS 88.4%
     # 🎯 优化版 trail (吃波段高点)
     "ml_direct_atr_swing": MLDirectATRSwing,            # ATR 自适应，单股 +36%，46% ≥10%
     "ml_direct_classic_greedy": MLDirectClassicGreedy,  # 经典 trail，78.6% 胜率

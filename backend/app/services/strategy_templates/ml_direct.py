@@ -387,6 +387,8 @@ class MLDirectDecision(StrategyTemplate):
                  atr_mult: float = 1.5,
                  require_zhunbei: bool = False,
                  require_jibuy: bool = False,
+                 require_dl_stage_bottom: bool = False,
+                 require_dl_stage_watch: bool = False,
                  kdj_j_cross_above: float | None = None,
                  skip_candidate_filter: bool = False):
         self.default_buy = buy_threshold
@@ -403,6 +405,8 @@ class MLDirectDecision(StrategyTemplate):
         # Mined-426 entry filters
         self.require_zhunbei = require_zhunbei
         self.require_jibuy = require_jibuy
+        self.require_dl_stage_bottom = require_dl_stage_bottom
+        self.require_dl_stage_watch = require_dl_stage_watch
         self.kdj_j_cross_above = kdj_j_cross_above
         self.skip_candidate_filter = skip_candidate_filter
 
@@ -512,6 +516,10 @@ class MLDirectDecision(StrategyTemplate):
                 if self.require_zhunbei and feat_i.get("mm_zhunbei_active", 0.0) <= 0:
                     continue
                 if self.require_jibuy and feat_i.get("mm_jibuy_active", 0.0) <= 0:
+                    continue
+                if self.require_dl_stage_bottom and feat_i.get("dl_stage_bottom_recent", 0.0) <= 0:
+                    continue
+                if self.require_dl_stage_watch and feat_i.get("dl_stage_watch_recent", 0.0) <= 0:
                     continue
                 if self.kdj_j_cross_above is not None and j_arr is not None:
                     thr = float(self.kdj_j_cross_above)
@@ -805,126 +813,3 @@ class MLDirectHighFreq(MLDirectDecision):
     def name(self) -> str:
         return "MLDirect_HighFreq"
 
-
-# =====================================================================
-# Mined-426 presets — output of the 50-family × 20-param mining (2026-04-26).
-# All 5 strategies pass: win_rate ≥ 75%, avg_trade ≥ 6%, max_loss ≤ 10%,
-# total_return ≥ 10% (in-sample AND out-of-sample 2024-09 → 2026-04).
-# Trained/validated across 1004 A-share stocks × 7 years.
-# =====================================================================
-
-class Mined426_1(MLDirectDecision):
-    """E07_ml_zhunbei_v06 — ML score + 买卖很准 准备 filter + ATR trail.
-    IS: 75.3% win, +9.57% avg, +38120% total, 3984 trades on 982 stocks.
-    OOS: 87.3% win, +9.53% avg, +3830% total, 402 trades.
-    """
-    template_id = "426-1"
-
-    def __init__(self):
-        super().__init__(
-            buy_threshold=0.5728, exit_threshold=0.30,
-            stop_loss=-0.10,
-            trail_activation=0.0978, trail_pct=0.04, atr_mult=2.361,
-            time_stop=91, use_adaptive=False,
-            mode="ATR_TRAIL",
-            require_zhunbei=True,
-            skip_candidate_filter=True,
-        )
-
-    @property
-    def name(self) -> str:
-        return "Mined426_1_ZhunbeiATR"
-
-
-class Mined426_2(MLDirectDecision):
-    """E07_ml_zhunbei_v11 — same family, tighter ATR (1.31×).
-    IS: 78.7% win, +6.25% avg, +24605% total, 3936 trades on 982 stocks.
-    OOS: 88.1% win, +7.03% avg, +2847% total, 405 trades.
-    """
-    template_id = "426-2"
-
-    def __init__(self):
-        super().__init__(
-            buy_threshold=0.5722, exit_threshold=0.30,
-            stop_loss=-0.10,
-            trail_activation=0.1085, trail_pct=0.04, atr_mult=1.310,
-            time_stop=84, use_adaptive=False,
-            mode="ATR_TRAIL",
-            require_zhunbei=True,
-            skip_candidate_filter=True,
-        )
-
-    @property
-    def name(self) -> str:
-        return "Mined426_2_ZhunbeiTight"
-
-
-class Mined426_3(MLDirectDecision):
-    """F03_ml_ji_kdj_v00 — ML score + 急买奇准 + KDJ J cross above 20 + classic trail.
-    IS: 86.6% win, +7.41% avg, +22550% total, 3045 trades on 945 stocks.
-    OOS: 91.3% win, +8.38% avg, +4600% total, 549 trades.
-    """
-    template_id = "426-3"
-
-    def __init__(self):
-        super().__init__(
-            buy_threshold=0.4600, exit_threshold=0.25,
-            stop_loss=-0.10,
-            trail_activation=0.0910, trail_pct=0.015,
-            time_stop=73, use_adaptive=False,
-            mode="CLASSIC",
-            require_jibuy=True,
-            kdj_j_cross_above=20.0,
-            skip_candidate_filter=True,
-        )
-
-    @property
-    def name(self) -> str:
-        return "Mined426_3_JibuyKDJ"
-
-
-class Mined426_4(MLDirectDecision):
-    """A10_mlkdj_v08 — ML score + KDJ J cross above 0 + ATR trail (2.73×).
-    IS: 76.1% win, +12.34% avg, +36926% total, 2992 trades on 932 stocks.
-    OOS: 82.1% win, +12.24% avg, +5534% total, 452 trades.
-    Highest avg per trade among Top 5.
-    """
-    template_id = "426-4"
-
-    def __init__(self):
-        super().__init__(
-            buy_threshold=0.5159, exit_threshold=0.30,
-            stop_loss=-0.10,
-            trail_activation=0.1453, trail_pct=0.04, atr_mult=2.729,
-            time_stop=93, use_adaptive=False,
-            mode="ATR_TRAIL",
-            kdj_j_cross_above=0.0,
-            skip_candidate_filter=True,
-        )
-
-    @property
-    def name(self) -> str:
-        return "Mined426_4_KDJATRSwing"
-
-
-class Mined426_5(MLDirectDecision):
-    """A10_mlkdj_v05 — same family, tighter buy + wider ATR (2.97×).
-    IS: 76.0% win, +13.23% avg, +35209% total, 2662 trades on 918 stocks.
-    OOS: 81.1% win, +12.26% avg, +4549% total, 371 trades.
-    """
-    template_id = "426-5"
-
-    def __init__(self):
-        super().__init__(
-            buy_threshold=0.5348, exit_threshold=0.30,
-            stop_loss=-0.10,
-            trail_activation=0.0458, trail_pct=0.04, atr_mult=2.974,
-            time_stop=88, use_adaptive=False,
-            mode="ATR_TRAIL",
-            kdj_j_cross_above=0.0,
-            skip_candidate_filter=True,
-        )
-
-    @property
-    def name(self) -> str:
-        return "Mined426_5_KDJATRWide"

@@ -1,0 +1,142 @@
+[
+  {
+    "id": "K03_kd_cross_v00",
+    "family": "K03_kd_cross",
+    "concept": "KDJ",
+    "params": {
+      "ml_gate": 0.4611636293908957,
+      "trail_activation": 0.14161199518472223,
+      "time_stop": 53,
+      "atr_mult": 2.9141174942240498
+    },
+    "passed": true,
+    "stocks_traded": 938,
+    "full": {
+      "n_trades": 3339,
+      "win_rate": 0.7589098532494759,
+      "avg_ret": 0.12003759652056943,
+      "max_loss": -0.10000000000000009,
+      "total_ret": 400.8055347821813
+    },
+    "oos": {
+      "n_trades": 685,
+      "win_rate": 0.8306569343065694,
+      "avg_ret": 0.12805123163435628,
+      "max_loss": -0.10000000000000009,
+      "total_ret": 87.71509366953404
+    },
+    "composite": 2390.369499638316
+  },
+  {
+    "id": "B01_bb_lower_v00",
+    "family": "B01_bb_lower",
+    "concept": "BB",
+    "params": {
+      "ml_gate": 0.497090848184025,
+      "trail_activation": 0.12833587547087777,
+      "time_stop": 57,
+      "trail_pct": 0.041578237296267334
+    },
+    "passed": true,
+    "stocks_traded": 959,
+    "full": {
+      "n_trades": 3737,
+      "win_rate": 0.7535456248327536,
+      "avg_ret": 0.06413837382070446,
+      "max_loss": -0.10000000000000009,
+      "total_ret": 239.6851029679726
+    },
+    "oos": {
+      "n_trades": 579,
+      "win_rate": 0.8359240069084629,
+      "avg_ret": 0.0809138725474444,
+      "max_loss": -0.10000000000000009,
+      "total_ret": 46.8491322049703
+    },
+    "composite": 2296.335970682608
+  },
+  {
+    "id": "D02_dl_cross_05_v17",
+    "family": "D02_dl_cross_05",
+    "concept": "\u52a8\u529b\u7ebf",
+    "params": {
+      "ml_gate": 0.44693040619810515,
+      "trail_activation": 0.1112033383445625,
+      "time_stop": 96,
+      "trail_pct": 0.04272084744663107
+    },
+    "passed": true,
+    "stocks_traded": 918,
+    "full": {
+      "n_trades": 2757,
+      "win_rate": 0.8335146898803046,
+      "avg_ret": 0.06739314228679351,
+      "max_loss": -0.10000000000000009,
+      "total_ret": 185.8028932846897
+    },
+    "oos": {
+      "n_trades": 517,
+      "win_rate": 0.8626692456479691,
+      "avg_ret": 0.07393829150189263,
+      "max_loss": -0.10000000000000009,
+      "total_ret": 38.22609670647849
+    },
+    "composite": 2080.870868609073
+  },
+  {
+    "id": "R01_rsi_30_v14",
+    "family": "R01_rsi_30",
+    "concept": "RSI",
+    "params": {
+      "ml_gate": 0.5448493913166623,
+      "trail_activation": 0.08290689254948,
+      "time_stop": 75,
+      "trail_pct": 0.05810787833549147
+    },
+    "passed": true,
+    "stocks_traded": 799,
+    "full": {
+      "n_trades": 1521,
+      "win_rate": 0.9099276791584484,
+      "avg_ret": 0.0602943515690353,
+      "max_loss": -0.10000000000000009,
+      "total_ret": 91.7077087365027
+    },
+    "oos": {
+      "n_trades": 207,
+      "win_rate": 0.8985507246376812,
+      "avg_ret": 0.06505133659809999,
+      "max_loss": -0.09999999999999998,
+      "total_ret": 13.465626675806696
+    },
+    "composite": 1461.2496624185433
+  },
+  {
+    "id": "MM03_zhunbei_v06",
+    "family": "MM03_zhunbei",
+    "concept": "\u4e70\u5356\u5f88\u51c6",
+    "params": {
+      "ml_gate": 0.5773775945353693,
+      "trail_activation": 0.11528420384054354,
+      "time_stop": 61,
+      "atr_mult": 1.2597749609209279
+    },
+    "passed": true,
+    "stocks_traded": 884,
+    "full": {
+      "n_trades": 1815,
+      "win_rate": 0.7790633608815427,
+      "avg_ret": 0.06615521843960243,
+      "max_loss": -0.10000000000000009,
+      "total_ret": 120.0717214678784
+    },
+    "oos": {
+      "n_trades": 129,
+      "win_rate": 0.8837209302325582,
+      "avg_ret": 0.0776312885083779,
+      "max_loss": -0.10000000000000009,
+      "total_ret": 10.01443621758075
+    },
+    "composite": 1447.2123985288258
+  }
+]
