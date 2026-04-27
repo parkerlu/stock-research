@@ -18,7 +18,8 @@ from .mined_426_v2 import (
     Mined426V2_6, Mined426V2_7, Mined426V2_8, Mined426V2_9, Mined426V2_10,
 )
 from .maimai_filter import (
-    MaimaiFilter40, MaimaiFilter50, MaimaiFilter55,
+    MaimaiFilter30, MaimaiFilter40, MaimaiFilter50, MaimaiFilter55,
+    MaimaiFilterBroad40, MaimaiFilterBroad50,
 )
 
 TEMPLATE_REGISTRY: dict[str, type] = {
@@ -34,10 +35,13 @@ TEMPLATE_REGISTRY: dict[str, type] = {
     "426-8":  Mined426V2_8,   # SMA 5/20 慢版      | IS 90.6%/+8.7% OOS 93.8%/+23.6%
     "426-9":  Mined426V2_9,   # 50日高点突破        | IS 80.4%/+7.9% OOS 77.8%/+11.6%
     "426-10": Mined426V2_10,  # BB 上轨突破        | IS 77.6%/+6.8% OOS 82.1%/+13.3%
-    # 🎯 买卖很准 ML-filter — 87K 信号训练，按分数阈值决定保留多少
-    "mm-40":  MaimaiFilter40,    # thr 0.40: 信号多一些
-    "mm-50":  MaimaiFilter50,    # thr 0.50: 603319 实测 8 信号 / 87.5% 胜率
-    "mm-55":  MaimaiFilter55,    # thr 0.55: 603319 实测 4/4 全胜
+    # 🎯 买卖很准 ML-filter — 87K 信号训练，贪婪 ATR 退出
+    "mm-30":       MaimaiFilter30,         # 高频版 thr 0.30
+    "mm-40":       MaimaiFilter40,         # 中频 thr 0.40
+    "mm-50":       MaimaiFilter50,         # sweet spot thr 0.50
+    "mm-55":       MaimaiFilter55,         # 严格 thr 0.55
+    "mm-broad-40": MaimaiFilterBroad40,    # 5 信号 OR 触发 + thr 0.40
+    "mm-broad-50": MaimaiFilterBroad50,    # 5 信号 OR 触发 + thr 0.50
     # 🎯 优化版 trail (吃波段高点)
     "ml_direct_atr_swing": MLDirectATRSwing,            # ATR 自适应，单股 +36%，46% ≥10%
     "ml_direct_classic_greedy": MLDirectClassicGreedy,  # 经典 trail，78.6% 胜率

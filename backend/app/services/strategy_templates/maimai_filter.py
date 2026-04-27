@@ -42,27 +42,29 @@ def _shift1(arr):
     return np.concatenate(([arr[0]], arr[:-1]))
 
 
-def _maimai_transition_mask(close, high, low) -> np.ndarray:
-    """True at bar i where (jibuy + duanbuy + zhunbei) just hit 0 from > 0.
-
-    Mirrors the TDX 买卖很准 indicator exactly:
-      买卖 = LLV(MA((H+L+C)/3, 5), 10)        # buy threshold
-      急买奇准 = LLV(close < 买卖, 5)            # close below threshold ALL 5 bars
-      短买奇准 = LLV(close < 买卖, 10)           # ... ALL 10 bars
-      准备现金 = (动向趋势线 > 88) AND (神偷线 < 5.8)
-    """
-    n = len(close)
+def _compute_maimai_signals(close, high, low):
+    """Compute all 5 TDX 买卖很准 lines + zhunbei. Returns dict of arrays."""
     typ = (close + high + low) / 3.0
     ban = pd.Series(typ).rolling(5, min_periods=5).mean().values
     ban_s = pd.Series(ban)
-    maimai_thr = ban_s.rolling(10, min_periods=10).min().values
-    below_buy = np.where(np.isnan(maimai_thr), 0.0,
-                         (close < maimai_thr).astype(float))
-    bb = pd.Series(below_buy)
-    # LLV(bool, n) = 1 iff ALL n bars are true → use rolling min
+    maimai_thr = ban_s.rolling(10, min_periods=10).min().values     # 买卖 (buy)
+    hao_thr = ban_s.rolling(10, min_periods=10).max().values         # 好  (sell)
+
+    # buy-side: close < maimai for ALL N bars
+    bb = pd.Series(
+        np.where(np.isnan(maimai_thr), 0.0, (close < maimai_thr).astype(float))
+    )
     jibuy = (bb.rolling(5, min_periods=5).min() > 0).astype(float).values
     duanbuy = (bb.rolling(10, min_periods=10).min() > 0).astype(float).values
-    # 准备 = DMI(5)-based  (mirror of precompute_maimai)
+
+    # sell-side: close < hao for any of N (HHV per TDX)
+    bs = pd.Series(
+        np.where(np.isnan(hao_thr), 0.0, (close < hao_thr).astype(float))
+    )
+    jisell = (bs.rolling(5, min_periods=1).max() > 0).astype(float).values
+    duansell = (bs.rolling(10, min_periods=1).max() > 0).astype(float).values
+
+    # 准备现金 (DMI-5)
     prev_h = _shift1(high); prev_l = _shift1(low); prev_c = _shift1(close)
     tr = np.maximum.reduce([high - low, np.abs(high - prev_c), np.abs(low - prev_c)])
     hd = high - prev_h; ld = prev_l - low
@@ -79,10 +81,35 @@ def _maimai_transition_mask(close, high, low) -> np.ndarray:
     dongxiang = pd.Series(dx).rolling(3, min_periods=1).mean().values
     zhunbei = ((dongxiang > 88) & (shentou < 5.8)).astype(float)
 
-    sum_now = jibuy + duanbuy + zhunbei
+    return {
+        "jibuy": jibuy, "duanbuy": duanbuy, "zhunbei": zhunbei,
+        "jisell": jisell, "duansell": duansell,
+    }
+
+
+def _maimai_transition_mask(close, high, low) -> np.ndarray:
+    """STRICT mode: all 3 buy-side signals at 0, ≥1 was active prev bar."""
+    sigs = _compute_maimai_signals(close, high, low)
+    sum_now = sigs["jibuy"] + sigs["duanbuy"] + sigs["zhunbei"]
     sum_prev = _shift1(sum_now)
     sum_prev[0] = 0.0
     return (sum_now == 0) & (sum_prev > 0)
+
+
+def _maimai_broad_mask(close, high, low) -> np.ndarray:
+    """BROAD mode: ANY of (急买/短买/准备/急卖/短卖) just turned off.
+
+    Captures every "fear-or-buy-signal-just-cleared" moment — much more
+    candidates per year. Quality varies more, so the ML filter does the heavy
+    lifting.
+    """
+    sigs = _compute_maimai_signals(close, high, low)
+    j_off = (_shift1(sigs["jibuy"]) > 0) & (sigs["jibuy"] == 0)
+    d_off = (_shift1(sigs["duanbuy"]) > 0) & (sigs["duanbuy"] == 0)
+    z_off = (_shift1(sigs["zhunbei"]) > 0) & (sigs["zhunbei"] == 0)
+    js_off = (_shift1(sigs["jisell"]) > 0) & (sigs["jisell"] == 0)
+    ds_off = (_shift1(sigs["duansell"]) > 0) & (sigs["duansell"] == 0)
+    return j_off | d_off | z_off | js_off | ds_off
 
 
 def _walk_classic(i, close, high, low, p, n):
@@ -154,7 +181,8 @@ class MaimaiFilterStrategy(StrategyTemplate):
 
     template_id = "mm-filter"
     _score_threshold = 0.50
-    _exit_mode = "atr_greedy"   # "classic" or "atr_greedy"
+    _exit_mode = "atr_greedy"      # "classic" or "atr_greedy"
+    _trigger_mode = "strict"       # "strict" (all 3 buy = 0) or "broad" (any signal off)
     _params: dict = {"atr_mult": 2.0, "trail_activation": 0.08, "time_stop": 75}
 
     def __init__(self, ts_code: str | None = None):
@@ -181,7 +209,10 @@ class MaimaiFilterStrategy(StrategyTemplate):
         vol = df["vol"].astype(float).values
         dates = df["trade_date"]
 
-        sig_mask = _maimai_transition_mask(close, high, low)
+        if self._trigger_mode == "broad":
+            sig_mask = _maimai_broad_mask(close, high, low)
+        else:
+            sig_mask = _maimai_transition_mask(close, high, low)
 
         signals: list[dict] = []
         in_pos = False
@@ -234,16 +265,56 @@ class MaimaiFilterStrategy(StrategyTemplate):
 
 # ---- Presets at different score thresholds ----
 
+class MaimaiFilter30(MaimaiFilterStrategy):
+    """thr 0.30 + 贪婪 ATR：高频版，最多信号。"""
+    template_id = "mm-30"
+    _score_threshold = 0.30
+    _exit_mode = "atr_greedy"
+    _trigger_mode = "strict"
+    _params = {"atr_mult": 1.8, "trail_activation": 0.05, "time_stop": 60}
+
+    @property
+    def name(self) -> str:
+        return "MaimaiFilter_30_HighFreq"
+
+
 class MaimaiFilter40(MaimaiFilterStrategy):
     """thr 0.40 + 贪婪 ATR(1.8)：信号多，给波段空间。"""
     template_id = "mm-40"
     _score_threshold = 0.40
     _exit_mode = "atr_greedy"
+    _trigger_mode = "strict"
     _params = {"atr_mult": 1.8, "trail_activation": 0.06, "time_stop": 60}
 
     @property
     def name(self) -> str:
         return "MaimaiFilter_40_Greedy"
+
+
+class MaimaiFilterBroad40(MaimaiFilterStrategy):
+    """BROAD 触发 (任一信号关闭) + thr 0.40 + 贪婪：~25/年候选."""
+    template_id = "mm-broad-40"
+    _score_threshold = 0.40
+    _exit_mode = "atr_greedy"
+    _trigger_mode = "broad"
+    _params = {"atr_mult": 1.8, "trail_activation": 0.06, "time_stop": 60}
+
+    @property
+    def name(self) -> str:
+        return "MaimaiBroad_40"
+
+
+class MaimaiFilterBroad50(MaimaiFilterStrategy):
+    """BROAD 触发 + thr 0.50 + 贪婪 ATR(2.0)：高频 sweet spot."""
+    template_id = "mm-broad-50"
+    _score_threshold = 0.50
+    _exit_mode = "atr_greedy"
+    _trigger_mode = "broad"
+    _params = {"atr_mult": 2.0, "trail_activation": 0.08, "time_stop": 75}
+
+    @property
+    def name(self) -> str:
+        return "MaimaiBroad_50"
 
 
 class MaimaiFilter50(MaimaiFilterStrategy):
