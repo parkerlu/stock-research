@@ -19,16 +19,15 @@ router = APIRouter(prefix="/api/strategy-factory", tags=["factory"])
 class RunFactoryRequest(BaseModel):
     ts_code: str
     cutoff_date: date
-    position_ratios: list[int] = [40, 30, 30]
 
 
-async def _run_factory_bg(ts_code: str, cutoff_date: date, position_ratios: list[int], job_id: str):
+async def _run_factory_bg(ts_code: str, cutoff_date: date, job_id: str):
     """Background wrapper for factory execution."""
     from app.db import async_session
 
     async with async_session() as db:
         try:
-            await run_factory(db, ts_code, cutoff_date, position_ratios, job_id=job_id)
+            await run_factory(db, ts_code, cutoff_date, job_id=job_id)
         except Exception as e:
             job = await db.get(FactoryJob, job_id)
             if job:
@@ -51,16 +50,13 @@ async def run(
         ts_code=body.ts_code,
         status="pending",
         total_candidates=len(candidates),
-        config={
-            "cutoff_date": body.cutoff_date.isoformat(),
-            "position_ratios": body.position_ratios,
-        },
+        config={"cutoff_date": body.cutoff_date.isoformat()},
     )
     db.add(job)
     await db.commit()
 
     background_tasks.add_task(
-        _run_factory_bg, body.ts_code, body.cutoff_date, body.position_ratios, job_id
+        _run_factory_bg, body.ts_code, body.cutoff_date, job_id
     )
     return {"job_id": job_id, "status": "pending", "total_candidates": len(candidates)}
 

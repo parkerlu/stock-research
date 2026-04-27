@@ -53,7 +53,7 @@ async def candles(
     manager: DataSourceManager = Depends(get_manager),
 ):
     if start is None:
-        start = date(date.today().year - 1, date.today().month, date.today().day)
+        start = date(date.today().year - 10, date.today().month, date.today().day)
     if end is None:
         end = date.today()
 

@@ -4,6 +4,7 @@ import { useStrategyStore } from "../../stores/strategyStore";
 import { FactoryControl } from "./FactoryControl";
 import { StrategyList } from "./StrategyList";
 import { BacktestReport } from "./BacktestReport";
+import { AdhocStrategy } from "./AdhocStrategy";
 
 export function StrategyPanel() {
   const currentSymbol = useQuoteStore((s) => s.currentSymbol);
@@ -32,6 +33,7 @@ export function StrategyPanel() {
         </div>
       </div>
 
+      {currentSymbol && <AdhocStrategy tsCode={currentSymbol} />}
       {currentSymbol && <FactoryControl tsCode={currentSymbol} />}
 
       <div className="strategy-panel-body">

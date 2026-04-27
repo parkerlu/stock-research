@@ -64,3 +64,60 @@ export async function runBacktest(params: {
 export async function getBacktestReport(runId: string): Promise<BacktestReport> {
   return json(`${BASE}/backtests/${runId}/report`);
 }
+
+export interface TemplateInfo {
+  template_id: string;
+  name: string;
+}
+
+export async function listTemplates(): Promise<TemplateInfo[]> {
+  return json(`${BASE}/backtests/templates`);
+}
+
+export interface TryTemplateResult {
+  ts_code: string;
+  template_id: string;
+  start_date: string;
+  end_date: string;
+  metrics: {
+    net_profit_pct: number;
+    annualized_return: number;
+    max_drawdown: number;
+    win_rate: number;
+    total_trades: number;
+    profit_factor: number;
+    final_capital: number;
+  };
+  trades: Array<{
+    entry_date: string;
+    exit_date: string;
+    entry_price: number;
+    exit_price: number;
+    shares: number;
+    pnl: number;
+  }>;
+  actions: Array<{
+    date: string;
+    type: "buy" | "sell";
+    price: number;
+    shares: number;
+    amount: number;
+    position_level: number;
+    pnl?: number;
+    pnl_pct?: number;
+  }>;
+}
+
+export async function tryTemplate(params: {
+  ts_code: string;
+  template_id: string;
+  params?: Record<string, number>;
+  start_date?: string;
+  end_date?: string;
+}): Promise<TryTemplateResult> {
+  return json(`${BASE}/backtests/try`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+}

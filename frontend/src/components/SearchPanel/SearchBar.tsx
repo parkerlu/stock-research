@@ -8,7 +8,7 @@ export function SearchBar() {
   const [results, setResults] = useState<StockInfo[]>([]);
   const [open, setOpen] = useState(false);
   const setCurrentStock = useQuoteStore((s) => s.setCurrentStock);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const doSearch = useCallback(async (q: string) => {
     if (q.length < 1) {

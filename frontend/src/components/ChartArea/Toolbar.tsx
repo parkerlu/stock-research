@@ -49,6 +49,8 @@ export function Toolbar({
   const setTimeframe = useQuoteStore((s) => s.setTimeframe);
   const linkedMode = useQuoteStore((s) => s.linkedMode);
   const toggleLinkedMode = useQuoteStore((s) => s.toggleLinkedMode);
+  const currentSymbol = useQuoteStore((s) => s.currentSymbol);
+  const currentName = useQuoteStore((s) => s.currentName);
 
   const [tdxIndicators, setTdxIndicators] = useState<IndicatorMeta[]>([]);
 
@@ -60,6 +62,14 @@ export function Toolbar({
 
   return (
     <div className="chart-toolbar">
+      {currentSymbol && (
+        <div className="toolbar-stock-label">
+          <span className="toolbar-stock-name">{currentName || "—"}</span>
+          <span className="toolbar-stock-code">{currentSymbol}</span>
+        </div>
+      )}
+      <div className="toolbar-divider" />
+
       <div className="toolbar-group">
         {TIMEFRAMES.map((tf) => (
           <button

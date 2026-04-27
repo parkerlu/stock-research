@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Chart } from "klinecharts";
 import { useQuoteStore } from "../../stores/quoteStore";
 import type { TradeAction } from "../../types/strategy";
 import { getIndicator } from "../../api/indicators";
@@ -13,22 +12,99 @@ interface Props {
   tradeActions?: TradeAction[] | null;
 }
 
+const MAIN_PANE_INDICATORS = new Set(["MA", "EMA", "BOLL", "SAR"]);
+const LS_STD_KEY = "chart.activeIndicators.v1";
+const LS_TDX_KEY = "chart.activeTdxIndicators.v1";
+
+function readLS(key: string, fallback: string[]): string[] {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((x) => typeof x === "string") : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export function ChartArea({ tradeActions }: Props = {}) {
   const linkedMode = useQuoteStore((s) => s.linkedMode);
   const currentSymbol = useQuoteStore((s) => s.currentSymbol);
   const timeframe = useQuoteStore((s) => s.timeframe);
-  const [activeIndicators, setActiveIndicators] = useState<string[]>(["MA"]);
-  const [activeTdxIndicators, setActiveTdxIndicators] = useState<string[]>([]);
-  const chartRef = useRef<Chart | null>(null);
+  const [activeIndicators, setActiveIndicators] = useState<string[]>(() =>
+    readLS(LS_STD_KEY, ["MA"])
+  );
+  const [activeTdxIndicators, setActiveTdxIndicators] = useState<string[]>(() =>
+    readLS(LS_TDX_KEY, [])
+  );
   const mainChartRef = useRef<MainChartHandle>(null);
   const tdxPaneIds = useRef<Record<string, string>>({});
   const [tradeIdx, setTradeIdx] = useState(-1);
 
   const indicatorPaneIds = useRef<Record<string, string>>({});
 
+  // Persist whenever state changes
+  useEffect(() => {
+    localStorage.setItem(LS_STD_KEY, JSON.stringify(activeIndicators));
+  }, [activeIndicators]);
+  useEffect(() => {
+    localStorage.setItem(LS_TDX_KEY, JSON.stringify(activeTdxIndicators));
+  }, [activeTdxIndicators]);
+
   useEffect(() => {
     setTradeIdx(-1);
   }, [tradeActions]);
+
+  // Apply persisted standard indicators once the chart is initialized.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const chart = mainChartRef.current?.getChart();
+      if (!chart) return;
+      for (const name of activeIndicators) {
+        const isMain = MAIN_PANE_INDICATORS.has(name);
+        if (isMain) {
+          chart.createIndicator(name, true, { id: "candle_pane" });
+        } else {
+          const paneId = `kc_${name}_pane`;
+          chart.createIndicator(name, false, { id: paneId });
+          indicatorPaneIds.current[name] = paneId;
+        }
+      }
+    }, 100);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Apply persisted TDX indicators once chart + symbol are ready.
+  // Runs only on first symbol load (the existing refresh effect re-applies
+  // them on subsequent symbol/timeframe changes).
+  const tdxBootstrapped = useRef(false);
+  useEffect(() => {
+    if (tdxBootstrapped.current) return;
+    if (!currentSymbol || activeTdxIndicators.length === 0) return;
+    const chart = mainChartRef.current?.getChart();
+    if (!chart) return;
+    tdxBootstrapped.current = true;
+    (async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      for (const name of activeTdxIndicators) {
+        try {
+          const result = await getIndicator(
+            name, currentSymbol, timeframe, "1990-01-01", today
+          );
+          setIndicatorData(result);
+          const kcName = getKlineIndicatorName(name);
+          const paneId =
+            result.pane === "main" ? "candle_pane" : `tdx_${name}_pane`;
+          chart.createIndicator(kcName, true, { id: paneId });
+          tdxPaneIds.current[name] = paneId;
+        } catch (err) {
+          console.error(`恢复 TDX 指标 ${name} 失败:`, err);
+        }
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSymbol]);
 
   const goToTrade = useCallback(
     (idx: number) => {
@@ -42,14 +118,14 @@ export function ChartArea({ tradeActions }: Props = {}) {
 
   const handleToggleIndicator = useCallback(
     (name: string, isMainPane: boolean) => {
+      const chart = mainChartRef.current?.getChart();
       setActiveIndicators((prev) => {
-        const chart = chartRef.current;
         if (prev.includes(name)) {
           if (chart) {
             if (isMainPane) {
               chart.removeIndicator({ paneId: "candle_pane", name });
-            } else if (indicatorPaneIds.current[name]) {
-              chart.removeIndicator({ paneId: indicatorPaneIds.current[name], name });
+            } else {
+              chart.removeIndicator({ name });
               delete indicatorPaneIds.current[name];
             }
           }
@@ -57,12 +133,12 @@ export function ChartArea({ tradeActions }: Props = {}) {
         } else {
           if (chart) {
             if (isMainPane) {
-              chart.createIndicator(name, false, { id: "candle_pane" });
+              // isStack=true → overlay onto candle pane without wiping it
+              chart.createIndicator(name, true, { id: "candle_pane" });
             } else {
-              const paneId = chart.createIndicator(name, true);
-              if (paneId) {
-                indicatorPaneIds.current[name] = paneId;
-              }
+              const paneId = `kc_${name}_pane`;
+              chart.createIndicator(name, false, { id: paneId });
+              indicatorPaneIds.current[name] = paneId;
             }
           }
           return [...prev, name];
@@ -77,27 +153,24 @@ export function ChartArea({ tradeActions }: Props = {}) {
       const chart = mainChartRef.current?.getChart();
       if (!chart || !currentSymbol) return;
 
+      const kcName = getKlineIndicatorName(name);
+
       if (activeTdxIndicators.includes(name)) {
-        // Remove
-        const paneId = tdxPaneIds.current[name];
-        if (paneId) {
-          chart.removeIndicator({ paneId, name: getKlineIndicatorName(name) });
-          delete tdxPaneIds.current[name];
-        }
+        // Remove by name — klinecharts will drop the pane when empty
+        chart.removeIndicator({ name: kcName });
+        delete tdxPaneIds.current[name];
         setActiveTdxIndicators((prev) => prev.filter((n) => n !== name));
         return;
       }
 
       // Add: fetch, register, create
       try {
-        const now = new Date();
-        const from = new Date(now.getFullYear() - 2, now.getMonth(), now.getDate());
         const result = await getIndicator(
           name,
           currentSymbol,
           timeframe,
-          from.toISOString().slice(0, 10),
-          now.toISOString().slice(0, 10)
+          "1990-01-01",
+          new Date().toISOString().slice(0, 10)
         );
 
         if (result.warnings.length > 0) {
@@ -105,12 +178,14 @@ export function ChartArea({ tradeActions }: Props = {}) {
           return;
         }
 
-        const kcName = setIndicatorData(result);
-        const paneId = chart.createIndicator(kcName, true);
-        if (paneId) {
-          tdxPaneIds.current[name] = paneId;
-          setActiveTdxIndicators((prev) => [...prev, name]);
-        }
+        setIndicatorData(result);
+        // For "main" pane indicators (e.g. MA, BOLL) overlay onto candle pane;
+        // "sub" pane indicators get their own bottom pane.
+        const paneId =
+          result.pane === "main" ? "candle_pane" : `tdx_${name}_pane`;
+        chart.createIndicator(kcName, true, { id: paneId });
+        tdxPaneIds.current[name] = paneId;
+        setActiveTdxIndicators((prev) => [...prev, name]);
       } catch (err) {
         console.error("加载 TDX 指标失败:", err);
         alert("加载 TDX 指标失败");
@@ -126,23 +201,19 @@ export function ChartArea({ tradeActions }: Props = {}) {
     if (!chart) return;
 
     (async () => {
-      const now = new Date();
-      const from = new Date(now.getFullYear() - 2, now.getMonth(), now.getDate());
+      const today = new Date().toISOString().slice(0, 10);
       for (const name of activeTdxIndicators) {
         try {
           const result = await getIndicator(
             name,
             currentSymbol,
             timeframe,
-            from.toISOString().slice(0, 10),
-            now.toISOString().slice(0, 10)
+            "1990-01-01",
+            today
           );
           setIndicatorData(result);
-          // Force re-draw by overriding
-          const paneId = tdxPaneIds.current[name];
-          if (paneId) {
-            chart.overrideIndicator({ paneId, name: getKlineIndicatorName(name) });
-          }
+          // Force re-draw by overriding (filter by name since paneId is auto-generated)
+          chart.overrideIndicator({ name: getKlineIndicatorName(name) });
         } catch (err) {
           console.error(`刷新 TDX 指标 ${name} 失败:`, err);
         }
@@ -152,7 +223,7 @@ export function ChartArea({ tradeActions }: Props = {}) {
   }, [currentSymbol, timeframe]);
 
   const handleSelectOverlay = useCallback((type: string) => {
-    chartRef.current?.createOverlay(type);
+    mainChartRef.current?.getChart()?.createOverlay(type);
   }, []);
 
   const hasActions = tradeActions && tradeActions.length > 0;

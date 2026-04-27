@@ -33,6 +33,8 @@ async def search_stocks(db: AsyncSession, query: str, limit: int = 10) -> list[d
 
 
 async def add_search_history(db: AsyncSession, ts_code: str) -> None:
+    # Remove all existing entries for this ts_code, then insert fresh
+    await db.execute(delete(SearchHistory).where(SearchHistory.ts_code == ts_code))
     db.add(SearchHistory(ts_code=ts_code, searched_at=datetime.now()))
     await db.commit()
 

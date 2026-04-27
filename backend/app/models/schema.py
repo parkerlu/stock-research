@@ -129,6 +129,7 @@ class BacktestRun(Base):
     status: Mapped[str] = mapped_column(String(20), default="pending")
     metrics: Mapped[dict | None] = mapped_column(JSON)
     trades: Mapped[list | None] = mapped_column(JSON)
+    actions: Mapped[list | None] = mapped_column(JSON)
     equity_curve: Mapped[list | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime)

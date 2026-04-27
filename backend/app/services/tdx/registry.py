@@ -7,11 +7,20 @@ from __future__ import annotations
 
 from types import ModuleType
 
-from app.services.tdx.indicators import dongli_xian, multi_kdj
+from app.services.tdx.indicators import (
+    didian_zuhe,
+    dongli_xian,
+    ma,
+    maimai_henzhun,
+    multi_kdj,
+)
 
 _INDICATORS: dict[str, ModuleType] = {
+    ma.name: ma,
     multi_kdj.name: multi_kdj,
     dongli_xian.name: dongli_xian,
+    maimai_henzhun.name: maimai_henzhun,
+    didian_zuhe.name: didian_zuhe,
 }
 
 

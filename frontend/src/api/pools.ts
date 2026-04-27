@@ -21,6 +21,18 @@ export async function createPool(
   });
 }
 
+export async function createPoolWithStocks(
+  name: string,
+  ts_codes: string[],
+  description?: string
+): Promise<{ id: number; name: string; added: number; total_requested: number }> {
+  return json(`${BASE}/batch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, description, ts_codes }),
+  });
+}
+
 export async function listPools(): Promise<Pool[]> {
   return json(`${BASE}`);
 }

@@ -4,28 +4,54 @@ import type { AppMode } from "../components/NavBar";
 import { SearchPanel } from "../components/SearchPanel";
 import { PoolPanel } from "../components/PoolPanel";
 import { StrategyPanel } from "../components/StrategyPanel";
+import { ScreeningPanel } from "../components/ScreeningPanel";
+import { StrategyPoolPanel } from "../components/StrategyPoolPanel";
+import { SystemPanel } from "../components/SystemPanel";
 import { ChartArea } from "../components/ChartArea";
+import { useStrategyStore } from "../stores/strategyStore";
 
 export function QuotePage() {
-  const [mode, setMode] = useState<AppMode>("quote");
-
-  const renderPanel = () => {
-    switch (mode) {
-      case "pool":
-        return <PoolPanel />;
-      case "strategy":
-        return <StrategyPanel />;
-      default:
-        return <SearchPanel />;
-    }
-  };
+  const [mode, setMode] = useState<AppMode>("strategy");
+  const tradeActions = useStrategyStore((s) => s.tradeActions);
+  // tradeActions show on chart in strategy AND screening modes
+  const actions = mode === "strategy" || mode === "screening" ? tradeActions : null;
 
   return (
     <div className="app-layout">
       <NavBar mode={mode} onModeChange={setMode} />
       <div className="app-body">
-        {renderPanel()}
-        {mode !== "strategy" && <ChartArea />}
+        {mode === "pool" ? (
+          <>
+            <PoolPanel />
+            <ChartArea />
+          </>
+        ) : mode === "strategy" ? (
+          <>
+            <SearchPanel />
+            <div className="strategy-main">
+              <div className="strategy-chart">
+                <ChartArea tradeActions={actions} />
+              </div>
+              <div className="strategy-table-area">
+                <StrategyPanel />
+              </div>
+            </div>
+          </>
+        ) : mode === "screening" ? (
+          <>
+            <ScreeningPanel />
+            <ChartArea tradeActions={actions} />
+          </>
+        ) : mode === "strategy-pool" ? (
+          <StrategyPoolPanel />
+        ) : mode === "system" ? (
+          <SystemPanel />
+        ) : (
+          <>
+            <SearchPanel />
+            <ChartArea />
+          </>
+        )}
       </div>
     </div>
   );

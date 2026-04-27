@@ -1,3 +1,4 @@
+import calendar
 from datetime import date, timedelta
 from itertools import groupby
 
@@ -26,7 +27,7 @@ def _aggregate(rows: list[dict], key_fn) -> list[dict]:
     for _, group in groupby(sorted_rows, key=lambda r: key_fn(r["trade_date"])):
         candles = list(group)
         bar = {
-            "timestamp": int(candles[0]["trade_date"].strftime("%s")) * 1000,
+            "timestamp": calendar.timegm(candles[0]["trade_date"].timetuple()) * 1000,
             "open": candles[0]["open"],
             "close": candles[-1]["close"],
             "high": max(c["high"] for c in candles),
@@ -81,29 +82,65 @@ async def get_candles(
             )
             cached = result.scalars().all()
     else:
-        # 3. Check if we need incremental update
+        # 3. Check if we need incremental update (forward and backward)
+        first_cached = min(cached_dates)
         last_cached = max(cached_dates)
-        if last_cached < end:
-            fetch_start = last_cached + timedelta(days=1)
-            df = await manager.fetch_daily(ts_code, fetch_start, end)
-            if not df.empty:
-                rows = df.to_dict("records")
-                stmt_upsert = pg_insert(DailyCandle).values(rows)
-                stmt_upsert = stmt_upsert.on_conflict_do_nothing(index_elements=["ts_code", "trade_date"])
-                await db.execute(stmt_upsert)
-                await db.commit()
-                result = await db.execute(
-                    select(DailyCandle)
-                    .where(and_(DailyCandle.ts_code == ts_code, DailyCandle.trade_date >= start, DailyCandle.trade_date <= end))
-                    .order_by(DailyCandle.trade_date)
-                )
-                cached = result.scalars().all()
+        need_reload = False
 
-    # 4. Apply adj_factor for forward-adjusted prices
+        # Backward fill: fetch earlier history if requested range starts before cache
+        # Skip if gap is small (<=5 days covers weekends/holidays)
+        if first_cached > start and (first_cached - start).days > 5:
+            try:
+                fetch_end = first_cached - timedelta(days=1)
+                df = await manager.fetch_daily(ts_code, start, fetch_end)
+                if not df.empty:
+                    rows = df.to_dict("records")
+                    stmt_upsert = pg_insert(DailyCandle).values(rows)
+                    stmt_upsert = stmt_upsert.on_conflict_do_nothing(index_elements=["ts_code", "trade_date"])
+                    await db.execute(stmt_upsert)
+                    need_reload = True
+            except Exception:
+                pass  # Use existing cache if data source fails
+
+        # Forward fill: fetch newer data
+        # Skip if gap is small (<=5 days covers weekends/holidays)
+        if last_cached < end and (end - last_cached).days > 5:
+            try:
+                fetch_start = last_cached + timedelta(days=1)
+                df = await manager.fetch_daily(ts_code, fetch_start, end)
+                if not df.empty:
+                    rows = df.to_dict("records")
+                    stmt_upsert = pg_insert(DailyCandle).values(rows)
+                    stmt_upsert = stmt_upsert.on_conflict_do_nothing(index_elements=["ts_code", "trade_date"])
+                    await db.execute(stmt_upsert)
+                    need_reload = True
+            except Exception:
+                pass  # Use existing cache if data source fails
+
+        if need_reload:
+            await db.commit()
+            result = await db.execute(
+                select(DailyCandle)
+                .where(and_(DailyCandle.ts_code == ts_code, DailyCandle.trade_date >= start, DailyCandle.trade_date <= end))
+                .order_by(DailyCandle.trade_date)
+            )
+            cached = result.scalars().all()
+
+    # 4. Apply adj_factor for backward-adjusted prices.
+    # IMPORTANT: latest_adj must be the GLOBAL latest for this symbol, not the
+    # latest within the requested date range — otherwise charts show different
+    # adjusted prices for the same bar depending on what window is queried.
+    latest_row = (await db.execute(
+        select(DailyCandle.adj_factor)
+        .where(DailyCandle.ts_code == ts_code)
+        .order_by(DailyCandle.trade_date.desc())
+        .limit(1)
+    )).scalar_one_or_none()
+    latest_adj = float(latest_row) if latest_row else 1.0
+
     daily_rows = []
     for c in cached:
         adj = float(c.adj_factor) if c.adj_factor else 1.0
-        latest_adj = float(cached[-1].adj_factor) if cached[-1].adj_factor else 1.0
         factor = adj / latest_adj if latest_adj != 0 else 1.0
         daily_rows.append({
             "trade_date": c.trade_date,
@@ -123,7 +160,7 @@ async def get_candles(
 
     return [
         {
-            "timestamp": int(r["trade_date"].strftime("%s")) * 1000,
+            "timestamp": calendar.timegm(r["trade_date"].timetuple()) * 1000,
             "open": r["open"],
             "high": r["high"],
             "low": r["low"],

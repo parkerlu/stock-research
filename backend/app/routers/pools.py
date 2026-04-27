@@ -28,6 +28,12 @@ class UpdatePoolRequest(BaseModel):
     description: str | None = None
 
 
+class CreateAndPopulateRequest(BaseModel):
+    name: str
+    description: str | None = None
+    ts_codes: list[str]
+
+
 class AddStockRequest(BaseModel):
     ts_code: str
 
@@ -35,6 +41,23 @@ class AddStockRequest(BaseModel):
 @router.post("")
 async def create(body: CreatePoolRequest, db: AsyncSession = Depends(get_db)):
     return await create_pool(db, body.name, body.description)
+
+
+@router.post("/batch")
+async def create_and_populate(
+    body: CreateAndPopulateRequest,
+    db: AsyncSession = Depends(get_db),
+    manager: DataSourceManager = Depends(get_manager),
+):
+    """One-shot: create a pool and add all given ts_codes to it."""
+    pool = await create_pool(db, body.name, body.description)
+    pool_id = pool["id"]
+    added = 0
+    for ts in body.ts_codes:
+        if await add_stock_to_pool(db, manager, pool_id, ts):
+            added += 1
+    return {"id": pool_id, "name": body.name, "added": added,
+            "total_requested": len(body.ts_codes)}
 
 
 @router.get("")

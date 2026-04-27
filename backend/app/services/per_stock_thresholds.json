@@ -1,0 +1,7865 @@
+{
+  "000001.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 32.91,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "000002.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000004.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 103.8,
+    "train_trades": 8,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "000006.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 12.68,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000007.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": 79.32,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "000008.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 17.75,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000009.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 63.36,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "000010.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 19.26,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000011.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 56.65,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000012.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 25.55,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "000014.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 31.39,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000016.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 38.61,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000017.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 44.94,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000019.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 10.02,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "000020.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 27.41,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000021.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 45.14,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "000025.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 53.76,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000026.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 42.93,
+    "train_trades": 6,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000027.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 15.66,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000028.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000029.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000030.SZ": {
+    "buy": 0.7,
+    "exit": 0.35,
+    "train_ret": 25.48,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000031.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 14.58,
+    "train_trades": 3,
+    "train_win_rate": 0.333,
+    "source": "tuned"
+  },
+  "000032.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 37.23,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "000034.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 57.52,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000035.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 39.95,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000036.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 45.39,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000037.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 52.61,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "000039.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 15.52,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000042.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 44.08,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "000045.SZ": {
+    "buy": 0.75,
+    "exit": 0.3,
+    "train_ret": 16.33,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000048.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 14.86,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000049.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 45.81,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000050.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 16.93,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000055.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 10.3,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000056.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 19.92,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000058.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 56.07,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "000059.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000060.SZ": {
+    "buy": 0.65,
+    "exit": 0.4,
+    "train_ret": 9.24,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000061.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 47.87,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000062.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 25.14,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000063.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 16.53,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000065.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 42.64,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000066.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 52.39,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "000068.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 108.38,
+    "train_trades": 9,
+    "train_win_rate": 0.889,
+    "source": "tuned"
+  },
+  "000069.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 5.64,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "000070.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 57.59,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000078.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000088.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 7.1,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000089.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 6.42,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000090.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 27.92,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000096.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 19.42,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000099.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 28.25,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000100.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 18.44,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000151.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 103.13,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "000153.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 18.0,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "000155.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 50.78,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "000156.SZ": {
+    "buy": 0.6,
+    "exit": 0.45,
+    "train_ret": 26.22,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000157.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 10.23,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000158.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 60.76,
+    "train_trades": 7,
+    "train_win_rate": 0.714,
+    "source": "tuned"
+  },
+  "000159.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 23.46,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000301.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 5.26,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "000333.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 21.47,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000338.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 6.12,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "000400.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 52.94,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000401.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 23.31,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000402.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000403.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 26.37,
+    "train_trades": 5,
+    "train_win_rate": 0.6,
+    "source": "tuned"
+  },
+  "000404.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 24.25,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "000407.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 15.5,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000408.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 104.71,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "000409.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 9.94,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "000410.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 25.49,
+    "train_trades": 5,
+    "train_win_rate": 0.6,
+    "source": "tuned"
+  },
+  "000411.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 80.42,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000415.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": 25.04,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000417.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 13.74,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000419.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 11.23,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "000420.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 45.41,
+    "train_trades": 5,
+    "train_win_rate": 0.6,
+    "source": "tuned"
+  },
+  "000421.SZ": {
+    "buy": 0.6,
+    "exit": 0.4,
+    "train_ret": 11.54,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000422.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 32.19,
+    "train_trades": 5,
+    "train_win_rate": 0.6,
+    "source": "tuned"
+  },
+  "000423.SZ": {
+    "buy": 0.55,
+    "exit": 0.45,
+    "train_ret": 21.8,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000425.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 9.99,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000426.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 5.17,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "000428.SZ": {
+    "buy": 0.6,
+    "exit": 0.45,
+    "train_ret": 15.15,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000429.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000430.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 29.51,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000488.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000498.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000501.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": -2.87,
+    "train_trades": 3,
+    "train_win_rate": 0.333,
+    "source": "tuned"
+  },
+  "000503.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 63.14,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000504.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 57.98,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "000505.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 15.93,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "000506.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 37.15,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000507.SZ": {
+    "buy": 0.6,
+    "exit": 0.4,
+    "train_ret": 6.17,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000509.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 87.14,
+    "train_trades": 8,
+    "train_win_rate": 0.625,
+    "source": "tuned"
+  },
+  "000510.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 36.17,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000513.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000514.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 33.15,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "000516.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000517.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 48.77,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000518.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 40.8,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000519.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 28.72,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000520.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 29.02,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000521.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 9.74,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "000523.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 21.84,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000524.SZ": {
+    "buy": 0.6,
+    "exit": 0.4,
+    "train_ret": 30.57,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000525.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 113.41,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "000526.SZ": {
+    "buy": 0.55,
+    "exit": 0.45,
+    "train_ret": 15.85,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "000528.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 11.57,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000529.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 5.72,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000530.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 64.36,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000531.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 42.5,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000532.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 33.1,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000533.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 46.82,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "000534.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 45.66,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "000536.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 28.2,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000537.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 44.06,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000538.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 8.25,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000539.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 17.87,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000541.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 12.53,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000543.SZ": {
+    "buy": 0.7,
+    "exit": 0.35,
+    "train_ret": 13.53,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000544.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 16.11,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "000545.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 56.12,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "000546.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 58.13,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000547.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 39.29,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000548.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 54.63,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000550.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 54.24,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000551.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 77.59,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "000552.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 20.41,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000553.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 18.52,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000554.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 21.43,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000555.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 34.99,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000557.SZ": {
+    "buy": 0.7,
+    "exit": 0.35,
+    "train_ret": 16.97,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000558.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 25.1,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000559.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 22.37,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000560.SZ": {
+    "buy": 0.7,
+    "exit": 0.45,
+    "train_ret": 4.34,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000561.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 14.64,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000563.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 9.2,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000564.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 79.34,
+    "train_trades": 7,
+    "train_win_rate": 0.714,
+    "source": "tuned"
+  },
+  "000565.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 26.94,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "000566.SZ": {
+    "buy": 0.6,
+    "exit": 0.45,
+    "train_ret": 0.96,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "000567.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 23.09,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000568.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 14.29,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000570.SZ": {
+    "buy": 0.75,
+    "exit": 0.3,
+    "train_ret": 18.73,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000571.SZ": {
+    "buy": 0.55,
+    "exit": 0.45,
+    "train_ret": 9.63,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000572.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 115.61,
+    "train_trades": 9,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000573.SZ": {
+    "buy": 0.6,
+    "exit": 0.4,
+    "train_ret": 12.69,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000576.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 36.2,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "000581.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000582.SZ": {
+    "buy": 0.55,
+    "exit": 0.45,
+    "train_ret": -2.66,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "000586.SZ": {
+    "buy": 0.75,
+    "exit": 0.3,
+    "train_ret": 29.85,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000589.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 9.6,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000590.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 29.98,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000591.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": 28.4,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000592.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 37.34,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000593.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 24.09,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000595.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 49.1,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000596.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000597.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 27.14,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000598.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 9.48,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000599.SZ": {
+    "buy": 0.6,
+    "exit": 0.45,
+    "train_ret": 22.81,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000600.SZ": {
+    "buy": 0.65,
+    "exit": 0.45,
+    "train_ret": 29.86,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000601.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 44.77,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000603.SZ": {
+    "buy": 0.55,
+    "exit": 0.45,
+    "train_ret": 3.7,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000605.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 27.44,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000607.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 17.08,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000608.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 27.31,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "000609.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 129.51,
+    "train_trades": 10,
+    "train_win_rate": 0.7,
+    "source": "tuned"
+  },
+  "000610.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 43.38,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000612.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 22.86,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000615.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 193.72,
+    "train_trades": 12,
+    "train_win_rate": 0.583,
+    "source": "tuned"
+  },
+  "000617.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 12.44,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000619.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 20.74,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000620.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 205.42,
+    "train_trades": 10,
+    "train_win_rate": 0.9,
+    "source": "tuned"
+  },
+  "000623.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000625.SZ": {
+    "buy": 0.6,
+    "exit": 0.4,
+    "train_ret": 48.49,
+    "train_trades": 6,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000626.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 40.35,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "000628.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 101.08,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "000629.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 45.24,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000630.SZ": {
+    "buy": 0.65,
+    "exit": 0.35,
+    "train_ret": 10.26,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000631.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 33.98,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000632.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 79.59,
+    "train_trades": 6,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000633.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 84.89,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "000635.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 60.06,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000636.SZ": {
+    "buy": 0.75,
+    "exit": 0.3,
+    "train_ret": 27.93,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000637.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 4.43,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "000638.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 93.69,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "000639.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 40.62,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "000650.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 4.2,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "000651.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 10.91,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000652.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 8.5,
+    "train_trades": 3,
+    "train_win_rate": 0.333,
+    "source": "tuned"
+  },
+  "000655.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 45.77,
+    "train_trades": 7,
+    "train_win_rate": 0.714,
+    "source": "tuned"
+  },
+  "000656.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 45.25,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "000657.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 89.42,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000659.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 44.25,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000661.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 41.63,
+    "train_trades": 5,
+    "train_win_rate": 0.6,
+    "source": "tuned"
+  },
+  "000663.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 57.84,
+    "train_trades": 7,
+    "train_win_rate": 0.714,
+    "source": "tuned"
+  },
+  "000665.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 82.31,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "000668.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 67.42,
+    "train_trades": 6,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000669.SZ": {
+    "buy": 0.6,
+    "exit": 0.45,
+    "train_ret": -6.81,
+    "train_trades": 4,
+    "train_win_rate": 0.25,
+    "source": "tuned"
+  },
+  "000670.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 19.98,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000672.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 18.09,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000676.SZ": {
+    "buy": 0.6,
+    "exit": 0.4,
+    "train_ret": 64.56,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "000677.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 17.38,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000678.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 54.38,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "000679.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 14.7,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "000680.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 32.15,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000681.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000682.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 32.66,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000683.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 31.66,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "000685.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000686.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 10.14,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000688.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 26.31,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000690.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 8.04,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "000691.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 18.0,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "000692.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 12.78,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "000695.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 76.49,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000697.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 33.66,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000698.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 28.7,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000700.SZ": {
+    "buy": 0.55,
+    "exit": 0.45,
+    "train_ret": 19.77,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "000701.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 17.64,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000702.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 21.09,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000703.SZ": {
+    "buy": 0.65,
+    "exit": 0.35,
+    "train_ret": 17.55,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000705.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000707.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 70.31,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000708.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": 26.22,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000709.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000710.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 33.58,
+    "train_trades": 7,
+    "train_win_rate": 0.714,
+    "source": "tuned"
+  },
+  "000711.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 243.63,
+    "train_trades": 12,
+    "train_win_rate": 0.917,
+    "source": "tuned"
+  },
+  "000712.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 14.41,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "000713.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 19.4,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000715.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 6.5,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000716.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 6.98,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "000717.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 4.41,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "000718.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 39.61,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000719.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000720.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 19.07,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000721.SZ": {
+    "buy": 0.6,
+    "exit": 0.4,
+    "train_ret": 44.3,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000722.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 11.28,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000723.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 52.03,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "000725.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 21.42,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000726.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000727.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 17.6,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000728.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 1.35,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "000729.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 25.39,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000731.SZ": {
+    "buy": 0.6,
+    "exit": 0.4,
+    "train_ret": 22.36,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000733.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 44.7,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "000735.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 16.14,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000736.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 82.4,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000737.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 4.28,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "000738.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 20.34,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000739.SZ": {
+    "buy": 0.55,
+    "exit": 0.45,
+    "train_ret": -13.86,
+    "train_trades": 3,
+    "train_win_rate": 0.333,
+    "source": "tuned"
+  },
+  "000750.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 10.67,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000751.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 8.23,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000752.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 99.66,
+    "train_trades": 13,
+    "train_win_rate": 0.692,
+    "source": "tuned"
+  },
+  "000753.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 33.38,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000755.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 42.13,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000756.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 104.49,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000757.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 34.91,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000758.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 27.25,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000759.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 19.53,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "000761.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000762.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 71.75,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "000766.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": 22.23,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "000767.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 2.01,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "000768.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 5.91,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "000776.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 23.82,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000777.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 7.97,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "000778.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 22.45,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000779.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 37.73,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000782.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": 2.2,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "000783.SZ": {
+    "buy": 0.55,
+    "exit": 0.45,
+    "train_ret": 7.45,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000785.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 13.53,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000786.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 24.91,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000788.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 46.36,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000789.SZ": {
+    "buy": 0.55,
+    "exit": 0.45,
+    "train_ret": 6.22,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000790.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": -2.94,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "000791.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 33.9,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000792.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": 19.08,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000793.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 31.9,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000795.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 47.43,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000796.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 161.72,
+    "train_trades": 10,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "000797.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 149.16,
+    "train_trades": 6,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000798.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": 20.17,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000799.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 33.25,
+    "train_trades": 6,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000800.SZ": {
+    "buy": 0.6,
+    "exit": 0.4,
+    "train_ret": 20.95,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000801.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 34.84,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000802.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 36.33,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000803.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 47.98,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000807.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 8.61,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "000809.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": -0.21,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "000810.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 28.84,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000811.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 42.27,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000812.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 50.85,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "000813.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 28.38,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000815.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 229.66,
+    "train_trades": 7,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000816.SZ": {
+    "buy": 0.65,
+    "exit": 0.4,
+    "train_ret": 31.4,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000818.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 10.46,
+    "train_trades": 4,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "000819.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 14.12,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "000820.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 188.83,
+    "train_trades": 11,
+    "train_win_rate": 0.818,
+    "source": "tuned"
+  },
+  "000821.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 22.54,
+    "train_trades": 7,
+    "train_win_rate": 0.571,
+    "source": "tuned"
+  },
+  "000822.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 20.23,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000823.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 38.3,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000825.SZ": {
+    "buy": 0.55,
+    "exit": 0.45,
+    "train_ret": 4.59,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000826.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 67.21,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "000828.SZ": {
+    "buy": 0.6,
+    "exit": 0.45,
+    "train_ret": 35.84,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000829.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 29.63,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "000830.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": 22.09,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000831.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 29.14,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000833.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 16.63,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000837.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 81.38,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000838.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 39.18,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000839.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 44.16,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000848.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000850.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 19.17,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "000852.SZ": {
+    "buy": 0.75,
+    "exit": 0.3,
+    "train_ret": 25.06,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000856.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 66.4,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000858.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 18.22,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000859.SZ": {
+    "buy": 0.75,
+    "exit": 0.3,
+    "train_ret": 23.73,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000860.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 39.1,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000862.SZ": {
+    "buy": 0.75,
+    "exit": 0.3,
+    "train_ret": 18.41,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000863.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 63.73,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000868.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 3.78,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "000869.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 6.52,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000875.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 29.14,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000876.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 22.13,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000877.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 45.21,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000878.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 22.82,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000880.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 12.54,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000881.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": 10.34,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000882.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 16.4,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000883.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 21.58,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000885.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 33.96,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000886.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 26.87,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000887.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 92.67,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000888.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 13.27,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000889.SZ": {
+    "buy": 0.7,
+    "exit": 0.4,
+    "train_ret": 6.18,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "000890.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 19.77,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000892.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 57.61,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000893.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 56.81,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000895.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000897.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 29.62,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000898.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000899.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 41.68,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "000900.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000901.SZ": {
+    "buy": 0.75,
+    "exit": 0.35,
+    "train_ret": 29.82,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000902.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 22.17,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000903.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 37.71,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000905.SZ": {
+    "buy": 0.55,
+    "exit": 0.45,
+    "train_ret": 9.78,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "000906.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 20.23,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000908.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 84.46,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000909.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 77.44,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000910.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 6.61,
+    "train_trades": 5,
+    "train_win_rate": 0.6,
+    "source": "tuned"
+  },
+  "000911.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": -1.97,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "000912.SZ": {
+    "buy": 0.65,
+    "exit": 0.35,
+    "train_ret": 25.43,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000913.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 34.79,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000915.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 24.11,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000917.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 58.39,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000919.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000920.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 92.67,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000921.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 33.57,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000922.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 36.91,
+    "train_trades": 6,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "000923.SZ": {
+    "buy": 0.6,
+    "exit": 0.4,
+    "train_ret": 16.77,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000925.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 10.55,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000926.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 51.01,
+    "train_trades": 7,
+    "train_win_rate": 0.714,
+    "source": "tuned"
+  },
+  "000927.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 36.06,
+    "train_trades": 6,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "000928.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 35.63,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000929.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 11.12,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000930.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 10.97,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000931.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 12.34,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000932.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 9.1,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000933.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 22.61,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000935.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 30.33,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000936.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 44.7,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "000937.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 73.65,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000938.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 61.69,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000948.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 40.13,
+    "train_trades": 6,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "000949.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 47.6,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "000950.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000951.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 35.79,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "000952.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000953.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 84.14,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000955.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": -3.73,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "000957.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": 58.55,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000958.SZ": {
+    "buy": 0.75,
+    "exit": 0.3,
+    "train_ret": 19.98,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000959.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000960.SZ": {
+    "buy": 0.7,
+    "exit": 0.45,
+    "train_ret": 36.23,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000962.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 41.71,
+    "train_trades": 8,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "000963.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 61.4,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000965.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 42.16,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000966.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 123.97,
+    "train_trades": 8,
+    "train_win_rate": 0.875,
+    "source": "tuned"
+  },
+  "000967.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 27.45,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000968.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 9.56,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000969.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 38.57,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000970.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 43.88,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000972.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 36.7,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "000973.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 31.09,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000975.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 10.84,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000977.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 14.96,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000978.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 29.3,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000980.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 398.74,
+    "train_trades": 18,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "000981.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 3.1,
+    "train_trades": 3,
+    "train_win_rate": 0.333,
+    "source": "tuned"
+  },
+  "000983.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 20.35,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000985.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 42.44,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000987.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 16.63,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000988.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 47.01,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000989.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "000990.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 35.09,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "000993.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 58.23,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000995.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 5.88,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "000997.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 19.86,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000998.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 44.17,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "000999.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "001696.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 28.35,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "001872.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 8.68,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "001896.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 95.08,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "001914.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 27.22,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002001.SZ": {
+    "buy": 0.55,
+    "exit": 0.45,
+    "train_ret": 9.06,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002003.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002004.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 16.82,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002005.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 50.96,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002006.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 86.96,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002007.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 13.22,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "002008.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 29.95,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002009.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 76.76,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002010.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 29.93,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002011.SZ": {
+    "buy": 0.65,
+    "exit": 0.35,
+    "train_ret": 30.19,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002012.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 29.1,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002014.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 8.74,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002015.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 39.31,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002016.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 27.41,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002017.SZ": {
+    "buy": 0.75,
+    "exit": 0.3,
+    "train_ret": 33.46,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002019.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 33.99,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002020.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002021.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 70.1,
+    "train_trades": 8,
+    "train_win_rate": 0.625,
+    "source": "tuned"
+  },
+  "002022.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 23.07,
+    "train_trades": 5,
+    "train_win_rate": 0.4,
+    "source": "tuned"
+  },
+  "002023.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 28.3,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002024.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 19.8,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002025.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 42.84,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002026.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 34.4,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002027.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 17.16,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002028.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 48.5,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002029.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 9.59,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002030.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002031.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 80.07,
+    "train_trades": 6,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002032.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 17.8,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002033.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 4.07,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "002034.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 27.81,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002035.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 28.2,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002036.SZ": {
+    "buy": 0.55,
+    "exit": 0.45,
+    "train_ret": 43.32,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002037.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 51.15,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002038.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002039.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 22.52,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002040.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 8.01,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002041.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 61.31,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002042.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 30.19,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002043.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 15.43,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002044.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 13.66,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "002045.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 71.46,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002046.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 48.54,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002047.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 132.56,
+    "train_trades": 6,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002048.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 21.52,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002049.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 36.95,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002050.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 47.65,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002051.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 10.95,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002052.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 52.68,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002053.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 59.11,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002054.SZ": {
+    "buy": 0.8,
+    "exit": 0.3,
+    "train_ret": 18.3,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002055.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 31.56,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002056.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 35.57,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002057.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 56.3,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002058.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 36.62,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "002059.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 19.98,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002060.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 70.17,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002061.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 29.27,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002062.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 36.22,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002063.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": 27.26,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002064.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 16.27,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002065.SZ": {
+    "buy": 0.7,
+    "exit": 0.4,
+    "train_ret": 21.33,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002066.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 33.04,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002067.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 7.19,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002068.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 35.07,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002069.SZ": {
+    "buy": 0.55,
+    "exit": 0.45,
+    "train_ret": 28.28,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002072.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 24.37,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002073.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 50.29,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002074.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 43.77,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002075.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 16.4,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002076.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 68.28,
+    "train_trades": 14,
+    "train_win_rate": 0.786,
+    "source": "tuned"
+  },
+  "002077.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 54.3,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002078.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 20.51,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002079.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 128.37,
+    "train_trades": 7,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002080.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 31.15,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002081.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 19.82,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002082.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 65.2,
+    "train_trades": 7,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002083.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 30.34,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002084.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 61.4,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002085.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 43.32,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002086.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 135.6,
+    "train_trades": 13,
+    "train_win_rate": 0.769,
+    "source": "tuned"
+  },
+  "002088.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 45.16,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002090.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 19.02,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002091.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 69.07,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002092.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 18.6,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002093.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 54.05,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002094.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 46.21,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002095.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 62.84,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002096.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 187.67,
+    "train_trades": 11,
+    "train_win_rate": 0.818,
+    "source": "tuned"
+  },
+  "002097.SZ": {
+    "buy": 0.7,
+    "exit": 0.45,
+    "train_ret": 14.7,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002098.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 7.91,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002099.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 22.16,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002100.SZ": {
+    "buy": 0.75,
+    "exit": 0.3,
+    "train_ret": 18.39,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002101.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 26.09,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002102.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002103.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 58.81,
+    "train_trades": 8,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002104.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 93.8,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002105.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 35.73,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002106.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 30.74,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002107.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 9.99,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002108.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 54.97,
+    "train_trades": 6,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002109.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 17.46,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002110.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 7.93,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002111.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 29.51,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002112.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 36.42,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002114.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 1.4,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "002115.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 68.54,
+    "train_trades": 8,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002116.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 62.41,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002117.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 40.27,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002119.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 29.8,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002120.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002121.SZ": {
+    "buy": 0.75,
+    "exit": 0.3,
+    "train_ret": 56.72,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002122.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 13.27,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002123.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 69.39,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "002124.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 27.69,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "002125.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 92.0,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002126.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 58.88,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002127.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 77.92,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002128.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 19.62,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002129.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 29.29,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002130.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 17.97,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002131.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 35.13,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002132.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": 67.89,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002133.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 23.26,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002134.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 35.15,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002135.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 45.42,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002136.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 34.34,
+    "train_trades": 8,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002137.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 17.96,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002138.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 51.81,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002139.SZ": {
+    "buy": 0.65,
+    "exit": 0.35,
+    "train_ret": 28.98,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002140.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 36.42,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002141.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 102.63,
+    "train_trades": 6,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002142.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002144.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 9.83,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002145.SZ": {
+    "buy": 0.65,
+    "exit": 0.35,
+    "train_ret": 37.95,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002146.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 50.82,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002148.SZ": {
+    "buy": 0.75,
+    "exit": 0.3,
+    "train_ret": 26.68,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002149.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 36.29,
+    "train_trades": 6,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "002150.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 154.63,
+    "train_trades": 8,
+    "train_win_rate": 0.875,
+    "source": "tuned"
+  },
+  "002151.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 51.94,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002152.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 22.48,
+    "train_trades": 5,
+    "train_win_rate": 0.6,
+    "source": "tuned"
+  },
+  "002153.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 108.44,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002154.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 8.03,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "002155.SZ": {
+    "buy": 0.55,
+    "exit": 0.45,
+    "train_ret": 6.82,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002156.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 31.86,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002157.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 43.75,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002158.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 59.33,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002159.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 20.98,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002160.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 75.71,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "002161.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 46.81,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002162.SZ": {
+    "buy": 0.55,
+    "exit": 0.45,
+    "train_ret": 20.99,
+    "train_trades": 7,
+    "train_win_rate": 0.714,
+    "source": "tuned"
+  },
+  "002163.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 24.59,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002164.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 24.57,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002165.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 57.58,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002166.SZ": {
+    "buy": 0.7,
+    "exit": 0.35,
+    "train_ret": 8.26,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "002167.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 45.2,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "002168.SZ": {
+    "buy": 0.75,
+    "exit": 0.3,
+    "train_ret": 22.59,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002169.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 64.75,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002170.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 38.04,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "002171.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 52.82,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002172.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 103.19,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002173.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 24.11,
+    "train_trades": 4,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "002174.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 31.59,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002175.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 72.94,
+    "train_trades": 7,
+    "train_win_rate": 0.714,
+    "source": "tuned"
+  },
+  "002176.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 255.13,
+    "train_trades": 11,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002177.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 12.7,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002178.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 100.71,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "002179.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 22.49,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002180.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 38.01,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002181.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 16.5,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002182.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 41.76,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002183.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 50.35,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002184.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 39.76,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002185.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 22.7,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002186.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 25.14,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002187.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 59.11,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002188.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 125.76,
+    "train_trades": 11,
+    "train_win_rate": 0.818,
+    "source": "tuned"
+  },
+  "002189.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 31.64,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002190.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 22.79,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002191.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 25.17,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002192.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 34.8,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002193.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 63.89,
+    "train_trades": 7,
+    "train_win_rate": 0.714,
+    "source": "tuned"
+  },
+  "002194.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 55.89,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002195.SZ": {
+    "buy": 0.75,
+    "exit": 0.3,
+    "train_ret": 28.69,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002196.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 23.27,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002197.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 68.32,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002198.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 33.63,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002199.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 56.2,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002200.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 2.77,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002201.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 60.13,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002202.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 22.32,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002203.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 18.3,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002204.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 31.83,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002205.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 19.07,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002206.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 19.83,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002207.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 67.22,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002208.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 13.59,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002209.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 53.75,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002210.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 108.2,
+    "train_trades": 9,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002211.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 5.04,
+    "train_trades": 7,
+    "train_win_rate": 0.571,
+    "source": "tuned"
+  },
+  "002212.SZ": {
+    "buy": 0.55,
+    "exit": 0.45,
+    "train_ret": 18.78,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002213.SZ": {
+    "buy": 0.75,
+    "exit": 0.3,
+    "train_ret": 27.95,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002214.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 17.46,
+    "train_trades": 5,
+    "train_win_rate": 0.6,
+    "source": "tuned"
+  },
+  "002215.SZ": {
+    "buy": 0.7,
+    "exit": 0.35,
+    "train_ret": 20.98,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002216.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002217.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 31.46,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002218.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 49.31,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002219.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 40.51,
+    "train_trades": 9,
+    "train_win_rate": 0.556,
+    "source": "tuned"
+  },
+  "002221.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 19.08,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002222.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 33.69,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002223.SZ": {
+    "buy": 0.55,
+    "exit": 0.45,
+    "train_ret": 13.07,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002224.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 11.52,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "002225.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 25.94,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002226.SZ": {
+    "buy": 0.7,
+    "exit": 0.4,
+    "train_ret": 8.89,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002227.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 54.38,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002228.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 7.26,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002229.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 99.77,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002230.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 26.63,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002232.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": 62.28,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002233.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 10.0,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002234.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002235.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 115.92,
+    "train_trades": 12,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "002236.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 9.94,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002237.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 9.38,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002238.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 25.09,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002239.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 82.39,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "002240.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 53.27,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002241.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 38.37,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002242.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002243.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 63.69,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002244.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002245.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 91.76,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002246.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 12.4,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "002247.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 49.91,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "002248.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 124.75,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002249.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 27.98,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002250.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 29.72,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "002251.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": 20.42,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002252.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002253.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 30.95,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002254.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 22.22,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002255.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 7.1,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "002256.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 130.84,
+    "train_trades": 8,
+    "train_win_rate": 0.875,
+    "source": "tuned"
+  },
+  "002258.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 44.3,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002259.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": 34.83,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002261.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 62.82,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002262.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 16.35,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002263.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 29.38,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002264.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 30.77,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002265.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 86.9,
+    "train_trades": 8,
+    "train_win_rate": 0.875,
+    "source": "tuned"
+  },
+  "002266.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 15.54,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002267.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 29.78,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002268.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 44.28,
+    "train_trades": 6,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "002269.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 105.38,
+    "train_trades": 8,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002270.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 37.75,
+    "train_trades": 7,
+    "train_win_rate": 0.714,
+    "source": "tuned"
+  },
+  "002271.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 19.87,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "002272.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 75.59,
+    "train_trades": 6,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002273.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 35.83,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002274.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 4.1,
+    "train_trades": 4,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "002275.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 27.66,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002276.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 63.55,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002277.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 30.21,
+    "train_trades": 6,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002278.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 21.47,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002279.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 28.9,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002281.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 25.96,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002282.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 50.8,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002283.SZ": {
+    "buy": 0.75,
+    "exit": 0.3,
+    "train_ret": 26.57,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002284.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 49.98,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "002285.SZ": {
+    "buy": 0.65,
+    "exit": 0.4,
+    "train_ret": 49.77,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002286.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 9.43,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002287.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002289.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 47.52,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002290.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 10.53,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002291.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 42.85,
+    "train_trades": 5,
+    "train_win_rate": 0.6,
+    "source": "tuned"
+  },
+  "002292.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 21.04,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002293.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 12.38,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002294.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 17.0,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002295.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 33.41,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002296.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 26.33,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002297.SZ": {
+    "buy": 0.65,
+    "exit": 0.35,
+    "train_ret": 33.9,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002298.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 47.97,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002299.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 19.12,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002300.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 47.57,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002301.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 23.28,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002302.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 17.68,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002303.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 31.29,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002304.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 13.7,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002305.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 119.93,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002306.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 12.88,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002307.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 20.01,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002309.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 95.22,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002310.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 31.5,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002311.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 6.82,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002312.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 40.46,
+    "train_trades": 6,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002313.SZ": {
+    "buy": 0.65,
+    "exit": 0.45,
+    "train_ret": 2.89,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "002314.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002315.SZ": {
+    "buy": 0.55,
+    "exit": 0.45,
+    "train_ret": 66.93,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002316.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 49.52,
+    "train_trades": 10,
+    "train_win_rate": 0.7,
+    "source": "tuned"
+  },
+  "002317.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 25.59,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002318.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 27.85,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002319.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 30.37,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002320.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 20.48,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002321.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 38.7,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002322.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 68.93,
+    "train_trades": 6,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002323.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 37.05,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002324.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 16.73,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "002326.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 54.2,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002327.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 10.39,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002328.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 58.57,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002329.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 36.19,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002330.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 31.88,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "002331.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 49.1,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002332.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": -1.55,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "002333.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 3.58,
+    "train_trades": 3,
+    "train_win_rate": 0.333,
+    "source": "tuned"
+  },
+  "002334.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 97.2,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002335.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 40.92,
+    "train_trades": 5,
+    "train_win_rate": 0.6,
+    "source": "tuned"
+  },
+  "002337.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 42.04,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002338.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 38.33,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002339.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 17.81,
+    "train_trades": 6,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "002340.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 22.0,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002342.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 33.01,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002343.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 75.1,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002344.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 14.01,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002345.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 8.68,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002346.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 49.68,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "002347.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 25.13,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002348.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 144.11,
+    "train_trades": 12,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "002349.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": 84.76,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002350.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 29.08,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002351.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 62.21,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002352.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 19.14,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002353.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 36.65,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002354.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 75.88,
+    "train_trades": 9,
+    "train_win_rate": 0.778,
+    "source": "tuned"
+  },
+  "002355.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 44.75,
+    "train_trades": 8,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002356.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 163.25,
+    "train_trades": 12,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002357.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 66.41,
+    "train_trades": 6,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002358.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 38.52,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002360.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 51.79,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002361.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 28.79,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002362.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 28.39,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002363.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 35.87,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002364.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 34.59,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002365.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002366.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 46.88,
+    "train_trades": 7,
+    "train_win_rate": 0.714,
+    "source": "tuned"
+  },
+  "002367.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 12.16,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002368.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 58.87,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002369.SZ": {
+    "buy": 0.75,
+    "exit": 0.35,
+    "train_ret": 22.54,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002370.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 113.95,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002371.SZ": {
+    "buy": 0.55,
+    "exit": 0.45,
+    "train_ret": 1.22,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "002372.SZ": {
+    "buy": 0.65,
+    "exit": 0.35,
+    "train_ret": 24.76,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002373.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 28.04,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002374.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 47.72,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002375.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 45.98,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002376.SZ": {
+    "buy": 0.75,
+    "exit": 0.3,
+    "train_ret": 35.68,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002377.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 29.74,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002378.SZ": {
+    "buy": 0.65,
+    "exit": 0.35,
+    "train_ret": 54.49,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002379.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002380.SZ": {
+    "buy": 0.8,
+    "exit": 0.3,
+    "train_ret": 12.55,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002381.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 0.08,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "002382.SZ": {
+    "buy": 0.7,
+    "exit": 0.45,
+    "train_ret": -1.28,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "002383.SZ": {
+    "buy": 0.7,
+    "exit": 0.35,
+    "train_ret": 17.85,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002384.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 42.54,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002385.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 42.53,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002386.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 30.81,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002387.SZ": {
+    "buy": 0.8,
+    "exit": 0.3,
+    "train_ret": 19.96,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002388.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 26.97,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002389.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 32.24,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002390.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 31.26,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002391.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002392.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 13.52,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002393.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 17.87,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002394.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002395.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 38.19,
+    "train_trades": 8,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002396.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 31.56,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002397.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 24.22,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002398.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 9.74,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002399.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 34.9,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002400.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": 40.82,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002401.SZ": {
+    "buy": 0.75,
+    "exit": 0.35,
+    "train_ret": 27.63,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002402.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 46.13,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002403.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 8.42,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002404.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 39.98,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002405.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 28.1,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002406.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 6.73,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002407.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 50.65,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002408.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 22.95,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002409.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": 24.79,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002410.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002412.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 18.3,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002413.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 39.39,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002414.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 13.22,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "002415.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002416.SZ": {
+    "buy": 0.65,
+    "exit": 0.35,
+    "train_ret": 51.35,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002418.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 62.44,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002419.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 35.59,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002420.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 70.07,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002421.SZ": {
+    "buy": 0.75,
+    "exit": 0.3,
+    "train_ret": 26.16,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002422.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002423.SZ": {
+    "buy": 0.6,
+    "exit": 0.45,
+    "train_ret": 5.5,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002424.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 43.08,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002425.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": 79.3,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "002426.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 25.36,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002427.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 48.63,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002428.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 111.44,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002429.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 48.3,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002430.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 28.18,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002431.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 57.05,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002432.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 61.85,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002434.SZ": {
+    "buy": 0.6,
+    "exit": 0.45,
+    "train_ret": 15.62,
+    "train_trades": 5,
+    "train_win_rate": 0.6,
+    "source": "tuned"
+  },
+  "002436.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 25.55,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002437.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 18.64,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002438.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": -2.69,
+    "train_trades": 4,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "002439.SZ": {
+    "buy": 0.55,
+    "exit": 0.45,
+    "train_ret": 12.58,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002440.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 12.71,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002441.SZ": {
+    "buy": 0.65,
+    "exit": 0.35,
+    "train_ret": 30.05,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002442.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 28.04,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002443.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 23.18,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002444.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 32.02,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002445.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 54.04,
+    "train_trades": 8,
+    "train_win_rate": 0.875,
+    "source": "tuned"
+  },
+  "002446.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 51.46,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002448.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 18.18,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002449.SZ": {
+    "buy": 0.75,
+    "exit": 0.3,
+    "train_ret": 28.75,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002451.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 67.53,
+    "train_trades": 7,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002452.SZ": {
+    "buy": 0.75,
+    "exit": 0.3,
+    "train_ret": 25.9,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002453.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 19.53,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002454.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 91.83,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002455.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 57.56,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002456.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 22.82,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002457.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 10.5,
+    "train_trades": 5,
+    "train_win_rate": 0.6,
+    "source": "tuned"
+  },
+  "002458.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 37.57,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002459.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002460.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 40.19,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002461.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 22.45,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002462.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002463.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 50.23,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002465.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 28.46,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002466.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 59.6,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002467.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 54.97,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002468.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 54.16,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002469.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 14.24,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002470.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 51.36,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "002471.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 28.56,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002472.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 31.88,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002474.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 37.64,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002475.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 19.26,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002476.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 70.51,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002478.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 9.3,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002479.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 23.27,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "002480.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 117.49,
+    "train_trades": 8,
+    "train_win_rate": 0.875,
+    "source": "tuned"
+  },
+  "002481.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 36.22,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002482.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 81.34,
+    "train_trades": 6,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002483.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 88.86,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002484.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 38.96,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002485.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 6.49,
+    "train_trades": 4,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "002486.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 69.23,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002487.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 110.92,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002488.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 36.83,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002489.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 25.74,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002490.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 63.84,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002491.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 26.21,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002492.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 19.04,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002493.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 13.32,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002494.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 20.05,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002495.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 12.58,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002496.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 16.79,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "002497.SZ": {
+    "buy": 0.65,
+    "exit": 0.35,
+    "train_ret": 100.61,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002498.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 27.79,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002500.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 7.86,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002501.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 37.76,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002506.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 92.42,
+    "train_trades": 8,
+    "train_win_rate": 0.875,
+    "source": "tuned"
+  },
+  "002507.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 10.68,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002508.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 20.53,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002510.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 96.68,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "002511.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 24.28,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002512.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 45.94,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002513.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 28.32,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002514.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 41.02,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002515.SZ": {
+    "buy": 0.55,
+    "exit": 0.45,
+    "train_ret": 19.61,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002516.SZ": {
+    "buy": 0.6,
+    "exit": 0.45,
+    "train_ret": 33.45,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002517.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 74.02,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002518.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 57.28,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002519.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": 15.43,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002520.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 26.61,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002521.SZ": {
+    "buy": 0.65,
+    "exit": 0.35,
+    "train_ret": 10.79,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002522.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 26.65,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002523.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 6.4,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002524.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 66.36,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002526.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 31.61,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002527.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 30.08,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002528.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 43.85,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002529.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 195.24,
+    "train_trades": 7,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002530.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 107.44,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "002531.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 57.62,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002532.SZ": {
+    "buy": 0.7,
+    "exit": 0.35,
+    "train_ret": 17.67,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002533.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 29.92,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002534.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 78.06,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002535.SZ": {
+    "buy": 0.65,
+    "exit": 0.35,
+    "train_ret": 7.67,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002536.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 55.17,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002537.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 171.18,
+    "train_trades": 6,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002538.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 20.99,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002539.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 36.15,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002540.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 47.47,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002541.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 53.23,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002542.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 12.47,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002543.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 46.73,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002544.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 48.11,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002545.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 38.5,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002546.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 16.8,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002547.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 168.19,
+    "train_trades": 7,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002548.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 27.32,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002549.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 50.54,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002550.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 36.97,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002551.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 38.4,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002552.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 85.35,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002553.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 207.07,
+    "train_trades": 10,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002554.SZ": {
+    "buy": 0.7,
+    "exit": 0.3,
+    "train_ret": 27.16,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002555.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 41.48,
+    "train_trades": 3,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "002556.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 29.67,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002557.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002558.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 9.75,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002559.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 97.79,
+    "train_trades": 9,
+    "train_win_rate": 0.778,
+    "source": "tuned"
+  },
+  "002560.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 83.3,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002561.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002562.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 38.68,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002563.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": -4.35,
+    "train_trades": 4,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "002564.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 91.26,
+    "train_trades": 14,
+    "train_win_rate": 0.643,
+    "source": "tuned"
+  },
+  "002565.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 59.65,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002566.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 33.81,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002567.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 21.31,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002568.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 16.34,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002569.SZ": {
+    "buy": 0.6,
+    "exit": 0.4,
+    "train_ret": 0.51,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "002570.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 83.53,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002571.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 56.92,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002572.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 6.16,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002573.SZ": {
+    "buy": 0.75,
+    "exit": 0.4,
+    "train_ret": 17.96,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002574.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 6.77,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002575.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 20.12,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002576.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 158.95,
+    "train_trades": 10,
+    "train_win_rate": 0.9,
+    "source": "tuned"
+  },
+  "002577.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 74.63,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002578.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 29.29,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002579.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 55.0,
+    "train_trades": 7,
+    "train_win_rate": 0.714,
+    "source": "tuned"
+  },
+  "002580.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 51.75,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002581.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 27.76,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002582.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": 19.81,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002583.SZ": {
+    "buy": 0.7,
+    "exit": 0.35,
+    "train_ret": 22.82,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002584.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 92.85,
+    "train_trades": 6,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002585.SZ": {
+    "buy": 0.6,
+    "exit": 0.45,
+    "train_ret": 29.57,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002586.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002587.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 24.14,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002588.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002589.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 8.17,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002590.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 55.96,
+    "train_trades": 7,
+    "train_win_rate": 0.857,
+    "source": "tuned"
+  },
+  "002591.SZ": {
+    "buy": 0.6,
+    "exit": 0.35,
+    "train_ret": 83.34,
+    "train_trades": 6,
+    "train_win_rate": 0.667,
+    "source": "tuned"
+  },
+  "002592.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 107.24,
+    "train_trades": 14,
+    "train_win_rate": 0.643,
+    "source": "tuned"
+  },
+  "002593.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 47.68,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002594.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 33.72,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002595.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "source": "default"
+  },
+  "002596.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 42.74,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002597.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 31.86,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002598.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 78.17,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002599.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 71.82,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002600.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 51.29,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002601.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 35.97,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002602.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 19.47,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002603.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 7.56,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "002605.SZ": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 12.18,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002606.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 67.73,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002607.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 38.89,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002608.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 11.23,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002609.SZ": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 22.09,
+    "train_trades": 4,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002611.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 30.38,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002612.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 87.86,
+    "train_trades": 6,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002613.SZ": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 135.38,
+    "train_trades": 7,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002614.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 25.81,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002615.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 51.94,
+    "train_trades": 6,
+    "train_win_rate": 0.833,
+    "source": "tuned"
+  },
+  "002616.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": -0.11,
+    "train_trades": 2,
+    "train_win_rate": 0.5,
+    "source": "tuned"
+  },
+  "002617.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 51.29,
+    "train_trades": 5,
+    "train_win_rate": 0.8,
+    "source": "tuned"
+  },
+  "002620.SZ": {
+    "buy": 0.55,
+    "exit": 0.45,
+    "train_ret": 30.04,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002622.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 160.47,
+    "train_trades": 7,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002623.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 139.28,
+    "train_trades": 12,
+    "train_win_rate": 0.75,
+    "source": "tuned"
+  },
+  "002624.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 34.97,
+    "train_trades": 4,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "002625.SZ": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 160.68,
+    "train_trades": 8,
+    "train_win_rate": 0.875,
+    "source": "tuned"
+  },
+  "002626.SZ": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 45.94,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "600104.SH": {
+    "buy": 0.6,
+    "exit": 0.3,
+    "train_ret": 29.84,
+    "train_trades": 3,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "600476.SH": {
+    "buy": 0.55,
+    "exit": 0.3,
+    "train_ret": 165.88,
+    "train_trades": 29,
+    "train_win_rate": 0.621,
+    "source": "tuned"
+  },
+  "600519.SH": {
+    "buy": 0.55,
+    "exit": 0.35,
+    "train_ret": 12.23,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "603319.SH": {
+    "buy": 0.65,
+    "exit": 0.3,
+    "train_ret": 56.82,
+    "train_trades": 5,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  },
+  "688111.SH": {
+    "buy": 0.55,
+    "exit": 0.4,
+    "train_ret": 26.26,
+    "train_trades": 2,
+    "train_win_rate": 1.0,
+    "source": "tuned"
+  }
+}

@@ -14,8 +14,18 @@ Uses the OHLCV cache for speed (no DB hits).
 """
 from __future__ import annotations
 
-import json
 import os
+# Cap OpenMP/BLAS threads BEFORE importing xgboost or torch — both ship libomp,
+# loading two copies on macOS causes pthread allocation crashes (SIGSEGV in
+# __kmp_create_worker). Single-runtime env keeps things stable.
+os.environ.setdefault("OMP_NUM_THREADS", "4")
+os.environ.setdefault("MKL_NUM_THREADS", "4")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "4")
+os.environ.setdefault("VECLIB_MAXIMUM_THREADS", "4")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "4")
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+
+import json
 import sys
 import time
 from datetime import date
@@ -72,6 +82,7 @@ XGB_PARAMS = {
     "min_child_weight": 5,
     "eval_metric": "auc",
     "verbosity": 0,
+    "nthread": 4,  # match OMP_NUM_THREADS
 }
 XGB_ROUNDS = 200
 XGB_SEEDS = [42, 123, 7, 2024, 88]
@@ -349,8 +360,22 @@ def main():
     print(f"  Cutoff: {CUTOFF.date()}  (train < cutoff < test)")
     print("=" * 72)
 
-    Xtr_xgb, Xtr_seq, ytr, gtr, Xte_xgb, Xte_seq, yte, gte = build_dataset_from_cache()
-    print(f"Dataset built in {time.time()-t0:.0f}s")
+    cache_path = OUT_DIR / "compare_dataset.npz"
+    if cache_path.exists() and "--rebuild" not in sys.argv:
+        print(f"Loading cached dataset from {cache_path}...", flush=True)
+        d = np.load(cache_path, allow_pickle=True)
+        Xtr_xgb = d["Xtr_xgb"]; Xtr_seq = d["Xtr_seq"]
+        ytr = d["ytr"]; gtr = d["gtr"]
+        Xte_xgb = d["Xte_xgb"]; Xte_seq = d["Xte_seq"]
+        yte = d["yte"]; gte = d["gte"]
+        print(f"  train={len(ytr)}  test={len(yte)}", flush=True)
+    else:
+        Xtr_xgb, Xtr_seq, ytr, gtr, Xte_xgb, Xte_seq, yte, gte = build_dataset_from_cache()
+        print(f"Dataset built in {time.time()-t0:.0f}s", flush=True)
+        np.savez(cache_path,
+                 Xtr_xgb=Xtr_xgb, Xtr_seq=Xtr_seq, ytr=ytr, gtr=gtr,
+                 Xte_xgb=Xte_xgb, Xte_seq=Xte_seq, yte=yte, gte=gte)
+        print(f"Cached dataset to {cache_path}", flush=True)
 
     xgb_preds = train_xgb_ensemble(Xtr_xgb, ytr, Xte_xgb, yte)
     pt_preds = train_patchtst(Xtr_seq, ytr, Xte_seq, yte)

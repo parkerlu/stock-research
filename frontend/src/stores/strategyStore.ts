@@ -1,14 +1,17 @@
 import { create } from "zustand";
-import type { BacktestReport, FactoryJob, StrategyItem } from "../types/strategy";
+import type { BacktestReport, FactoryJob, StrategyItem, TradeAction } from "../types/strategy";
 import {
   getBacktestReport,
   getFactoryJob,
   listStrategies,
+  listTemplates,
   pinStrategy as apiPin,
   runBacktest as apiRunBacktest,
   runFactory as apiRunFactory,
+  tryTemplate,
   unpinStrategy as apiUnpin,
 } from "../api/strategy";
+import type { TemplateInfo, TryTemplateResult } from "../api/strategy";
 
 interface StrategyState {
   strategies: StrategyItem[];
@@ -28,6 +31,16 @@ interface StrategyState {
   reportLoading: boolean;
   runAndShowReport: (tsCode: string, strategyId: number) => Promise<void>;
   clearReport: () => void;
+
+  tradeActions: TradeAction[] | null;
+  clearTradeActions: () => void;
+
+  templates: TemplateInfo[];
+  fetchTemplates: () => Promise<void>;
+  adhocResult: TryTemplateResult | null;
+  adhocRunning: boolean;
+  runAdhocTemplate: (tsCode: string, templateId: string) => Promise<void>;
+  clearAdhocResult: () => void;
 }
 
 let pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -114,6 +127,9 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
     }
   },
 
+  tradeActions: null,
+  clearTradeActions: () => set({ tradeActions: null }),
+
   selectedReport: null,
   reportLoading: false,
   runAndShowReport: async (tsCode, strategyId) => {
@@ -131,7 +147,7 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
           const report = await getBacktestReport(res.id);
           if (report.status === "completed" || report.status === "failed") {
             clearInterval(poll);
-            set({ selectedReport: report, reportLoading: false });
+            set({ selectedReport: report, tradeActions: report.actions ?? null, reportLoading: false });
           }
         } catch {
           clearInterval(poll);
@@ -144,4 +160,31 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
   },
 
   clearReport: () => set({ selectedReport: null }),
+
+  templates: [],
+  fetchTemplates: async () => {
+    try {
+      const data = await listTemplates();
+      set({ templates: data });
+    } catch {
+      set({ templates: [] });
+    }
+  },
+
+  adhocResult: null,
+  adhocRunning: false,
+  runAdhocTemplate: async (tsCode, templateId) => {
+    set({ adhocRunning: true, adhocResult: null });
+    try {
+      const result = await tryTemplate({ ts_code: tsCode, template_id: templateId });
+      set({
+        adhocResult: result,
+        tradeActions: result.actions as TradeAction[],
+        adhocRunning: false,
+      });
+    } catch {
+      set({ adhocRunning: false });
+    }
+  },
+  clearAdhocResult: () => set({ adhocResult: null, tradeActions: null }),
 }));

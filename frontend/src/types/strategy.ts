@@ -33,6 +33,7 @@ export interface BacktestReport {
   strategy_id: number | null;
   metrics: BacktestMetrics | null;
   trades: TradeDetail[] | null;
+  actions: TradeAction[] | null;
   equity_curve: EquityPoint[] | null;
   created_at: string | null;
   completed_at: string | null;
@@ -56,6 +57,17 @@ export interface TradeDetail {
   exit_price: number;
   shares: number;
   pnl: number;
+}
+
+export interface TradeAction {
+  date: string;
+  type: "buy" | "sell";
+  price: number;
+  shares: number;
+  amount: number;
+  position_level: number;
+  pnl?: number;
+  pnl_pct?: number;
 }
 
 export interface EquityPoint {

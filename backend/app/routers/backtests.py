@@ -23,7 +23,6 @@ class RunBacktestRequest(BaseModel):
     start_date: date
     end_date: date
     initial_capital: float = 10000.0
-    position_ratios: list[int] = [40, 30, 30]
 
 
 async def _execute_backtest(run_id: str, request: RunBacktestRequest):
@@ -56,7 +55,6 @@ async def _execute_backtest(run_id: str, request: RunBacktestRequest):
             result = run_backtest(
                 candles, signals,
                 initial_capital=request.initial_capital,
-                position_ratios=request.position_ratios,
             )
 
             bt.status = "completed"
@@ -65,6 +63,7 @@ async def _execute_backtest(run_id: str, request: RunBacktestRequest):
                 if k not in ("trades", "equity_curve")
             }
             bt.trades = result["trades"]
+            bt.actions = result["actions"]
             bt.equity_curve = result["equity_curve"]
             bt.completed_at = datetime.now()
             await db.commit()
@@ -89,7 +88,6 @@ async def run(
         start_date=body.start_date,
         end_date=body.end_date,
         initial_capital=body.initial_capital,
-        position_ratios=body.position_ratios,
         status="running",
     )
     db.add(bt)
@@ -97,6 +95,74 @@ async def run(
 
     background_tasks.add_task(_execute_backtest, run_id, body)
     return {"id": run_id, "status": "running"}
+
+
+class TryTemplateRequest(BaseModel):
+    ts_code: str
+    template_id: str
+    params: dict | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+
+
+@router.get("/templates")
+def list_templates(active_only: bool = True):
+    """List strategy templates. By default returns only active pool entries
+    in user-defined order; pass `active_only=false` to see every registered
+    template (useful for debugging)."""
+    from app.services.strategy_pool_service import list_pool
+    pool = list_pool(active_only=active_only)
+    out = []
+    for e in pool:
+        tid = e["template_id"]
+        if tid not in TEMPLATE_REGISTRY:
+            continue
+        out.append({
+            "template_id": tid,
+            "name": e.get("display_name") or TEMPLATE_REGISTRY[tid].__name__,
+            "concept": e.get("concept", ""),
+            "is_active": e.get("is_active", True),
+        })
+    return out
+
+
+@router.post("/try")
+async def try_template(
+    body: TryTemplateRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Run a strategy template ad-hoc (no DB persistence). Returns result synchronously."""
+    if body.template_id not in TEMPLATE_REGISTRY:
+        raise HTTPException(status_code=400, detail=f"Unknown template: {body.template_id}")
+
+    end = body.end_date or date.today()
+    start = body.start_date or date(end.year - 5, end.month, end.day)
+
+    candles = await get_candle_dicts(db, body.ts_code, start, end)
+    if not candles:
+        raise HTTPException(status_code=404, detail="No candles in this range")
+
+    import pandas as pd
+    template_cls = TEMPLATE_REGISTRY[body.template_id]
+    template = template_cls(**(body.params or {}))
+    # Make stock-aware strategies able to look up per-stock parameters
+    if hasattr(template, "ts_code"):
+        template.ts_code = body.ts_code
+    df = pd.DataFrame(candles)
+    signals = template.generate_signals(df)
+
+    result = run_backtest(candles, signals, initial_capital=10000)
+
+    return {
+        "ts_code": body.ts_code,
+        "template_id": body.template_id,
+        "start_date": start.isoformat(),
+        "end_date": end.isoformat(),
+        "metrics": {k: v for k, v in result.items()
+                    if k not in ("trades", "equity_curve", "actions")},
+        "trades": result["trades"],
+        "actions": result["actions"],
+    }
 
 
 @router.get("/{run_id}/report")
@@ -111,6 +177,7 @@ async def report(run_id: str, db: AsyncSession = Depends(get_db)):
         "strategy_id": bt.strategy_id,
         "metrics": bt.metrics,
         "trades": bt.trades,
+        "actions": bt.actions,
         "equity_curve": bt.equity_curve,
         "created_at": bt.created_at.isoformat() if bt.created_at else None,
         "completed_at": bt.completed_at.isoformat() if bt.completed_at else None,

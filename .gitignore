@@ -7,3 +7,16 @@ __pycache__/
 node_modules/
 data/
 backend/cache/
+# Large training/research artifacts (regenerable)
+backend/models/compare_dataset.npz
+backend/models/compare_*_preds.npy
+backend/models/compare_y_te.npy
+backend/models/patchtst_*.pt
+backend/models/patchtst_v*_norm.npy
+backend/models/lambdarank*.json
+backend/models/maimai_filter_*_SH.json
+backend/models/maimai_filter_*_SZ.json
+backend/models/ml_step1_data.csv
+backend/models/ml_filter_v1.json
+backend/models/cross_sectional_ranks.parquet
+backend/app/services/cross_sectional_ranks.parquet

@@ -17,7 +17,6 @@ from app.services.strategy_templates import TEMPLATE_REGISTRY, generate_all_cand
 def evaluate_single_candidate(
     candles: list[dict],
     candidate: dict,
-    position_ratios: list[int],
 ) -> dict:
     """Evaluate a single strategy candidate (runs in worker process)."""
     template_cls = TEMPLATE_REGISTRY[candidate["template_id"]]
@@ -25,7 +24,7 @@ def evaluate_single_candidate(
 
     df = pd.DataFrame(candles)
     signals = template.generate_signals(df)
-    metrics = run_backtest(candles, signals, initial_capital=10000, position_ratios=position_ratios)
+    metrics = run_backtest(candles, signals, initial_capital=10000)
 
     return {
         "template_id": candidate["template_id"],
@@ -49,7 +48,12 @@ def filter_and_rank(results: list[dict], top_n: int = 50) -> list[dict]:
 
 
 async def get_candle_dicts(db: AsyncSession, ts_code: str, start: date, end: date) -> list[dict]:
-    """Fetch candle data from DB as list of dicts for backtest."""
+    """Fetch candle data as list of dicts for backtest.
+
+    Applies BACKWARD adjustment (latest price preserved) to match exactly
+    what the K-line chart shows. Without this, dividends/splits cause the
+    backtest to compute returns from raw prices that don't match the chart.
+    """
     stmt = (
         select(DailyCandle)
         .where(and_(
@@ -61,13 +65,24 @@ async def get_candle_dicts(db: AsyncSession, ts_code: str, start: date, end: dat
     )
     result = await db.execute(stmt)
     rows = result.scalars().all()
+    if not rows:
+        return []
+    # Use GLOBAL latest adj_factor (not within range) so prices match the chart
+    latest_row = (await db.execute(
+        select(DailyCandle.adj_factor)
+        .where(DailyCandle.ts_code == ts_code)
+        .order_by(DailyCandle.trade_date.desc())
+        .limit(1)
+    )).scalar_one_or_none()
+    latest_adj = float(latest_row) if latest_row else 1.0
     return [
         {
             "trade_date": r.trade_date,
-            "open": float(r.open),
-            "high": float(r.high),
-            "low": float(r.low),
-            "close": float(r.close),
+            # Apply factor = adj / latest_adj — same formula as quote_service
+            "open": round(float(r.open) * (float(r.adj_factor or 1.0) / latest_adj), 4),
+            "high": round(float(r.high) * (float(r.adj_factor or 1.0) / latest_adj), 4),
+            "low":  round(float(r.low)  * (float(r.adj_factor or 1.0) / latest_adj), 4),
+            "close":round(float(r.close)* (float(r.adj_factor or 1.0) / latest_adj), 4),
             "vol": r.vol,
             "amount": float(r.amount),
         }
@@ -79,13 +94,9 @@ async def run_factory(
     db: AsyncSession,
     ts_code: str,
     cutoff_date: date,
-    position_ratios: list[int] | None = None,
     job_id: str | None = None,
 ) -> str:
     """Run the strategy factory: generate candidates, backtest, filter, persist top 50."""
-    if position_ratios is None:
-        position_ratios = [40, 30, 30]
-
     candidates = generate_all_candidates()
 
     # Use existing job or create new one
@@ -103,10 +114,7 @@ async def run_factory(
             ts_code=ts_code,
             status="running",
             total_candidates=len(candidates),
-            config={
-                "cutoff_date": cutoff_date.isoformat(),
-                "position_ratios": position_ratios,
-            },
+            config={"cutoff_date": cutoff_date.isoformat()},
         )
         db.add(job)
         await db.commit()
@@ -127,7 +135,7 @@ async def run_factory(
     try:
         with ProcessPoolExecutor(max_workers=4) as executor:
             futures = [
-                executor.submit(evaluate_single_candidate, candles, c, position_ratios)
+                executor.submit(evaluate_single_candidate, candles, c)
                 for c in candidates
             ]
             for i, future in enumerate(futures):
