@@ -105,12 +105,57 @@ def _walk_classic(i, close, high, low, p, n):
     return end, close[end]
 
 
+def _walk_atr_greedy(i, close, high, low, p, n):
+    """Greedy ATR-based trailing stop. Lets winners run further than classic %.
+
+    - hard stop -10% (always)
+    - activate trailing only after gain >= activation
+    - trailing stop = peak - atr_mult × ATR(14)
+    - time stop falls back at end
+    """
+    entry = close[i]
+    hard_stop = entry * 0.90
+    atr_mult = p.get("atr_mult", 2.0)
+    activation = p.get("trail_activation", 0.08)
+    time_stop = p.get("time_stop", 75)
+    peak = high[i]
+    activated = False
+
+    # Wilder ATR(14) using close-aware true range, computed on the fly via
+    # a leaky integrator α = 1/14.
+    alpha = 1.0 / 14.0
+    atr = max(high[i] - low[i], 1e-9)
+
+    end = min(i + time_stop, n - 1)
+    for k in range(i + 1, end + 1):
+        # Update ATR incrementally
+        prev_close = close[k - 1] if k - 1 >= 0 else close[k]
+        tr = max(
+            high[k] - low[k],
+            abs(high[k] - prev_close),
+            abs(low[k] - prev_close),
+        )
+        atr = (1 - alpha) * atr + alpha * tr
+
+        peak = max(peak, high[k])
+        if peak / entry - 1 >= activation:
+            activated = True
+        if low[k] <= hard_stop:
+            return k, hard_stop
+        if activated and atr > 0:
+            stop = peak - atr_mult * atr
+            if low[k] <= stop:
+                return k, max(stop, hard_stop)
+    return end, close[end]
+
+
 class MaimaiFilterStrategy(StrategyTemplate):
     """Filtered maimai strategy. Score threshold tunable per preset."""
 
     template_id = "mm-filter"
     _score_threshold = 0.50
-    _params: dict = {"trail_pct": 0.04, "trail_activation": 0.05, "time_stop": 30}
+    _exit_mode = "atr_greedy"   # "classic" or "atr_greedy"
+    _params: dict = {"atr_mult": 2.0, "trail_activation": 0.08, "time_stop": 75}
 
     def __init__(self, ts_code: str | None = None):
         self.ts_code = ts_code
@@ -178,7 +223,8 @@ class MaimaiFilterStrategy(StrategyTemplate):
                 continue
             if i > 0 and close[i] > close[i - 1] * 1.099:
                 continue
-            exit_idx, _ = _walk_classic(i, close, high, low, self._params, n)
+            walker = _walk_atr_greedy if self._exit_mode == "atr_greedy" else _walk_classic
+            exit_idx, _ = walker(i, close, high, low, self._params, n)
             signals.append({"date": dates.iloc[i], "action": "buy"})
             signals.append({"date": dates.iloc[exit_idx], "action": "sell"})
             in_pos = True
@@ -188,34 +234,37 @@ class MaimaiFilterStrategy(StrategyTemplate):
 
 # ---- Presets at different score thresholds ----
 
-class MaimaiFilter50(MaimaiFilterStrategy):
-    """thr 0.50: 在 603319 上保留 8 信号 / 87.5% 胜率."""
-    template_id = "mm-50"
-    _score_threshold = 0.50
-    _params = {"trail_pct": 0.04, "trail_activation": 0.05, "time_stop": 30}
+class MaimaiFilter40(MaimaiFilterStrategy):
+    """thr 0.40 + 贪婪 ATR(1.8)：信号多，给波段空间。"""
+    template_id = "mm-40"
+    _score_threshold = 0.40
+    _exit_mode = "atr_greedy"
+    _params = {"atr_mult": 1.8, "trail_activation": 0.06, "time_stop": 60}
 
     @property
     def name(self) -> str:
-        return "MaimaiFilter_50"
+        return "MaimaiFilter_40_Greedy"
+
+
+class MaimaiFilter50(MaimaiFilterStrategy):
+    """thr 0.50 + 贪婪 ATR(2.0)：sweet spot — 高胜率 + 吃波段."""
+    template_id = "mm-50"
+    _score_threshold = 0.50
+    _exit_mode = "atr_greedy"
+    _params = {"atr_mult": 2.0, "trail_activation": 0.08, "time_stop": 75}
+
+    @property
+    def name(self) -> str:
+        return "MaimaiFilter_50_Greedy"
 
 
 class MaimaiFilter55(MaimaiFilterStrategy):
-    """thr 0.55: 更严格，603319 上 4/4 全胜."""
+    """thr 0.55 + 贪婪 ATR(2.5)：严格 + 最宽 trail，吃最大波段."""
     template_id = "mm-55"
     _score_threshold = 0.55
-    _params = {"trail_pct": 0.04, "trail_activation": 0.05, "time_stop": 30}
+    _exit_mode = "atr_greedy"
+    _params = {"atr_mult": 2.5, "trail_activation": 0.10, "time_stop": 90}
 
     @property
     def name(self) -> str:
-        return "MaimaiFilter_55"
-
-
-class MaimaiFilter40(MaimaiFilterStrategy):
-    """thr 0.40: 信号多一些，权衡覆盖率."""
-    template_id = "mm-40"
-    _score_threshold = 0.40
-    _params = {"trail_pct": 0.04, "trail_activation": 0.05, "time_stop": 30}
-
-    @property
-    def name(self) -> str:
-        return "MaimaiFilter_40"
+        return "MaimaiFilter_55_GreedyWide"
