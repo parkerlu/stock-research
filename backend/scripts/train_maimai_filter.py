@@ -50,23 +50,63 @@ MIN_HISTORY = 130        # bars of history required before signal
 
 
 def find_maimai_transitions(df: pd.DataFrame) -> list[int]:
-    """Return list of bar indices i where:
-       - mm_jibuy + mm_duanbuy + mm_zhunbei == 0 at bar i
-       - sum > 0 at bar i-1 (at least one was active and just turned off)
+    """Return bar indices where the TDX 买卖很准 buy panel just turned all-clear.
+
+    Uses the EXACT TDX formula (LLV not HHV):
+      买卖 = LLV(MA(typ, 5), 10)                    # buy-side threshold
+      急买奇准 = LLV(close < 买卖, 5)                  # ALL 5 bars under threshold
+      短买奇准 = LLV(close < 买卖, 10)                 # ALL 10 bars under threshold
+      准备现金 = (动向趋势线 > 88) AND (神偷线 < 5.8)   # DMI capitulation
+    Signal: sum just dropped from > 0 to == 0.
+
+    Also caches feature-friendly mm_* arrays in df.attrs so
+    compute_features() reuses the same series.
     """
-    if len(df) < 30:
+    n = len(df)
+    if n < 30:
         return []
-    mm = precompute_maimai(df)
-    df.attrs["_mm_cache"] = mm  # cache for downstream feature compute
+    close = df["close"].values.astype(float)
+    high = df["high"].values.astype(float)
+    low = df["low"].values.astype(float)
 
-    j = mm["mm_jibuy_active"]
-    d = mm["mm_duanbuy_active"]
-    z = mm["mm_zhunbei_active"]
-    sum_now = j + d + z
+    typ = (close + high + low) / 3.0
+    ban = pd.Series(typ).rolling(5, min_periods=5).mean().values
+    ban_s = pd.Series(ban)
+    maimai_thr = ban_s.rolling(10, min_periods=10).min().values
+    below_buy = np.where(np.isnan(maimai_thr), 0.0,
+                         (close < maimai_thr).astype(float))
+    bb = pd.Series(below_buy)
+    jibuy = (bb.rolling(5, min_periods=5).min() > 0).astype(float).values
+    duanbuy = (bb.rolling(10, min_periods=10).min() > 0).astype(float).values
+
+    # 准备现金 — same as before (DMI 5-bar) but match TDX scale (1 vs 80 doesn't matter)
+    prev_h = np.concatenate(([high[0]], high[:-1]))
+    prev_l = np.concatenate(([low[0]], low[:-1]))
+    prev_c = np.concatenate(([close[0]], close[:-1]))
+    tr = np.maximum.reduce([high - low, np.abs(high - prev_c), np.abs(low - prev_c)])
+    hd = high - prev_h; ld = prev_l - low
+    pos_hd = np.where((hd > 0) & (hd > ld), hd, 0.0)
+    pos_ld = np.where((ld > 0) & (ld > hd), ld, 0.0)
+    td = pd.Series(tr).rolling(5, min_periods=5).sum().values
+    dmp = pd.Series(pos_hd).rolling(5, min_periods=5).sum().values
+    dmm = pd.Series(pos_ld).rolling(5, min_periods=5).sum().values
+    with np.errstate(divide="ignore", invalid="ignore"):
+        shentou = np.where(td > 0, dmp * 100.0 / td, 0.0)
+        fuzhu = np.where(td > 0, dmm * 100.0 / td, 0.0)
+        denom = fuzhu + shentou
+        dx = np.where(denom > 0, np.abs(fuzhu - shentou) / denom * 100.0, 0.0)
+    dongxiang = pd.Series(dx).rolling(3, min_periods=1).mean().values
+    zhunbei = ((dongxiang > 88) & (shentou < 5.8)).astype(float)
+
+    # Also keep the noisy precompute_maimai cache for compute_features (uses HHV).
+    # Those are FEATURES the model learned; we only changed the trigger event.
+    mm_cache = precompute_maimai(df)
+    df.attrs["_mm_cache"] = mm_cache
+
+    sum_now = jibuy + duanbuy + zhunbei
     sum_prev = np.concatenate(([0.0], sum_now[:-1]))
-
     sig = (sum_now == 0) & (sum_prev > 0)
-    return [i for i in range(1, len(df)) if sig[i]]
+    return [i for i in range(1, n) if sig[i]]
 
 
 def label_event(df: pd.DataFrame, i: int) -> int | None:

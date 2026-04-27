@@ -43,16 +43,25 @@ def _shift1(arr):
 
 
 def _maimai_transition_mask(close, high, low) -> np.ndarray:
-    """True at bar i where (jibuy+duanbuy+zhunbei) just hit 0 from > 0."""
+    """True at bar i where (jibuy + duanbuy + zhunbei) just hit 0 from > 0.
+
+    Mirrors the TDX 买卖很准 indicator exactly:
+      买卖 = LLV(MA((H+L+C)/3, 5), 10)        # buy threshold
+      急买奇准 = LLV(close < 买卖, 5)            # close below threshold ALL 5 bars
+      短买奇准 = LLV(close < 买卖, 10)           # ... ALL 10 bars
+      准备现金 = (动向趋势线 > 88) AND (神偷线 < 5.8)
+    """
     n = len(close)
     typ = (close + high + low) / 3.0
     ban = pd.Series(typ).rolling(5, min_periods=5).mean().values
     ban_s = pd.Series(ban)
-    floor10 = ban_s.rolling(10, min_periods=10).min().values
-    below_floor = np.where(np.isnan(floor10), 0.0, (close < floor10).astype(float))
-    bf = pd.Series(below_floor)
-    jibuy = (bf.rolling(5, min_periods=1).max() > 0).astype(float).values
-    duanbuy = (bf.rolling(10, min_periods=1).max() > 0).astype(float).values
+    maimai_thr = ban_s.rolling(10, min_periods=10).min().values
+    below_buy = np.where(np.isnan(maimai_thr), 0.0,
+                         (close < maimai_thr).astype(float))
+    bb = pd.Series(below_buy)
+    # LLV(bool, n) = 1 iff ALL n bars are true → use rolling min
+    jibuy = (bb.rolling(5, min_periods=5).min() > 0).astype(float).values
+    duanbuy = (bb.rolling(10, min_periods=10).min() > 0).astype(float).values
     # 准备 = DMI(5)-based  (mirror of precompute_maimai)
     prev_h = _shift1(high); prev_l = _shift1(low); prev_c = _shift1(close)
     tr = np.maximum.reduce([high - low, np.abs(high - prev_c), np.abs(low - prev_c)])
