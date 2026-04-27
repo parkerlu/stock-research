@@ -132,6 +132,57 @@ def _walk_classic(i, close, high, low, p, n):
     return end, close[end]
 
 
+def _walk_with_mm_sell_exit(i, close, high, low, sigs, p, n):
+    """Exit on EITHER:
+       - 买卖很准 卖出信号 fires (急卖 50→100 or 短卖 50→100), OR
+       - greedy ATR trailing stop, OR
+       - hard stop -10%, OR
+       - time_stop fallback.
+    Whichever triggers first.
+    """
+    entry = close[i]
+    hard_stop = entry * 0.90
+    atr_mult = p.get("atr_mult", 2.0)
+    activation = p.get("trail_activation", 0.08)
+    time_stop = p.get("time_stop", 75)
+    peak = high[i]
+    activated = False
+    alpha = 1.0 / 14.0
+    atr = max(high[i] - low[i], 1e-9)
+    end = min(i + time_stop, n - 1)
+
+    jisell = sigs["jisell"]
+    duansell = sigs["duansell"]
+
+    for k in range(i + 1, end + 1):
+        # Update ATR(14)
+        prev_c = close[k - 1] if k - 1 >= 0 else close[k]
+        tr = max(high[k] - low[k], abs(high[k] - prev_c), abs(low[k] - prev_c))
+        atr = (1 - alpha) * atr + alpha * tr
+        peak = max(peak, high[k])
+        if peak / entry - 1 >= activation:
+            activated = True
+
+        # Hard stop
+        if low[k] <= hard_stop:
+            return k, hard_stop
+
+        # 买卖很准 sell signal fires (transitions to active state)
+        # 急卖: 50→100 (entered overbought 5d)
+        # 短卖: 50→100 (entered overbought 10d)
+        if (jisell[k] > 0 and jisell[k - 1] == 0) or (
+            duansell[k] > 0 and duansell[k - 1] == 0
+        ):
+            return k, close[k]
+
+        # ATR trail
+        if activated and atr > 0:
+            stop = peak - atr_mult * atr
+            if low[k] <= stop:
+                return k, max(stop, hard_stop)
+    return end, close[end]
+
+
 def _walk_atr_greedy(i, close, high, low, p, n):
     """Greedy ATR-based trailing stop. Lets winners run further than classic %.
 
@@ -181,7 +232,8 @@ class MaimaiFilterStrategy(StrategyTemplate):
 
     template_id = "mm-filter"
     _score_threshold = 0.50
-    _exit_mode = "atr_greedy"      # "classic" or "atr_greedy"
+    # exit_mode: "atr_greedy" or "mm_sell" (uses 买卖很准 sell signals + ATR + hard stop)
+    _exit_mode = "atr_greedy"
     _trigger_mode = "strict"       # "strict" (all 3 buy = 0) or "broad" (any signal off)
     _params: dict = {"atr_mult": 2.0, "trail_activation": 0.08, "time_stop": 75}
 
@@ -213,6 +265,8 @@ class MaimaiFilterStrategy(StrategyTemplate):
             sig_mask = _maimai_broad_mask(close, high, low)
         else:
             sig_mask = _maimai_transition_mask(close, high, low)
+        # Pre-compute all signals once for the mm-sell exit walker
+        all_sigs = _compute_maimai_signals(close, high, low) if self._exit_mode == "mm_sell" else None
 
         signals: list[dict] = []
         in_pos = False
@@ -254,8 +308,14 @@ class MaimaiFilterStrategy(StrategyTemplate):
                 continue
             if i > 0 and close[i] > close[i - 1] * 1.099:
                 continue
-            walker = _walk_atr_greedy if self._exit_mode == "atr_greedy" else _walk_classic
-            exit_idx, _ = walker(i, close, high, low, self._params, n)
+            if self._exit_mode == "mm_sell":
+                exit_idx, _ = _walk_with_mm_sell_exit(
+                    i, close, high, low, all_sigs, self._params, n
+                )
+            elif self._exit_mode == "atr_greedy":
+                exit_idx, _ = _walk_atr_greedy(i, close, high, low, self._params, n)
+            else:
+                exit_idx, _ = _walk_classic(i, close, high, low, self._params, n)
             signals.append({"date": dates.iloc[i], "action": "buy"})
             signals.append({"date": dates.iloc[exit_idx], "action": "sell"})
             in_pos = True
@@ -302,6 +362,32 @@ class MaimaiFilterBroad40(MaimaiFilterStrategy):
     @property
     def name(self) -> str:
         return "MaimaiBroad_40"
+
+
+class MaimaiPure40(MaimaiFilterStrategy):
+    """纯 mm 买入 + 纯 mm 卖出（急卖/短卖触发） + ATR + 硬止损 -10%。"""
+    template_id = "mm-pure-40"
+    _score_threshold = 0.40
+    _exit_mode = "mm_sell"
+    _trigger_mode = "broad"
+    _params = {"atr_mult": 2.0, "trail_activation": 0.06, "time_stop": 90}
+
+    @property
+    def name(self) -> str:
+        return "MaimaiPure_40"
+
+
+class MaimaiPure50(MaimaiFilterStrategy):
+    """纯 mm 双向：buy on 买入信号关闭 + ML, exit on 卖出信号触发 OR ATR OR -10%."""
+    template_id = "mm-pure-50"
+    _score_threshold = 0.50
+    _exit_mode = "mm_sell"
+    _trigger_mode = "broad"
+    _params = {"atr_mult": 2.5, "trail_activation": 0.08, "time_stop": 90}
+
+    @property
+    def name(self) -> str:
+        return "MaimaiPure_50"
 
 
 class MaimaiFilterBroad50(MaimaiFilterStrategy):

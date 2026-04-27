@@ -20,6 +20,7 @@ from .mined_426_v2 import (
 from .maimai_filter import (
     MaimaiFilter30, MaimaiFilter40, MaimaiFilter50, MaimaiFilter55,
     MaimaiFilterBroad40, MaimaiFilterBroad50,
+    MaimaiPure40, MaimaiPure50,
 )
 from .reversal_filter import Reversal30, Reversal40, Reversal50, Reversal55, Reversal60
 
@@ -43,6 +44,9 @@ TEMPLATE_REGISTRY: dict[str, type] = {
     "mm-55":       MaimaiFilter55,         # 严格 thr 0.55
     "mm-broad-40": MaimaiFilterBroad40,    # 5 信号 OR 触发 + thr 0.40
     "mm-broad-50": MaimaiFilterBroad50,    # 5 信号 OR 触发 + thr 0.50
+    # 🔄 纯买卖很准双向 — 买入用 mm 买信号关闭，退出用 mm 卖信号触发
+    "mm-pure-40":  MaimaiPure40,           # 买/卖都来自 买卖很准 + ATR backup
+    "mm-pure-50":  MaimaiPure50,           # 严格版
     # 🔄 多源反转融合 — 买卖很准 + 动力线 + KDJ + RSI 全部，345K 信号训练
     "rev-30": Reversal30,    # thr 0.30 高频版 (~10/yr)
     "rev-40": Reversal40,    # thr 0.40 中频版
