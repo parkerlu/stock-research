@@ -23,6 +23,7 @@ from .maimai_filter import (
     MaimaiPure40, MaimaiPure50,
 )
 from .reversal_filter import Reversal30, Reversal40, Reversal50, Reversal55, Reversal60
+from .tdx_classics import TDXTripleGold, TDXMACDGoldPit, TDXExpmaTrio, TDXDualKDJ
 
 TEMPLATE_REGISTRY: dict[str, type] = {
     # 🏆 Mined-426 V2 — top 10 from re-mining on 2031 stocks (2026-04-27).
@@ -53,6 +54,11 @@ TEMPLATE_REGISTRY: dict[str, type] = {
     "rev-50": Reversal50,    # thr 0.50 sweet spot — 目标 10/年
     "rev-55": Reversal55,    # thr 0.55 严格 + 宽 trail
     "rev-60": Reversal60,    # thr 0.60 极严
+    # 📚 通达信社区经典策略（无 ML，纯指标信号 + 贪婪 ATR 退出）
+    "tdx-triple-gold":  TDXTripleGold,    # 三金叉共振 (MA+MACD+KDJ)
+    "tdx-macd-pit":     TDXMACDGoldPit,   # MACD 黄金坑抄底
+    "tdx-expma-trio":   TDXExpmaTrio,     # EXPMA 三步擒牛
+    "tdx-dual-kdj":     TDXDualKDJ,       # 日周 KDJ 共振
     # 🎯 优化版 trail (吃波段高点)
     "ml_direct_atr_swing": MLDirectATRSwing,            # ATR 自适应，单股 +36%，46% ≥10%
     "ml_direct_classic_greedy": MLDirectClassicGreedy,  # 经典 trail，78.6% 胜率
