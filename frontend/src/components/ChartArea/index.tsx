@@ -44,6 +44,7 @@ export function ChartArea({ tradeActions }: Props = {}) {
   const [tradeIdx, setTradeIdx] = useState(-1);
   const [forecast, setForecast] = useState<ForecastResult | null>(null);
   const [forecastLoading, setForecastLoading] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const indicatorPaneIds = useRef<Record<string, string>>({});
 
@@ -237,9 +238,10 @@ export function ChartArea({ tradeActions }: Props = {}) {
     mainChartRef.current?.getChart()?.createOverlay(type);
   }, []);
 
-  // Clear forecast when symbol changes
+  // Clear forecast + selection when symbol changes
   useEffect(() => {
     setForecast(null);
+    setSelectedDate(null);
   }, [currentSymbol]);
 
   const handleToggleForecast = useCallback(async () => {
@@ -250,14 +252,15 @@ export function ChartArea({ tradeActions }: Props = {}) {
     if (!currentSymbol) return;
     setForecastLoading(true);
     try {
-      const f = await getForecast(currentSymbol);
+      // If a bar has been clicked, predict from that date; else from latest
+      const f = await getForecast(currentSymbol, selectedDate ?? undefined);
       setForecast(f);
     } catch (e: any) {
       alert(`预测失败: ${e?.message ?? "unknown"}`);
     } finally {
       setForecastLoading(false);
     }
-  }, [currentSymbol, forecast]);
+  }, [currentSymbol, forecast, selectedDate]);
 
   const hasActions = tradeActions && tradeActions.length > 0;
 
@@ -272,6 +275,7 @@ export function ChartArea({ tradeActions }: Props = {}) {
         forecastActive={!!forecast}
         forecastLoading={forecastLoading}
         onToggleForecast={handleToggleForecast}
+        selectedDate={selectedDate}
       />
       {hasActions && (
         <div className="trade-nav">
@@ -300,7 +304,12 @@ export function ChartArea({ tradeActions }: Props = {}) {
         {linkedMode ? (
           <LinkedView />
         ) : (
-          <MainChart ref={mainChartRef} tradeActions={tradeActions} forecast={forecast} />
+          <MainChart
+            ref={mainChartRef}
+            tradeActions={tradeActions}
+            forecast={forecast}
+            onBarSelected={setSelectedDate}
+          />
         )}
       </div>
     </div>

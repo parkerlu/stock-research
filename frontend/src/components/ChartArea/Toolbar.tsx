@@ -39,6 +39,7 @@ interface Props {
   forecastActive?: boolean;
   forecastLoading?: boolean;
   onToggleForecast?: () => void;
+  selectedDate?: string | null;
 }
 
 export function Toolbar({
@@ -50,6 +51,7 @@ export function Toolbar({
   forecastActive,
   forecastLoading,
   onToggleForecast,
+  selectedDate,
 }: Props) {
   const timeframe = useQuoteStore((s) => s.timeframe);
   const setTimeframe = useQuoteStore((s) => s.setTimeframe);
@@ -165,9 +167,19 @@ export function Toolbar({
             className={forecastActive ? "active" : ""}
             onClick={onToggleForecast}
             disabled={forecastLoading || !currentSymbol}
-            title="LSTM 5 日价格预测（虚线，仅作视觉参考）"
+            title={
+              selectedDate
+                ? `从选中 K 线 (${selectedDate}) 预测未来 5 日`
+                : "LSTM 5 日价格预测（点击 K 线可选历史日期，未选则从最新预测）"
+            }
           >
-            {forecastLoading ? "⏳ 预测中..." : forecastActive ? "📈 隐藏预测" : "📈 5日预测"}
+            {forecastLoading
+              ? "⏳ 预测中..."
+              : forecastActive
+              ? "📈 隐藏预测"
+              : selectedDate
+              ? `📈 从 ${selectedDate} 预测`
+              : "📈 5日预测"}
           </button>
         )}
         <button

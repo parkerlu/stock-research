@@ -29,6 +29,7 @@ interface Props {
   className?: string;
   tradeActions?: TradeAction[] | null;
   forecast?: ForecastResult | null;
+  onBarSelected?: (date: string | null) => void;
 }
 
 const TF_TO_PERIOD: Record<Timeframe, Period> = {
@@ -73,7 +74,7 @@ export interface MainChartHandle {
 }
 
 export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
-  { timeframe: tfOverride, className, tradeActions, forecast },
+  { timeframe: tfOverride, className, tradeActions, forecast, onBarSelected },
   ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -284,6 +285,14 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
       if (idx >= 0) {
         selectedIndex = idx;
         moveCrosshairTo(idx);
+        // Notify parent of selection (for forecast-from-bar)
+        if (onBarSelected) {
+          const d = new Date(ts);
+          const yyyy = d.getUTCFullYear();
+          const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+          const dd = String(d.getUTCDate()).padStart(2, "0");
+          onBarSelected(`${yyyy}-${mm}-${dd}`);
+        }
       }
     };
     container.addEventListener("mousedown", onClick);
