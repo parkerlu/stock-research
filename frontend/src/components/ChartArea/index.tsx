@@ -7,8 +7,6 @@ import type { MainChartHandle } from "./MainChart";
 import { Toolbar } from "./Toolbar";
 import { LinkedView } from "./LinkedView";
 import { getKlineIndicatorName, setIndicatorData } from "./TdxIndicatorManager";
-import { getForecast } from "../../api/forecast";
-import type { ForecastResult } from "./MainChart";
 
 interface Props {
   tradeActions?: TradeAction[] | null;
@@ -42,9 +40,6 @@ export function ChartArea({ tradeActions }: Props = {}) {
   const mainChartRef = useRef<MainChartHandle>(null);
   const tdxPaneIds = useRef<Record<string, string>>({});
   const [tradeIdx, setTradeIdx] = useState(-1);
-  const [forecast, setForecast] = useState<ForecastResult | null>(null);
-  const [forecastLoading, setForecastLoading] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const indicatorPaneIds = useRef<Record<string, string>>({});
 
@@ -115,17 +110,10 @@ export function ChartArea({ tradeActions }: Props = {}) {
     (idx: number) => {
       if (!tradeActions || idx < 0 || idx >= tradeActions.length) return;
       setTradeIdx(idx);
-      const action = tradeActions[idx];
-      const ts = new Date(action.date + "T00:00:00").getTime();
+      const ts = new Date(tradeActions[idx].date + "T00:00:00").getTime();
       mainChartRef.current?.scrollToTimestamp(ts);
-      // Auto-fetch forecast as of the trade date (only on buy actions to avoid double-fetch)
-      if (currentSymbol && action.type === "buy") {
-        getForecast(currentSymbol, action.date)
-          .then((f) => setForecast(f))
-          .catch(() => {/* swallow — forecast may not be available pre-2019 */});
-      }
     },
-    [tradeActions, currentSymbol]
+    [tradeActions]
   );
 
   const handleToggleIndicator = useCallback(
@@ -238,29 +226,6 @@ export function ChartArea({ tradeActions }: Props = {}) {
     mainChartRef.current?.getChart()?.createOverlay(type);
   }, []);
 
-  // Clear forecast + selection when symbol changes
-  useEffect(() => {
-    setForecast(null);
-    setSelectedDate(null);
-  }, [currentSymbol]);
-
-  const handleToggleForecast = useCallback(async () => {
-    if (forecast) {
-      setForecast(null);
-      return;
-    }
-    if (!currentSymbol) return;
-    setForecastLoading(true);
-    try {
-      // If a bar has been clicked, predict from that date; else from latest
-      const f = await getForecast(currentSymbol, selectedDate ?? undefined);
-      setForecast(f);
-    } catch (e: any) {
-      alert(`预测失败: ${e?.message ?? "unknown"}`);
-    } finally {
-      setForecastLoading(false);
-    }
-  }, [currentSymbol, forecast, selectedDate]);
 
   const hasActions = tradeActions && tradeActions.length > 0;
 
@@ -272,10 +237,6 @@ export function ChartArea({ tradeActions }: Props = {}) {
         onToggleIndicator={handleToggleIndicator}
         onToggleTdxIndicator={handleToggleTdxIndicator}
         onSelectOverlay={handleSelectOverlay}
-        forecastActive={!!forecast}
-        forecastLoading={forecastLoading}
-        onToggleForecast={handleToggleForecast}
-        selectedDate={selectedDate}
       />
       {hasActions && (
         <div className="trade-nav">
@@ -304,12 +265,7 @@ export function ChartArea({ tradeActions }: Props = {}) {
         {linkedMode ? (
           <LinkedView />
         ) : (
-          <MainChart
-            ref={mainChartRef}
-            tradeActions={tradeActions}
-            forecast={forecast}
-            onBarSelected={setSelectedDate}
-          />
+          <MainChart ref={mainChartRef} tradeActions={tradeActions} />
         )}
       </div>
     </div>

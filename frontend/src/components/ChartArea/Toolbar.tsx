@@ -36,10 +36,6 @@ interface Props {
   onToggleIndicator: (name: string, isMainPane: boolean) => void;
   onToggleTdxIndicator: (name: string) => void;
   onSelectOverlay: (type: string) => void;
-  forecastActive?: boolean;
-  forecastLoading?: boolean;
-  onToggleForecast?: () => void;
-  selectedDate?: string | null;
 }
 
 export function Toolbar({
@@ -48,10 +44,6 @@ export function Toolbar({
   onToggleIndicator,
   onToggleTdxIndicator,
   onSelectOverlay,
-  forecastActive,
-  forecastLoading,
-  onToggleForecast,
-  selectedDate,
 }: Props) {
   const timeframe = useQuoteStore((s) => s.timeframe);
   const setTimeframe = useQuoteStore((s) => s.setTimeframe);
@@ -162,26 +154,9 @@ export function Toolbar({
       </div>
 
       <div className="toolbar-group" style={{ marginLeft: "auto" }}>
-        {onToggleForecast && (
-          <button
-            className={forecastActive ? "active" : ""}
-            onClick={onToggleForecast}
-            disabled={forecastLoading || !currentSymbol}
-            title={
-              selectedDate
-                ? `从选中 K 线 (${selectedDate}) 预测未来 5 日`
-                : "LSTM 5 日价格预测（点击 K 线可选历史日期，未选则从最新预测）"
-            }
-          >
-            {forecastLoading
-              ? "⏳ 预测中..."
-              : forecastActive
-              ? "📈 隐藏预测"
-              : selectedDate
-              ? `📈 从 ${selectedDate} 预测`
-              : "📈 5日预测"}
-          </button>
-        )}
+        {/* LSTM 5-day forecast removed: model exhibited mode collapse
+            (returns near-identical path for all stocks). Backend endpoint
+            and trained model files retained for future experiments. */}
         <button
           className={linkedMode ? "active" : ""}
           onClick={toggleLinkedMode}
