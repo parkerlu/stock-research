@@ -16,6 +16,7 @@ export interface PoolEntry {
   is_active: boolean;
   sort_order: number;
   source: string;
+  score?: number;
 }
 
 export async function listPool(opts?: {

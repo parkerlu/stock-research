@@ -171,14 +171,55 @@ def _save(entries: list[dict]) -> None:
     POOL_PATH.write_text(json.dumps({"entries": entries}, ensure_ascii=False, indent=2))
 
 
-def list_pool(active_only: bool = False, concept: str | None = None) -> list[dict]:
+def _compute_score(metrics: dict) -> float:
+    """Composite quality score. Higher = better.
+
+    Weighted combination:
+      win_rate (proxy for reliability)
+      avg_ret  (alpha per trade)
+      log(trades+1) (sample-size confidence)
+      MDD penalty
+    """
+    if not metrics:
+        return 0.0
+    # Read either pool-style or eval-style metrics keys
+    win = float(metrics.get("oos_win", metrics.get("win_rate", 0)) or 0)
+    avg = float(metrics.get("oos_avg", metrics.get("avg_ret", 0)) or 0)
+    trades = float(metrics.get("trades", 0) or 0)
+    mdd = float(metrics.get("avg_mdd", 0) or 0)
+    if trades < 5:
+        return 0.0
+    import math
+    score = (
+        max(win, 0) / 100.0
+        * max(avg, 0)                       # only reward positive avg
+        * math.log(1 + trades)
+        * max(1.0 - mdd / 30.0, 0.1)        # MDD 30%+ heavily discounted
+    )
+    return round(score, 3)
+
+
+def list_pool(active_only: bool = False, concept: str | None = None,
+              sort_by: str = "score") -> list[dict]:
+    """List pool entries.
+
+    sort_by:
+      - "score"       — composite metric, descending (default; pushes proven strategies up)
+      - "sort_order"  — user-defined drag-drop order
+    """
     with _LOCK:
         entries = _load()
     if active_only:
         entries = [e for e in entries if e.get("is_active", True)]
     if concept:
         entries = [e for e in entries if e.get("concept") == concept]
-    entries.sort(key=lambda e: e.get("sort_order", 0))
+    # Compute and attach score
+    for e in entries:
+        e["score"] = _compute_score(e.get("metrics") or {})
+    if sort_by == "score":
+        entries.sort(key=lambda e: (-e["score"], e.get("sort_order", 0)))
+    else:
+        entries.sort(key=lambda e: e.get("sort_order", 0))
     return entries
 
 

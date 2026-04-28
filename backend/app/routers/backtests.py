@@ -106,12 +106,11 @@ class TryTemplateRequest(BaseModel):
 
 
 @router.get("/templates")
-def list_templates(active_only: bool = True):
+def list_templates(active_only: bool = True, sort_by: str = "score"):
     """List strategy templates. By default returns only active pool entries
-    in user-defined order; pass `active_only=false` to see every registered
-    template (useful for debugging)."""
+    sorted by composite score (descending — best-rated first)."""
     from app.services.strategy_pool_service import list_pool
-    pool = list_pool(active_only=active_only)
+    pool = list_pool(active_only=active_only, sort_by=sort_by)
     out = []
     for e in pool:
         tid = e["template_id"]
@@ -122,6 +121,7 @@ def list_templates(active_only: bool = True):
             "name": e.get("display_name") or TEMPLATE_REGISTRY[tid].__name__,
             "concept": e.get("concept", ""),
             "is_active": e.get("is_active", True),
+            "score": e.get("score", 0.0),
         })
     return out
 

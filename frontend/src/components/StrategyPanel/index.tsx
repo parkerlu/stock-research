@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useQuoteStore } from "../../stores/quoteStore";
 import { useStrategyStore } from "../../stores/strategyStore";
-import { FactoryControl } from "./FactoryControl";
 import { StrategyList } from "./StrategyList";
 import { BacktestReport } from "./BacktestReport";
 import { AdhocStrategy } from "./AdhocStrategy";
@@ -34,14 +33,13 @@ export function StrategyPanel() {
       </div>
 
       {currentSymbol && <AdhocStrategy tsCode={currentSymbol} />}
-      {currentSymbol && <FactoryControl tsCode={currentSymbol} />}
 
       <div className="strategy-panel-body">
         {loading ? (
           <div className="strategy-loading">加载中...</div>
         ) : strategies.length === 0 ? (
           <div className="strategy-empty">
-            {currentSymbol ? "暂无策略，请运行策略工厂" : "请先选择股票"}
+            {currentSymbol ? "暂无策略" : "请先选择股票"}
           </div>
         ) : (
           <StrategyList strategies={strategies} tsCode={currentSymbol} />

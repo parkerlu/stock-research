@@ -1612,3 +1612,11 @@ body {
   background: var(--bg-tertiary);
   border-radius: 4px;
 }
+
+.cell-score {
+  font-weight: 700;
+  color: #f59e0b;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}

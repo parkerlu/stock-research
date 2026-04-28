@@ -1,0 +1,318 @@
+{
+  "426-1": {
+    "trades": 4,
+    "stocks": 3,
+    "win_rate": 100.0,
+    "avg_ret": 8.16,
+    "max_loss": 0.85,
+    "avg_mdd": 4.0
+  },
+  "426-2": {
+    "trades": 4,
+    "stocks": 3,
+    "win_rate": 75.0,
+    "avg_ret": 18.25,
+    "max_loss": -10.64,
+    "avg_mdd": 10.1
+  },
+  "426-3": {
+    "trades": 2,
+    "stocks": 2,
+    "win_rate": 50.0,
+    "avg_ret": 5.4,
+    "max_loss": -4.7,
+    "avg_mdd": 2.8
+  },
+  "426-4": {
+    "trades": 4,
+    "stocks": 3,
+    "win_rate": 100.0,
+    "avg_ret": 16.9,
+    "max_loss": 10.26,
+    "avg_mdd": 4.7
+  },
+  "426-5": {
+    "trades": 3,
+    "stocks": 3,
+    "win_rate": 100.0,
+    "avg_ret": 22.03,
+    "max_loss": 16.93,
+    "avg_mdd": 7.5
+  },
+  "426-6": {
+    "trades": 0,
+    "stocks": 0
+  },
+  "426-7": {
+    "trades": 0,
+    "stocks": 0
+  },
+  "426-8": {
+    "trades": 0,
+    "stocks": 0
+  },
+  "426-9": {
+    "trades": 0,
+    "stocks": 0
+  },
+  "426-10": {
+    "trades": 0,
+    "stocks": 0
+  },
+  "mm-30": {
+    "trades": 234,
+    "stocks": 8,
+    "win_rate": 59.4,
+    "avg_ret": 1.8,
+    "max_loss": -14.85,
+    "avg_mdd": 35.8
+  },
+  "mm-40": {
+    "trades": 106,
+    "stocks": 8,
+    "win_rate": 58.5,
+    "avg_ret": 2.21,
+    "max_loss": -18.99,
+    "avg_mdd": 26.8
+  },
+  "mm-50": {
+    "trades": 29,
+    "stocks": 7,
+    "win_rate": 72.4,
+    "avg_ret": 7.39,
+    "max_loss": -12.76,
+    "avg_mdd": 16.4
+  },
+  "mm-55": {
+    "trades": 17,
+    "stocks": 6,
+    "win_rate": 70.6,
+    "avg_ret": 11.35,
+    "max_loss": -10.95,
+    "avg_mdd": 14.3
+  },
+  "mm-broad-40": {
+    "trades": 244,
+    "stocks": 8,
+    "win_rate": 56.6,
+    "avg_ret": 1.6,
+    "max_loss": -18.99,
+    "avg_mdd": 37.6
+  },
+  "mm-broad-50": {
+    "trades": 79,
+    "stocks": 8,
+    "win_rate": 58.2,
+    "avg_ret": 3.44,
+    "max_loss": -16.83,
+    "avg_mdd": 21.7
+  },
+  "mm-pure-40": {
+    "trades": 250,
+    "stocks": 8,
+    "win_rate": 46.4,
+    "avg_ret": 0.88,
+    "max_loss": -18.99,
+    "avg_mdd": 31.9
+  },
+  "mm-pure-50": {
+    "trades": 79,
+    "stocks": 8,
+    "win_rate": 45.6,
+    "avg_ret": 2.33,
+    "max_loss": -13.72,
+    "avg_mdd": 19.5
+  },
+  "rev-30": {
+    "trades": 523,
+    "stocks": 8,
+    "win_rate": 56.4,
+    "avg_ret": 1.43,
+    "max_loss": -17.47,
+    "avg_mdd": 44.2
+  },
+  "rev-40": {
+    "trades": 294,
+    "stocks": 8,
+    "win_rate": 55.4,
+    "avg_ret": 1.72,
+    "max_loss": -17.8,
+    "avg_mdd": 37.6
+  },
+  "rev-50": {
+    "trades": 69,
+    "stocks": 8,
+    "win_rate": 69.6,
+    "avg_ret": 6.96,
+    "max_loss": -16.81,
+    "avg_mdd": 20.0
+  },
+  "rev-55": {
+    "trades": 36,
+    "stocks": 8,
+    "win_rate": 69.4,
+    "avg_ret": 12.47,
+    "max_loss": -13.69,
+    "avg_mdd": 17.2
+  },
+  "rev-60": {
+    "trades": 23,
+    "stocks": 8,
+    "win_rate": 78.3,
+    "avg_ret": 16.16,
+    "max_loss": -13.07,
+    "avg_mdd": 12.2
+  },
+  "tdx-triple-gold": {
+    "trades": 70,
+    "stocks": 8,
+    "win_rate": 48.6,
+    "avg_ret": -0.53,
+    "max_loss": -13.46,
+    "avg_mdd": 27.6
+  },
+  "tdx-macd-pit": {
+    "trades": 176,
+    "stocks": 8,
+    "win_rate": 58.0,
+    "avg_ret": 0.77,
+    "max_loss": -20.88,
+    "avg_mdd": 34.6
+  },
+  "tdx-expma-trio": {
+    "trades": 231,
+    "stocks": 8,
+    "win_rate": 45.0,
+    "avg_ret": 1.06,
+    "max_loss": -15.86,
+    "avg_mdd": 46.5
+  },
+  "tdx-dual-kdj": {
+    "trades": 127,
+    "stocks": 8,
+    "win_rate": 70.1,
+    "avg_ret": 3.82,
+    "max_loss": -20.62,
+    "avg_mdd": 24.8
+  },
+  "chan-1buy": {
+    "trades": 83,
+    "stocks": 8,
+    "win_rate": 72.3,
+    "avg_ret": 3.94,
+    "max_loss": -13.44,
+    "avg_mdd": 20.1
+  },
+  "chan-2buy": {
+    "trades": 52,
+    "stocks": 8,
+    "win_rate": 73.1,
+    "avg_ret": 4.1,
+    "max_loss": -12.4,
+    "avg_mdd": 13.6
+  },
+  "chan-12": {
+    "trades": 121,
+    "stocks": 8,
+    "win_rate": 71.9,
+    "avg_ret": 3.77,
+    "max_loss": -13.44,
+    "avg_mdd": 21.4
+  },
+  "chan-1buy-wide": {
+    "trades": 82,
+    "stocks": 8,
+    "win_rate": 56.1,
+    "avg_ret": 3.91,
+    "max_loss": -13.44,
+    "avg_mdd": 28.7
+  },
+  "chan-1buy-strict": {
+    "trades": 82,
+    "stocks": 8,
+    "win_rate": 61.0,
+    "avg_ret": 1.33,
+    "max_loss": -14.7,
+    "avg_mdd": 25.3
+  },
+  "ml_direct_atr_swing": {
+    "trades": 55,
+    "stocks": 8,
+    "win_rate": 76.4,
+    "avg_ret": 6.97,
+    "max_loss": -11.65,
+    "avg_mdd": 14.0
+  },
+  "ml_direct_classic_greedy": {
+    "trades": 55,
+    "stocks": 8,
+    "win_rate": 85.5,
+    "avg_ret": 4.19,
+    "max_loss": -11.65,
+    "avg_mdd": 11.8
+  },
+  "ml_direct_top1_tight_lock": {
+    "trades": 44,
+    "stocks": 8,
+    "win_rate": 86.4,
+    "avg_ret": 5.48,
+    "max_loss": -11.65,
+    "avg_mdd": 11.2
+  },
+  "ml_direct_top2_mid_greedy": {
+    "trades": 44,
+    "stocks": 8,
+    "win_rate": 86.4,
+    "avg_ret": 5.82,
+    "max_loss": -11.65,
+    "avg_mdd": 10.5
+  },
+  "ml_direct_top3_high_greedy": {
+    "trades": 44,
+    "stocks": 8,
+    "win_rate": 86.4,
+    "avg_ret": 5.95,
+    "max_loss": -11.65,
+    "avg_mdd": 11.2
+  },
+  "ml_direct_fast_turnover": {
+    "trades": 55,
+    "stocks": 8,
+    "win_rate": 78.2,
+    "avg_ret": 3.98,
+    "max_loss": -13.07,
+    "avg_mdd": 13.9
+  },
+  "ml_direct_high_freq_v2": {
+    "trades": 80,
+    "stocks": 8,
+    "win_rate": 73.8,
+    "avg_ret": 4.77,
+    "max_loss": -17.06,
+    "avg_mdd": 19.0
+  },
+  "ml_direct_max_freq": {
+    "trades": 110,
+    "stocks": 8,
+    "win_rate": 69.1,
+    "avg_ret": 3.72,
+    "max_loss": -16.79,
+    "avg_mdd": 22.3
+  },
+  "ml_direct_high_freq": {
+    "trades": 125,
+    "stocks": 8,
+    "win_rate": 64.8,
+    "avg_ret": 3.64,
+    "max_loss": -17.06,
+    "avg_mdd": 26.8
+  },
+  "ml_direct": {
+    "trades": 46,
+    "stocks": 8,
+    "win_rate": 80.4,
+    "avg_ret": 3.99,
+    "max_loss": -12.75,
+    "avg_mdd": 10.7
+  }
+}

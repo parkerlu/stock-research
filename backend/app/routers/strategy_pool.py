@@ -26,8 +26,9 @@ class ReorderRequest(BaseModel):
 def list_all(
     active_only: bool = False,
     concept: str | None = None,
+    sort_by: str = "score",
 ):
-    return list_pool(active_only=active_only, concept=concept)
+    return list_pool(active_only=active_only, concept=concept, sort_by=sort_by)
 
 
 @router.get("/concepts")

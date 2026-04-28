@@ -147,15 +147,15 @@ export function StrategyPoolPanel() {
           <thead>
             <tr>
               <th style={{ width: 28 }}></th>
-              <th style={{ width: 36 }}>#</th>
+              <th style={{ width: 50 }}>评分</th>
               <th>策略</th>
               <th>概念</th>
               <th>家族</th>
-              <th>IS胜率</th>
-              <th>IS平均</th>
-              <th>OOS胜率</th>
-              <th>OOS平均</th>
+              <th>胜率</th>
+              <th>平均</th>
               <th>笔数</th>
+              <th>股票</th>
+              <th>回撤</th>
               <th>状态</th>
               <th></th>
             </tr>
@@ -175,7 +175,9 @@ export function StrategyPoolPanel() {
                   className={`${e.is_active ? "" : "inactive"} ${isOver ? "drag-over" : ""}`}
                 >
                   <td className="drag-handle" title="拖动以重排">⋮⋮</td>
-                  <td>{e.sort_order}</td>
+                  <td className="cell-score">
+                    {e.score && e.score > 0 ? e.score.toFixed(2) : "—"}
+                  </td>
                   <td>
                     <div className="cell-name">
                       <span className="cell-tid">{e.template_id}</span>
@@ -184,11 +186,11 @@ export function StrategyPoolPanel() {
                   </td>
                   <td><span className="concept-tag">{e.concept}</span></td>
                   <td className="cell-family">{e.family || "—"}</td>
-                  <td>{m.is_win != null ? `${m.is_win.toFixed(1)}%` : "—"}</td>
-                  <td>{m.is_avg != null ? `+${m.is_avg.toFixed(1)}%` : "—"}</td>
-                  <td>{m.oos_win != null ? `${m.oos_win.toFixed(1)}%` : "—"}</td>
-                  <td>{m.oos_avg != null ? `+${m.oos_avg.toFixed(1)}%` : "—"}</td>
-                  <td>{m.trades ?? "—"}</td>
+                  <td>{(m as any).win_rate != null ? `${(m as any).win_rate.toFixed(1)}%` : (m.is_win != null ? `${m.is_win.toFixed(1)}%` : "—")}</td>
+                  <td>{(m as any).avg_ret != null ? `+${(m as any).avg_ret.toFixed(2)}%` : (m.is_avg != null ? `+${m.is_avg.toFixed(1)}%` : "—")}</td>
+                  <td>{(m as any).trades ?? m.trades ?? "—"}</td>
+                  <td>{(m as any).stocks ?? "—"}</td>
+                  <td className={(m as any).avg_mdd > 15 ? "stat-bad" : "stat-warn"}>{(m as any).avg_mdd != null ? `${(m as any).avg_mdd.toFixed(1)}%` : "—"}</td>
                   <td>
                     <button
                       className={`toggle-btn ${e.is_active ? "on" : "off"}`}
@@ -211,7 +213,7 @@ export function StrategyPoolPanel() {
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={12} className="empty-row">无匹配策略</td>
+                <td colSpan={13} className="empty-row">无匹配策略</td>
               </tr>
             )}
           </tbody>
