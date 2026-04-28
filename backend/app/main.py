@@ -10,6 +10,7 @@ from app.routers.indicators import router as indicators_router
 from app.routers.screening import router as screening_router
 from app.routers.strategy_pool import router as strategy_pool_router
 from app.routers.system import router as system_router
+from app.routers.forecast import router as forecast_router
 
 
 def create_app() -> FastAPI:
@@ -29,6 +30,7 @@ def create_app() -> FastAPI:
     app.include_router(screening_router)
     app.include_router(strategy_pool_router)
     app.include_router(system_router)
+    app.include_router(forecast_router)
 
     @app.get("/api/health")
     async def health():

@@ -36,6 +36,9 @@ interface Props {
   onToggleIndicator: (name: string, isMainPane: boolean) => void;
   onToggleTdxIndicator: (name: string) => void;
   onSelectOverlay: (type: string) => void;
+  forecastActive?: boolean;
+  forecastLoading?: boolean;
+  onToggleForecast?: () => void;
 }
 
 export function Toolbar({
@@ -44,6 +47,9 @@ export function Toolbar({
   onToggleIndicator,
   onToggleTdxIndicator,
   onSelectOverlay,
+  forecastActive,
+  forecastLoading,
+  onToggleForecast,
 }: Props) {
   const timeframe = useQuoteStore((s) => s.timeframe);
   const setTimeframe = useQuoteStore((s) => s.setTimeframe);
@@ -154,6 +160,16 @@ export function Toolbar({
       </div>
 
       <div className="toolbar-group" style={{ marginLeft: "auto" }}>
+        {onToggleForecast && (
+          <button
+            className={forecastActive ? "active" : ""}
+            onClick={onToggleForecast}
+            disabled={forecastLoading || !currentSymbol}
+            title="LSTM 5 日价格预测（虚线，仅作视觉参考）"
+          >
+            {forecastLoading ? "⏳ 预测中..." : forecastActive ? "📈 隐藏预测" : "📈 5日预测"}
+          </button>
+        )}
         <button
           className={linkedMode ? "active" : ""}
           onClick={toggleLinkedMode}

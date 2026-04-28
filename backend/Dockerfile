@@ -9,6 +9,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+# torch (CPU only) for LSTM forecast inference (~200MB)
+RUN pip install --no-cache-dir --timeout 300 \
+    torch --index-url https://download.pytorch.org/whl/cpu
 
 COPY . .
 

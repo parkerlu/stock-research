@@ -10,10 +10,25 @@ import { buildTradeLabel, registerTradeMarker } from "./tradeOverlays";
 
 registerTradeMarker();
 
+export interface ForecastDay {
+  day: number;
+  close: number;
+  low: number;
+  high: number;
+  log_return: number;
+}
+export interface ForecastResult {
+  ts_code: string;
+  anchor_close: number;
+  anchor_date: string;
+  forecast: ForecastDay[];
+}
+
 interface Props {
   timeframe?: Timeframe;
   className?: string;
   tradeActions?: TradeAction[] | null;
+  forecast?: ForecastResult | null;
 }
 
 const TF_TO_PERIOD: Record<Timeframe, Period> = {
@@ -58,7 +73,7 @@ export interface MainChartHandle {
 }
 
 export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
-  { timeframe: tfOverride, className, tradeActions },
+  { timeframe: tfOverride, className, tradeActions, forecast },
   ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -306,6 +321,93 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
       container.removeEventListener("mousedown", onClick);
     };
   }, []);
+
+  // Render LSTM forecast as dashed lines + band on the right side of the chart
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    chart.removeOverlay({ groupId: "lstm-forecast" });
+    if (!forecast || forecast.forecast.length === 0) return;
+
+    const timer = setTimeout(() => {
+      const dataList = chart.getDataList() as Array<{ timestamp: number }>;
+      if (dataList.length === 0) return;
+      // Find the anchor bar's timestamp from the last bar of dataList,
+      // since `forecast.anchor_date` may not match if the chart hasn't reloaded.
+      const anchorTs = dataList[dataList.length - 1].timestamp;
+
+      // Project N business days into future (skip Sat/Sun)
+      const projectDays = (anchor: number, n: number): number => {
+        const d = new Date(anchor);
+        let added = 0;
+        while (added < n) {
+          d.setUTCDate(d.getUTCDate() + 1);
+          const wd = d.getUTCDay();
+          if (wd !== 0 && wd !== 6) added += 1;
+        }
+        return d.getTime();
+      };
+
+      const anchorClose = forecast.anchor_close;
+      const overlays: any[] = [];
+      let prevTs = anchorTs;
+      let prevClose = anchorClose;
+      let prevHigh = anchorClose;
+      let prevLow = anchorClose;
+      for (const fd of forecast.forecast) {
+        const futureTs = projectDays(anchorTs, fd.day);
+        // Predicted close polyline (red dashed)
+        overlays.push({
+          name: "segment",
+          groupId: "lstm-forecast",
+          lock: true,
+          points: [
+            { timestamp: prevTs, value: prevClose },
+            { timestamp: futureTs, value: fd.close },
+          ],
+          styles: {
+            line: { color: "#e94560", style: "dashed", size: 2, dashedValue: [4, 4] },
+            point: { color: "transparent", borderColor: "transparent" },
+          },
+          extendData: { day: fd.day, label: `日+${fd.day}: ${fd.close.toFixed(2)}` },
+        });
+        // Upper band (gray dashed)
+        overlays.push({
+          name: "segment",
+          groupId: "lstm-forecast",
+          lock: true,
+          points: [
+            { timestamp: prevTs, value: prevHigh },
+            { timestamp: futureTs, value: fd.high },
+          ],
+          styles: {
+            line: { color: "#888", style: "dashed", size: 1, dashedValue: [3, 3] },
+            point: { color: "transparent", borderColor: "transparent" },
+          },
+        });
+        // Lower band (gray dashed)
+        overlays.push({
+          name: "segment",
+          groupId: "lstm-forecast",
+          lock: true,
+          points: [
+            { timestamp: prevTs, value: prevLow },
+            { timestamp: futureTs, value: fd.low },
+          ],
+          styles: {
+            line: { color: "#888", style: "dashed", size: 1, dashedValue: [3, 3] },
+            point: { color: "transparent", borderColor: "transparent" },
+          },
+        });
+        prevTs = futureTs;
+        prevClose = fd.close;
+        prevHigh = fd.high;
+        prevLow = fd.low;
+      }
+      chart.createOverlay(overlays);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [forecast]);
 
   // Render trade markers on chart
   useEffect(() => {

@@ -23,6 +23,10 @@ services:
       DATABASE_URL: postgresql+asyncpg://stock:__REDACTED_DB_PASSWORD__@db:5432/stock_db
       DATABASE_URL_SYNC: postgresql+psycopg2://stock:__REDACTED_DB_PASSWORD__@db:5432/stock_db
       TUSHARE_TOKEN: ${TUSHARE_TOKEN:-}
+    volumes:
+      - ./backend/cache:/app/cache:ro
+      - ./backend/models:/app/models:ro
+      - backend_data:/app/data
     depends_on:
       db:
         condition: service_healthy
@@ -34,3 +38,6 @@ services:
     depends_on:
       - backend
 
+
+volumes:
+  backend_data: {}

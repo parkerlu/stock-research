@@ -7,6 +7,8 @@ import type { MainChartHandle } from "./MainChart";
 import { Toolbar } from "./Toolbar";
 import { LinkedView } from "./LinkedView";
 import { getKlineIndicatorName, setIndicatorData } from "./TdxIndicatorManager";
+import { getForecast } from "../../api/forecast";
+import type { ForecastResult } from "./MainChart";
 
 interface Props {
   tradeActions?: TradeAction[] | null;
@@ -226,6 +228,31 @@ export function ChartArea({ tradeActions }: Props = {}) {
     mainChartRef.current?.getChart()?.createOverlay(type);
   }, []);
 
+  const [forecast, setForecast] = useState<ForecastResult | null>(null);
+  const [forecastLoading, setForecastLoading] = useState(false);
+
+  // Clear forecast when symbol changes
+  useEffect(() => {
+    setForecast(null);
+  }, [currentSymbol]);
+
+  const handleToggleForecast = useCallback(async () => {
+    if (forecast) {
+      setForecast(null);
+      return;
+    }
+    if (!currentSymbol) return;
+    setForecastLoading(true);
+    try {
+      const f = await getForecast(currentSymbol);
+      setForecast(f);
+    } catch (e: any) {
+      alert(`预测失败: ${e?.message ?? "unknown"}`);
+    } finally {
+      setForecastLoading(false);
+    }
+  }, [currentSymbol, forecast]);
+
   const hasActions = tradeActions && tradeActions.length > 0;
 
   return (
@@ -236,6 +263,9 @@ export function ChartArea({ tradeActions }: Props = {}) {
         onToggleIndicator={handleToggleIndicator}
         onToggleTdxIndicator={handleToggleTdxIndicator}
         onSelectOverlay={handleSelectOverlay}
+        forecastActive={!!forecast}
+        forecastLoading={forecastLoading}
+        onToggleForecast={handleToggleForecast}
       />
       {hasActions && (
         <div className="trade-nav">
@@ -264,7 +294,7 @@ export function ChartArea({ tradeActions }: Props = {}) {
         {linkedMode ? (
           <LinkedView />
         ) : (
-          <MainChart ref={mainChartRef} tradeActions={tradeActions} />
+          <MainChart ref={mainChartRef} tradeActions={tradeActions} forecast={forecast} />
         )}
       </div>
     </div>

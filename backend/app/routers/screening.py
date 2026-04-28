@@ -53,6 +53,77 @@ async def _run_scan(job_id: str, template_id: str, lookback_days: int) -> None:
     job = _JOBS[job_id]
     job["status"] = "running"
     t0 = time.time()
+
+    # Fast path: cached screening for known template families
+    fast_supported = (
+        template_id.startswith("mm-") or
+        template_id.startswith("rev-") or
+        template_id.startswith("426-")
+    )
+    if fast_supported:
+        try:
+            from app.services.screening_fast import fast_scan, _load_caches
+            from sqlalchemy import select
+            async with async_session() as db:
+                names_rows = (await db.execute(
+                    select(StockBasic.ts_code, StockBasic.name)
+                )).all()
+                active_rows = (await db.execute(
+                    select(StockBasic.ts_code).where(StockBasic.is_active.is_(True))
+                )).scalars().all()
+            names = {ts: nm for ts, nm in names_rows}
+            active_set = set(active_rows)
+
+            cache = _load_caches()
+            stocks = cache.get("stocks", {})
+            # Filter to active only
+            active_codes = [c for c in stocks.keys() if c in active_set]
+            job["total"] = len(active_codes)
+
+            def on_progress(scanned, _total):
+                if _CANCEL.get(job_id):
+                    raise InterruptedError()
+                # Map raw progress to active subset
+                job["progress"] = min(scanned, job["total"])
+                job["elapsed_sec"] = time.time() - t0
+
+            try:
+                # Pre-filter stocks dict to active before scanning
+                from app.services import screening_fast
+                full_stocks = screening_fast._CACHE["stocks"] if screening_fast._CACHE else {}
+                active_only = {k: v for k, v in full_stocks.items() if k in active_set}
+                # Temporarily swap to active subset
+                screening_fast._CACHE["stocks"] = active_only
+                try:
+                    hits_raw = fast_scan(template_id, lookback_days, on_progress)
+                finally:
+                    screening_fast._CACHE["stocks"] = full_stocks
+            except InterruptedError:
+                job["status"] = "cancelled"
+                job["progress"] = job.get("progress", 0)
+                job["elapsed_sec"] = time.time() - t0
+                return
+
+            hits = [
+                StockHit(
+                    ts_code=h["ts_code"],
+                    name=names.get(h["ts_code"]),
+                    signal_date=h["signal_date"],
+                    latest_date=h["latest_date"],
+                    latest_close=h["latest_close"],
+                    gain_since_signal_pct=h["gain_since_signal_pct"],
+                    max_drawdown_pct=h["max_drawdown_pct"],
+                )
+                for h in hits_raw
+            ]
+            job["hits"] = hits
+            job["status"] = "completed"
+            job["elapsed_sec"] = time.time() - t0
+            return
+        except Exception as e:
+            job["error"] = f"fast scan failed: {e}; falling back to slow path"
+            # fall through to slow path
+
     try:
         async with async_session() as db:
             # Active stocks only (excludes ST/*ST/suspended)
