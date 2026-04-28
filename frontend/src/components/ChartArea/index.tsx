@@ -42,6 +42,8 @@ export function ChartArea({ tradeActions }: Props = {}) {
   const mainChartRef = useRef<MainChartHandle>(null);
   const tdxPaneIds = useRef<Record<string, string>>({});
   const [tradeIdx, setTradeIdx] = useState(-1);
+  const [forecast, setForecast] = useState<ForecastResult | null>(null);
+  const [forecastLoading, setForecastLoading] = useState(false);
 
   const indicatorPaneIds = useRef<Record<string, string>>({});
 
@@ -112,10 +114,17 @@ export function ChartArea({ tradeActions }: Props = {}) {
     (idx: number) => {
       if (!tradeActions || idx < 0 || idx >= tradeActions.length) return;
       setTradeIdx(idx);
-      const ts = new Date(tradeActions[idx].date + "T00:00:00").getTime();
+      const action = tradeActions[idx];
+      const ts = new Date(action.date + "T00:00:00").getTime();
       mainChartRef.current?.scrollToTimestamp(ts);
+      // Auto-fetch forecast as of the trade date (only on buy actions to avoid double-fetch)
+      if (currentSymbol && action.type === "buy") {
+        getForecast(currentSymbol, action.date)
+          .then((f) => setForecast(f))
+          .catch(() => {/* swallow — forecast may not be available pre-2019 */});
+      }
     },
-    [tradeActions]
+    [tradeActions, currentSymbol]
   );
 
   const handleToggleIndicator = useCallback(
@@ -227,9 +236,6 @@ export function ChartArea({ tradeActions }: Props = {}) {
   const handleSelectOverlay = useCallback((type: string) => {
     mainChartRef.current?.getChart()?.createOverlay(type);
   }, []);
-
-  const [forecast, setForecast] = useState<ForecastResult | null>(null);
-  const [forecastLoading, setForecastLoading] = useState(false);
 
   // Clear forecast when symbol changes
   useEffect(() => {

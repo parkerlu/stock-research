@@ -332,9 +332,14 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
     const timer = setTimeout(() => {
       const dataList = chart.getDataList() as Array<{ timestamp: number }>;
       if (dataList.length === 0) return;
-      // Find the anchor bar's timestamp from the last bar of dataList,
-      // since `forecast.anchor_date` may not match if the chart hasn't reloaded.
-      const anchorTs = dataList[dataList.length - 1].timestamp;
+      // Anchor at the bar matching forecast.anchor_date if present;
+      // otherwise default to the last bar in the chart.
+      let anchorTs = dataList[dataList.length - 1].timestamp;
+      if (forecast.anchor_date) {
+        const wantTs = new Date(forecast.anchor_date + "T00:00:00Z").getTime();
+        const match = dataList.find((b) => b.timestamp === wantTs);
+        if (match) anchorTs = match.timestamp;
+      }
 
       // Project N business days into future (skip Sat/Sun)
       const projectDays = (anchor: number, n: number): number => {

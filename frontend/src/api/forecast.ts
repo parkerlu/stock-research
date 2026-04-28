@@ -15,8 +15,14 @@ export interface ForecastResult {
   forecast: ForecastDay[];
 }
 
-export async function getForecast(tsCode: string): Promise<ForecastResult> {
-  const res = await fetch(`${BASE}/${encodeURIComponent(tsCode)}`);
+export async function getForecast(
+  tsCode: string,
+  asOf?: string,
+): Promise<ForecastResult> {
+  const url = asOf
+    ? `${BASE}/${encodeURIComponent(tsCode)}?as_of=${asOf}`
+    : `${BASE}/${encodeURIComponent(tsCode)}`;
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`forecast ${res.status}`);
   return res.json();
 }
