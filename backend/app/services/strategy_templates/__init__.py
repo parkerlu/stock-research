@@ -24,7 +24,7 @@ from .maimai_filter import (
 )
 from .reversal_filter import Reversal30, Reversal40, Reversal50, Reversal55, Reversal60
 from .tdx_classics import TDXTripleGold, TDXMACDGoldPit, TDXExpmaTrio, TDXDualKDJ
-from .chanlun_strategy import Chan1Buy, Chan2Buy, Chan12Buy, Chan1BuyWide
+from .chanlun_strategy import Chan1Buy, Chan2Buy, Chan12Buy, Chan1BuyWide, Chan1BuyStrict
 
 TEMPLATE_REGISTRY: dict[str, type] = {
     # 🏆 Mined-426 V2 — top 10 from re-mining on 2031 stocks (2026-04-27).
@@ -65,6 +65,7 @@ TEMPLATE_REGISTRY: dict[str, type] = {
     "chan-2buy":        Chan2Buy,        # 2 类买点（1 类后回踩不破底）
     "chan-12":          Chan12Buy,       # 1+2 合并
     "chan-1buy-wide":   Chan1BuyWide,    # 1 类 + 宽 ATR 吃大波段
+    "chan-1buy-strict": Chan1BuyStrict,  # 1 类 + 5 bar 严格滞后（无偷看）
     # 🎯 优化版 trail (吃波段高点)
     "ml_direct_atr_swing": MLDirectATRSwing,            # ATR 自适应，单股 +36%，46% ≥10%
     "ml_direct_classic_greedy": MLDirectClassicGreedy,  # 经典 trail，78.6% 胜率

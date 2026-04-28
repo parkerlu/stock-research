@@ -36,6 +36,10 @@ def _walk_atr_greedy(i, close, high, low, p, n):
 class _ChanlunBase(StrategyTemplate):
     template_id = "chan-base"
     _classes_to_use: tuple[str, ...] = ("1", "2")
+    # _confirm_lag: bars to wait before acting on a chanlun buy point.
+    # Reality: a 3-bar bottom fractal + stroke validation is only KNOWN one
+    # bar after it forms. Default 2 bars to remove look-ahead bias.
+    _confirm_lag: int = 2
     _params: dict = {"atr_mult": 2.0, "trail_activation": 0.06, "time_stop": 90}
     _display = "Chan_Base"
 
@@ -72,14 +76,19 @@ class _ChanlunBase(StrategyTemplate):
         in_pos = False
         exit_until = -1
         n = len(close)
-        buy_idx_set = {b.bar_idx for b in buys if b.type in self._classes_to_use}
+        # Apply confirm_lag: actual buy bar = bar_idx + lag (bias-free)
+        buy_action_idx = {
+            b.bar_idx + self._confirm_lag for b in buys
+            if b.type in self._classes_to_use
+            and b.bar_idx + self._confirm_lag < n - 1
+        }
 
         for i in range(20, n - 1):
             if in_pos:
                 if i >= exit_until:
                     in_pos = False
                 continue
-            if i not in buy_idx_set:
+            if i not in buy_action_idx:
                 continue
             if i > 0 and close[i] > close[i - 1] * 1.099:
                 continue
@@ -92,11 +101,21 @@ class _ChanlunBase(StrategyTemplate):
 
 
 class Chan1Buy(_ChanlunBase):
-    """缠论 1 类买点 — 底背驰反转，每段下跌结束 + MACD 面积衰减."""
+    """缠论 1 类买点 — 底背驰反转，2 bar 滞后确认（去偷看）."""
     template_id = "chan-1buy"
     _classes_to_use = ("1",)
+    _confirm_lag = 2
     _params = {"atr_mult": 2.0, "trail_activation": 0.06, "time_stop": 75}
-    _display = "缠论_一类买点"
+    _display = "缠论_一类买点(lag2)"
+
+
+class Chan1BuyStrict(_ChanlunBase):
+    """缠论 1 类买点 — 严格 5 bar 滞后（笔完全确认后才入场）."""
+    template_id = "chan-1buy-strict"
+    _classes_to_use = ("1",)
+    _confirm_lag = 5
+    _params = {"atr_mult": 2.0, "trail_activation": 0.06, "time_stop": 75}
+    _display = "缠论_一类买点(lag5严格)"
 
 
 class Chan2Buy(_ChanlunBase):
