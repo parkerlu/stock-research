@@ -124,14 +124,22 @@ async def _do_backfill(job_id: str, include_inactive: bool, only_stale: bool):
             )).all()
             latest_map = {ts: d for ts, d in latest_rows}
 
-        # Filter
+        # `end` should be TODAY, not max-DB-date — otherwise we never advance
+        # past the last successful backfill. TuShare returns up-to-the-most-
+        # recent trading day automatically (skips weekends/holidays).
+        from datetime import date as _date
+        today = _date.today()
+        end = today
+
+        # Filter: a stock is "stale" if its latest is < end (today) — no longer
+        # gated on market_latest (which is a chicken-and-egg metric).
         targets: list[tuple[str, date | None]] = []
         for ts_code, active in codes_all:
             if active is False and not include_inactive:
                 continue
             latest = latest_map.get(ts_code)
             if only_stale:
-                if latest is None or latest >= market_latest:
+                if latest is None or latest >= end:
                     continue
             targets.append((ts_code, latest))
 
@@ -142,7 +150,6 @@ async def _do_backfill(job_id: str, include_inactive: bool, only_stale: bool):
             return
 
         provider = TuShareProvider(token=settings.tushare_token)
-        end = market_latest
         rows_inserted = 0
 
         for k, (ts_code, latest) in enumerate(targets):

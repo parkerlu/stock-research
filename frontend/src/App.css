@@ -1620,3 +1620,28 @@ body {
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
+
+.cell-display-editable {
+  cursor: pointer;
+  border-bottom: 1px dashed transparent;
+  transition: border-color 0.15s;
+}
+.cell-display-editable:hover {
+  border-bottom-color: var(--accent, #2962ff);
+}
+.cell-rename-input {
+  background: var(--bg-primary);
+  border: 1px solid var(--accent, #2962ff);
+  color: var(--text-primary);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  width: 100%;
+  outline: none;
+}
+.strategy-pool-table th {
+  user-select: none;
+}
+.strategy-pool-table th:hover {
+  background: var(--bg-primary);
+}

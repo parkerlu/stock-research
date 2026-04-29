@@ -76,7 +76,7 @@ export function ScreeningPanel() {
         }
       };
       stopPolling();
-      pollTimer.current = setInterval(tick, 800);
+      pollTimer.current = setInterval(tick, 250);  // tight poll for smooth progress
       tick();  // immediate first poll
     } catch (e: any) {
       setError(e?.message ?? "start failed");

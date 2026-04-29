@@ -16,9 +16,42 @@ export function StrategyPoolPanel() {
   );
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<string>("score");
+  const [sortAsc, setSortAsc] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
   const dragId = useRef<string | null>(null);
   const dragOverId = useRef<string | null>(null);
   const [, force] = useState(0);
+
+  const toggleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortAsc(!sortAsc);
+    } else {
+      setSortKey(key);
+      setSortAsc(false);   // most columns most useful in descending order
+    }
+  };
+
+  const beginRename = (e: PoolEntry) => {
+    setEditingId(e.template_id);
+    setEditText(e.display_name);
+  };
+  const commitRename = async () => {
+    if (!editingId) return;
+    const newName = editText.trim();
+    const cur = entries.find((x) => x.template_id === editingId);
+    setEditingId(null);
+    if (!cur || !newName || newName === cur.display_name) return;
+    try {
+      await updatePoolEntry(editingId, { display_name: newName });
+      setEntries((prev) =>
+        prev.map((e) => (e.template_id === editingId ? { ...e, display_name: newName } : e))
+      );
+    } catch (e: any) {
+      setMsg(`✗ ${e?.message ?? "rename failed"}`);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -38,13 +71,37 @@ export function StrategyPoolPanel() {
   }, []);
 
   const filtered = useMemo(() => {
-    return entries.filter((e) => {
+    const list = entries.filter((e) => {
       if (filter.concept !== "all" && e.concept !== filter.concept) return false;
       if (filter.active === "active" && !e.is_active) return false;
       if (filter.active === "inactive" && e.is_active) return false;
       return true;
     });
-  }, [entries, filter]);
+    const get = (e: PoolEntry, k: string): number | string => {
+      if (k === "score") return e.score ?? 0;
+      if (k === "tid") return e.template_id;
+      if (k === "name") return e.display_name;
+      if (k === "concept") return e.concept;
+      if (k === "family") return e.family;
+      if (k === "active") return e.is_active ? 1 : 0;
+      const m: any = e.metrics ?? {};
+      if (k === "win") return m.win_rate ?? m.is_win ?? 0;
+      if (k === "avg") return m.avg_ret ?? m.is_avg ?? 0;
+      if (k === "trades") return m.trades ?? 0;
+      if (k === "stocks") return m.stocks ?? 0;
+      if (k === "mdd") return m.avg_mdd ?? 0;
+      return 0;
+    };
+    list.sort((a, b) => {
+      const va = get(a, sortKey);
+      const vb = get(b, sortKey);
+      const cmp = typeof va === "number" && typeof vb === "number"
+        ? (va as number) - (vb as number)
+        : String(va).localeCompare(String(vb));
+      return sortAsc ? cmp : -cmp;
+    });
+    return list;
+  }, [entries, filter, sortKey, sortAsc]);
 
   const handleToggle = async (tid: string, current: boolean) => {
     setMsg(null);
@@ -147,16 +204,36 @@ export function StrategyPoolPanel() {
           <thead>
             <tr>
               <th style={{ width: 28 }}></th>
-              <th style={{ width: 50 }}>评分</th>
-              <th>策略</th>
-              <th>概念</th>
-              <th>家族</th>
-              <th>胜率</th>
-              <th>平均</th>
-              <th>笔数</th>
-              <th>股票</th>
-              <th>回撤</th>
-              <th>状态</th>
+              <th style={{ width: 60, cursor: "pointer" }} onClick={() => toggleSort("score")}>
+                评分 {sortKey === "score" ? (sortAsc ? "↑" : "↓") : ""}
+              </th>
+              <th style={{ cursor: "pointer" }} onClick={() => toggleSort("name")}>
+                策略 {sortKey === "name" ? (sortAsc ? "↑" : "↓") : ""}
+              </th>
+              <th style={{ cursor: "pointer" }} onClick={() => toggleSort("concept")}>
+                概念 {sortKey === "concept" ? (sortAsc ? "↑" : "↓") : ""}
+              </th>
+              <th style={{ cursor: "pointer" }} onClick={() => toggleSort("family")}>
+                家族 {sortKey === "family" ? (sortAsc ? "↑" : "↓") : ""}
+              </th>
+              <th style={{ cursor: "pointer" }} onClick={() => toggleSort("win")}>
+                胜率 {sortKey === "win" ? (sortAsc ? "↑" : "↓") : ""}
+              </th>
+              <th style={{ cursor: "pointer" }} onClick={() => toggleSort("avg")}>
+                平均 {sortKey === "avg" ? (sortAsc ? "↑" : "↓") : ""}
+              </th>
+              <th style={{ cursor: "pointer" }} onClick={() => toggleSort("trades")}>
+                笔数 {sortKey === "trades" ? (sortAsc ? "↑" : "↓") : ""}
+              </th>
+              <th style={{ cursor: "pointer" }} onClick={() => toggleSort("stocks")}>
+                股票 {sortKey === "stocks" ? (sortAsc ? "↑" : "↓") : ""}
+              </th>
+              <th style={{ cursor: "pointer" }} onClick={() => toggleSort("mdd")}>
+                回撤 {sortKey === "mdd" ? (sortAsc ? "↑" : "↓") : ""}
+              </th>
+              <th style={{ cursor: "pointer" }} onClick={() => toggleSort("active")}>
+                状态 {sortKey === "active" ? (sortAsc ? "↑" : "↓") : ""}
+              </th>
               <th></th>
             </tr>
           </thead>
@@ -181,7 +258,27 @@ export function StrategyPoolPanel() {
                   <td>
                     <div className="cell-name">
                       <span className="cell-tid">{e.template_id}</span>
-                      <span className="cell-display">{e.display_name}</span>
+                      {editingId === e.template_id ? (
+                        <input
+                          className="cell-rename-input"
+                          value={editText}
+                          autoFocus
+                          onChange={(ev) => setEditText(ev.target.value)}
+                          onBlur={commitRename}
+                          onKeyDown={(ev) => {
+                            if (ev.key === "Enter") commitRename();
+                            else if (ev.key === "Escape") setEditingId(null);
+                          }}
+                        />
+                      ) : (
+                        <span
+                          className="cell-display cell-display-editable"
+                          onClick={() => beginRename(e)}
+                          title="点击重命名"
+                        >
+                          {e.display_name}
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td><span className="concept-tag">{e.concept}</span></td>

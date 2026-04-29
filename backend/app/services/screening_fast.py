@@ -191,17 +191,20 @@ def _entry_mask_for(template_id: str, sd: dict) -> np.ndarray:
 # Public scan API
 # =========================================================================
 
-def fast_scan(template_id: str, lookback_days: int, on_progress=None) -> list[dict]:
-    """Returns list of hits. on_progress(scanned, total) called after each batch."""
+async def fast_scan_async(template_id: str, lookback_days: int, on_progress=None) -> list[dict]:
+    """Async version — yields to event loop every batch so HTTP polling
+    can see progress mid-scan instead of waiting for the whole scan to finish.
+    """
+    import asyncio
     cache = _load_caches()
     if not cache.get("loaded"):
         return []
     stocks = cache["stocks"]
-    max_date = cache["max_date"]
     codes = sorted(stocks.keys())
     total = len(codes)
 
     hits = []
+    BATCH = 25  # finer granularity for visible progress
     for k, ts in enumerate(codes):
         sd = stocks[ts]
         try:
@@ -209,7 +212,6 @@ def fast_scan(template_id: str, lookback_days: int, on_progress=None) -> list[di
         except Exception:
             mask = None
         if mask is not None and mask.any():
-            # Look at last `lookback_days+1` bars
             n = len(mask)
             for i in range(max(0, n - lookback_days - 1), n):
                 if mask[i]:
@@ -222,7 +224,6 @@ def fast_scan(template_id: str, lookback_days: int, on_progress=None) -> list[di
                     buy_close = float(sd["close"][i])
                     latest_close = float(sd["close"][latest_idx])
                     gain = (latest_close / buy_close - 1) * 100 if buy_close > 0 else 0.0
-                    # MDD since signal
                     closes_since = sd["close"][i:]
                     lows_since = sd["low"][i:]
                     running_peak = closes_since[0]; worst_dd = 0.0
@@ -240,10 +241,19 @@ def fast_scan(template_id: str, lookback_days: int, on_progress=None) -> list[di
                         "gain_since_signal_pct": round(gain, 2),
                         "max_drawdown_pct": round(worst_dd * 100, 2),
                     })
-                    break  # one hit per stock (most recent in window)
-        if on_progress and (k + 1) % 100 == 0:
-            on_progress(k + 1, total)
+                    break
+        if (k + 1) % BATCH == 0:
+            if on_progress:
+                on_progress(k + 1, total)
+            # Yield to event loop so polling endpoint can serve job-status reads
+            await asyncio.sleep(0)
     if on_progress:
         on_progress(total, total)
     hits.sort(key=lambda h: (h["signal_date"], h["gain_since_signal_pct"]), reverse=True)
     return hits
+
+
+def fast_scan(template_id: str, lookback_days: int, on_progress=None) -> list[dict]:
+    """Synchronous wrapper kept for backwards compat."""
+    import asyncio
+    return asyncio.run(fast_scan_async(template_id, lookback_days, on_progress))

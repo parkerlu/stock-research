@@ -88,14 +88,13 @@ async def _run_scan(job_id: str, template_id: str, lookback_days: int) -> None:
                 job["elapsed_sec"] = time.time() - t0
 
             try:
-                # Pre-filter stocks dict to active before scanning
                 from app.services import screening_fast
+                from app.services.screening_fast import fast_scan_async
                 full_stocks = screening_fast._CACHE["stocks"] if screening_fast._CACHE else {}
                 active_only = {k: v for k, v in full_stocks.items() if k in active_set}
-                # Temporarily swap to active subset
                 screening_fast._CACHE["stocks"] = active_only
                 try:
-                    hits_raw = fast_scan(template_id, lookback_days, on_progress)
+                    hits_raw = await fast_scan_async(template_id, lookback_days, on_progress)
                 finally:
                     screening_fast._CACHE["stocks"] = full_stocks
             except InterruptedError:
