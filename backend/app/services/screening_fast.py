@@ -125,12 +125,13 @@ def _entry_mask_for(template_id: str, sd: dict) -> np.ndarray:
         thr = thr_map.get(template_id, 0.50)
         broad = template_id.startswith("mm-broad") or template_id.startswith("mm-pure")
         if broad:
+            # ONLY include the 3 BUY-side signals turning off (急买/短买/准备).
+            # Sell-side (急卖/短卖) turn-off was previously included as a
+            # "fear exhausted" proxy but produced false positives.
             j_off = (_shift1(jibuy) > 0) & (jibuy == 0)
             d_off = (_shift1(duanbuy) > 0) & (duanbuy == 0)
             z_off = (_shift1(zhunbei) > 0) & (zhunbei == 0)
-            js_off = (_shift1(jisell) > 0) & (jisell == 0)
-            ds_off = (_shift1(duansell) > 0) & (duansell == 0)
-            sig_mask = j_off | d_off | z_off | js_off | ds_off
+            sig_mask = j_off | d_off | z_off
         else:
             sum_now = jibuy + duanbuy + zhunbei
             sum_prev = _shift1(sum_now)
@@ -141,12 +142,11 @@ def _entry_mask_for(template_id: str, sd: dict) -> np.ndarray:
     # rev-* family
     if template_id.startswith("rev-"):
         jibuy, duanbuy, zhunbei, jisell, duansell = _maimai_signals(sd)
+        # buy-side mm only — no sell-off
         j_off = (_shift1(jibuy) > 0) & (jibuy == 0)
         d_off = (_shift1(duanbuy) > 0) & (duanbuy == 0)
         z_off = (_shift1(zhunbei) > 0) & (zhunbei == 0)
-        js_off = (_shift1(jisell) > 0) & (jisell == 0)
-        ds_off = (_shift1(duansell) > 0) & (duansell == 0)
-        mm_any = j_off | d_off | z_off | js_off | ds_off
+        mm_any = j_off | d_off | z_off
 
         # 动力线 stage_bottom: cross above 0.2
         dl = sd.get("dl_value", np.zeros(n))
@@ -213,14 +213,13 @@ async def fast_scan_async(template_id: str, lookback_days: int, on_progress=None
             mask = None
         if mask is not None and mask.any():
             n = len(mask)
-            for i in range(max(0, n - lookback_days - 1), n):
+            # Last `lookback_days` trading bars (NOT calendar days).
+            # range(n - lookback_days, n) gives exactly N bars including today.
+            for i in range(max(0, n - lookback_days), n):
                 if mask[i]:
                     sig_date: date = sd["dates"][i]
                     latest_idx = n - 1
                     latest_date: date = sd["dates"][latest_idx]
-                    days_ago = (latest_date - sig_date).days
-                    if days_ago > lookback_days + 1:
-                        continue
                     buy_close = float(sd["close"][i])
                     latest_close = float(sd["close"][latest_idx])
                     gain = (latest_close / buy_close - 1) * 100 if buy_close > 0 else 0.0
