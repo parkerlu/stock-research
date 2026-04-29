@@ -18,7 +18,6 @@ export function ScreeningPanel() {
   const currentSymbol = useQuoteStore((s) => s.currentSymbol);
   const templates = useStrategyStore((s) => s.templates);
   const fetchTemplates = useStrategyStore((s) => s.fetchTemplates);
-  const runAdhocTemplate = useStrategyStore((s) => s.runAdhocTemplate);
 
   const [activeTpl, setActiveTpl] = useState<string | null>(null);
   const [lookbackDays, setLookbackDays] = useState(3);
@@ -43,30 +42,21 @@ export function ScreeningPanel() {
     }
   };
 
-  const handleStockClick = async (hit: StockHit) => {
+  const handleStockClick = (hit: StockHit) => {
     setCurrentStock(hit.ts_code, hit.name ?? hit.ts_code);
-    if (!activeTpl) return;
-    await runAdhocTemplate(hit.ts_code, activeTpl);
-    // Make sure the screening-detected signal date is visually marked even
-    // if tryTemplate's sequential walk skipped it (e.g. open position from
-    // earlier signal, or score difference between cache vs fresh ensemble).
-    const store = useStrategyStore.getState();
-    const cur = store.tradeActions ?? [];
-    const has = cur.some((a) => a.type === "buy" && a.date === hit.signal_date);
-    if (!has) {
-      // synthesize a buy marker at the signal date so user can locate it
-      const synthetic = {
-        date: hit.signal_date,
-        type: "buy" as const,
-        price: hit.latest_close,   // approximate (real price would be that bar's close)
-        shares: 0,
-        amount: 0,
-        position_level: 1,
-      };
-      useStrategyStore.setState({
-        tradeActions: [synthetic, ...cur],
-      });
-    }
+    // Just mark the buy date — no full backtest, no sell point
+    useStrategyStore.setState({
+      tradeActions: [
+        {
+          date: hit.signal_date,
+          type: "buy" as const,
+          price: hit.latest_close,
+          shares: 0,
+          amount: 0,
+          position_level: 1,
+        },
+      ],
+    });
   };
 
   const handleSearch = async () => {
@@ -281,19 +271,8 @@ export function ScreeningPanel() {
                 <span className="hit-name">{h.name ?? ""}</span>
               </div>
               <div className="hit-row2">
-                <span className="hit-date">📅 {h.signal_date}</span>
-                <span
-                  className={`hit-gain ${
-                    h.gain_since_signal_pct >= 0 ? "up" : "down"
-                  }`}
-                >
-                  {h.gain_since_signal_pct >= 0 ? "+" : ""}
-                  {h.gain_since_signal_pct.toFixed(1)}%
-                </span>
-              </div>
-              <div className="hit-row3">
-                <span className="hit-mdd-label">最大回撤</span>
-                <span className="hit-mdd">−{h.max_drawdown_pct.toFixed(1)}%</span>
+                <span className="hit-date">📅 信号 {h.signal_date}</span>
+                <span className="hit-price">¥{h.latest_close.toFixed(2)}</span>
               </div>
             </div>
           ))}

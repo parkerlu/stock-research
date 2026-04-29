@@ -30,8 +30,6 @@ class StockHit(BaseModel):
     signal_date: str
     latest_date: str
     latest_close: float
-    gain_since_signal_pct: float
-    max_drawdown_pct: float       # peak-to-trough since signal, on this stock alone
 
 
 class JobState(BaseModel):
@@ -110,8 +108,6 @@ async def _run_scan(job_id: str, template_id: str, lookback_days: int) -> None:
                     signal_date=h["signal_date"],
                     latest_date=h["latest_date"],
                     latest_close=h["latest_close"],
-                    gain_since_signal_pct=h["gain_since_signal_pct"],
-                    max_drawdown_pct=h["max_drawdown_pct"],
                 )
                 for h in hits_raw
             ]

@@ -1645,3 +1645,9 @@ body {
 .strategy-pool-table th:hover {
   background: var(--bg-primary);
 }
+
+.hit-price {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}

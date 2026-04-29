@@ -6,8 +6,6 @@ export interface StockHit {
   signal_date: string;
   latest_date: string;
   latest_close: number;
-  gain_since_signal_pct: number;
-  max_drawdown_pct: number;
 }
 
 export interface JobState {

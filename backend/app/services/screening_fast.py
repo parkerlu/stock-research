@@ -213,32 +213,17 @@ async def fast_scan_async(template_id: str, lookback_days: int, on_progress=None
             mask = None
         if mask is not None and mask.any():
             n = len(mask)
-            # Last `lookback_days` trading bars (NOT calendar days).
-            # range(n - lookback_days, n) gives exactly N bars including today.
+            # Last `lookback_days` trading bars
             for i in range(max(0, n - lookback_days), n):
                 if mask[i]:
                     sig_date: date = sd["dates"][i]
                     latest_idx = n - 1
                     latest_date: date = sd["dates"][latest_idx]
-                    buy_close = float(sd["close"][i])
-                    latest_close = float(sd["close"][latest_idx])
-                    gain = (latest_close / buy_close - 1) * 100 if buy_close > 0 else 0.0
-                    closes_since = sd["close"][i:]
-                    lows_since = sd["low"][i:]
-                    running_peak = closes_since[0]; worst_dd = 0.0
-                    for kk in range(1, len(closes_since)):
-                        running_peak = max(running_peak, closes_since[kk])
-                        if running_peak > 0:
-                            dd = (running_peak - lows_since[kk]) / running_peak
-                            if dd > worst_dd:
-                                worst_dd = dd
                     hits.append({
                         "ts_code": ts,
                         "signal_date": sig_date.isoformat(),
                         "latest_date": latest_date.isoformat(),
-                        "latest_close": round(latest_close, 4),
-                        "gain_since_signal_pct": round(gain, 2),
-                        "max_drawdown_pct": round(worst_dd * 100, 2),
+                        "latest_close": round(float(sd["close"][latest_idx]), 4),
                     })
                     break
         if (k + 1) % BATCH == 0:
