@@ -240,3 +240,28 @@ async def backfill_cancel(job_id: str):
         raise HTTPException(404, "Unknown job")
     _CANCEL[job_id] = True
     return {"job_id": job_id, "cancelling": True}
+
+
+# =========================================================================
+# Scheduled sync status + manual trigger
+# =========================================================================
+
+@router.get("/scheduler")
+async def scheduler_status():
+    """Show next scheduled run time."""
+    from app.services.scheduler import _scheduler
+    if not _scheduler:
+        return {"running": False}
+    job = _scheduler.get_job("daily_sync")
+    return {
+        "running": True,
+        "next_run": str(job.next_run_time) if job else None,
+    }
+
+
+@router.post("/scheduler/trigger")
+async def scheduler_trigger():
+    """Manually trigger the daily sync now."""
+    from app.services.scheduler import daily_sync_job
+    asyncio.create_task(daily_sync_job())
+    return {"triggered": True}

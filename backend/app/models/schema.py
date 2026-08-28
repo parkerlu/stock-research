@@ -13,7 +13,10 @@ class StockBasic(Base):
 
     ts_code: Mapped[str] = mapped_column(String(12), primary_key=True)
     symbol: Mapped[str] = mapped_column(String(6), index=True)
-    name: Mapped[str] = mapped_column(String(20), index=True)
+    # 64 而非 20: ETF/LOF 简称远长于股票简称，实测 tushare fund_basic 有 113/2879
+    # 个超过 20 字符，最长 32 (如 "广发道琼斯美国石油开发与生产指数(QDII-LOF)-A-CNY")。
+    # 之前 20 会让整批 upsert 直接回滚，ETF 元数据一条都写不进去。
+    name: Mapped[str] = mapped_column(String(64), index=True)
     area: Mapped[str | None] = mapped_column(String(10))
     industry: Mapped[str | None] = mapped_column(String(20))
     market: Mapped[str | None] = mapped_column(String(10))

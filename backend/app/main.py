@@ -1,3 +1,6 @@
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -11,10 +14,20 @@ from app.routers.screening import router as screening_router
 from app.routers.strategy_pool import router as strategy_pool_router
 from app.routers.system import router as system_router
 from app.routers.forecast import router as forecast_router
+from app.services.scheduler import start_scheduler, stop_scheduler
+
+logging.basicConfig(level=logging.INFO)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_scheduler()
+    yield
+    stop_scheduler()
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Stock Quote API", version="0.1.0")
+    app = FastAPI(title="Stock Quote API", version="0.1.0", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["http://localhost:5173"],

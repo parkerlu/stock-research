@@ -3,7 +3,8 @@ FROM node:20-slim AS build
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+# npmmirror — 官方 registry 在国内 ECS 上极慢
+RUN npm config set registry https://registry.npmmirror.com && npm ci
 
 COPY . .
 RUN npm run build
