@@ -62,3 +62,24 @@ export async function cancelBackfill(jobId: string): Promise<void> {
   const r = await fetch(`${BASE}/backfill/${jobId}/cancel`, { method: "POST" });
   if (!r.ok) throw new Error(`cancelBackfill ${r.status}`);
 }
+
+export interface SymbolSyncResult {
+  ts_code: string;
+  inserted: number;
+  latest: string | null;
+  /** 非 null 表示没打数据源: "cooldown" 冷却期内, "up-to-date" 本地已到今天 */
+  skipped: "cooldown" | "up-to-date" | null;
+}
+
+/** 补齐单只标的的日线到今天 — 实时页切股时调用, 周/月K 由日线聚合故一并补齐。 */
+export async function syncSymbol(
+  tsCode: string,
+  force = false
+): Promise<SymbolSyncResult> {
+  const r = await fetch(
+    `${BASE}/backfill/symbol/${tsCode}${force ? "?force=true" : ""}`,
+    { method: "POST" }
+  );
+  if (!r.ok) throw new Error(`syncSymbol ${r.status}`);
+  return r.json();
+}

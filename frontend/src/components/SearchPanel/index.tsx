@@ -7,7 +7,8 @@ import { SnapshotCard } from "./SnapshotCard";
 type Tab = "recent" | "favorites";
 
 export function SearchPanel() {
-  const [tab, setTab] = useState<Tab>("recent");
+  // 默认收藏 —— 自选是最常用的入口, 且带实时报价
+  const [tab, setTab] = useState<Tab>("favorites");
 
   return (
     <div className="search-panel">

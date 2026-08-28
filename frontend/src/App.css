@@ -1700,14 +1700,47 @@ body {
 
 .live-panes { flex: 1; display: flex; min-height: 0; }
 .live-pane {
-  flex: 1 1 50%;
+  flex: 1 1 0;
   min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--border);
 }
-.live-pane:last-child { border-right: none; }
+/* 左栏宽度由 --live-split 控制 (LiveView 拖分割线时写入), 右栏吃掉剩余 */
+.live-pane-first { flex: 0 0 var(--live-split, 50%); }
+
+/* 拖拽分割线 —— 深色背景上 1px 细线等于看不见, 所以做成一条有抓手的窄栏 */
+.live-splitter {
+  position: relative;
+  flex: 0 0 10px;
+  cursor: col-resize;
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  transition: background-color 0.12s;
+}
+/* 居中的一小截竖条 —— 让人一眼看出这里能拖 */
+.live-splitter::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 32px;
+  border-radius: 1px;
+  background: var(--text-muted, #6b7280);
+  transition: background-color 0.12s, height 0.12s;
+}
+.live-splitter:hover,
+.live-panes.dragging .live-splitter { background: rgba(41, 98, 255, 0.18); }
+.live-splitter:hover::after,
+.live-panes.dragging .live-splitter::after {
+  background: var(--accent, #2962ff);
+  height: 56px;
+}
+/* 拖动中: 整页锁成拖拽光标, 并禁选文字, 否则鼠标划过图表会选中文本 */
+.live-panes.dragging { cursor: col-resize; user-select: none; }
 .live-pane-title {
   padding: 4px 12px;
   font-size: 11px;
@@ -1720,10 +1753,22 @@ body {
 .live-pane-body .live-daily,
 .live-pane-body > div { width: 100%; height: 100%; }
 
-/* 窄屏改上下排列 */
+/* 窄屏改上下排列 —— 分割线随之变成横向 */
 @media (max-width: 1100px) {
   .live-panes { flex-direction: column; }
-  .live-pane { border-right: none; border-bottom: 1px solid var(--border); }
+  .live-pane-first { flex: 0 0 var(--live-split, 50%); }
+  /* 上下排列时抓手转 90 度 */
+  .live-splitter {
+    cursor: row-resize;
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .live-splitter::after { width: 32px; height: 2px; }
+  .live-splitter:hover::after,
+  .live-panes.dragging .live-splitter::after { width: 56px; height: 2px; }
+  .live-panes.dragging { cursor: row-resize; }
 }
 
 /* 分时图 */

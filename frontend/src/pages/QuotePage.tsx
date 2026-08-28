@@ -12,7 +12,8 @@ import { LiveView } from "../components/ChartArea/LiveView";
 import { useStrategyStore } from "../stores/strategyStore";
 
 export function QuotePage() {
-  const [mode, setMode] = useState<AppMode>("strategy");
+  // 默认落在实时看盘 —— 打开就是看今天的盘
+  const [mode, setMode] = useState<AppMode>("live");
   const tradeActions = useStrategyStore((s) => s.tradeActions);
   // tradeActions show on chart in strategy AND screening modes
   const actions = mode === "strategy" || mode === "screening" ? tradeActions : null;

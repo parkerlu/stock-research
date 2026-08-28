@@ -73,6 +73,8 @@ export interface MainChartHandle {
   getChart: () => Chart | null;
   /** 推送一根实时K线 (盘中更新当日末根)。klinecharts v10 走 subscribeBar 回调。 */
   pushBar: (bar: KLineData) => void;
+  /** 丢弃缓存重新拉K线 (数据补齐后调用)。加载中则排队到本次加载结束再执行。 */
+  reload: () => void;
 }
 
 export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
@@ -89,6 +91,24 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
   // klinecharts 通过 subscribeBar 交给我们一个推送回调, 存起来供 pushBar 使用
   const livePushRef = useRef<((bar: KLineData) => void) | null>(null);
 
+  // reload 与 init 取数的竞态: klinecharts 的 resetData 会强制 _loading=false 再
+  // 发一次 init, 但它不会作废在途的旧回调 —— 旧回调后落地就会用补齐前的数据盖掉
+  // 新数据。所以加载中时把 reload 挂起, 等本次加载结束再执行。
+  const loadingRef = useRef(false);
+  const pendingReloadRef = useRef(false);
+
+  const doReload = () => {
+    const chart = chartRef.current;
+    const ticker = chart?.getSymbol()?.ticker;
+    if (!chart || !ticker) return;
+    // 周/月K 由日线聚合, 补齐日线后三个周期的缓存一起作废
+    (["1d", "1w", "1m"] as const).forEach((t) => {
+      candleCache.delete(`${ticker}|${t}`);
+      noMoreHistory.delete(`${ticker}|${t}`);
+    });
+    chart.resetData();
+  };
+
   useImperativeHandle(ref, () => ({
     scrollToTimestamp: (ts: number) => {
       chartRef.current?.scrollToTimestamp(ts, 300);
@@ -96,6 +116,13 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
     getChart: () => chartRef.current,
     // 若图表尚未订阅 (还没初始化完), 静默丢弃 —— 下一轮轮询会再推一次
     pushBar: (bar: KLineData) => livePushRef.current?.(bar),
+    reload: () => {
+      if (loadingRef.current) {
+        pendingReloadRef.current = true;
+        return;
+      }
+      doReload();
+    },
   }));
 
   useEffect(() => {
@@ -176,6 +203,7 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
           }
 
           setLoading(true);
+          loadingRef.current = true;
           const now = new Date();
           const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
 
@@ -189,6 +217,12 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
             console.error("Failed to load candles:", err);
             setLoading(false);
             callback([], false);
+          } finally {
+            loadingRef.current = false;
+            if (pendingReloadRef.current) {
+              pendingReloadRef.current = false;
+              doReload();
+            }
           }
         } else if (type === "forward") {
           // User scrolled left past the oldest candle → load older history

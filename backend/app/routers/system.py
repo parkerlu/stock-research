@@ -5,6 +5,10 @@ import asyncio
 import time
 import uuid
 from datetime import date, timedelta
+from functools import partial
+
+import pandas as pd
+import tushare as ts
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -240,6 +244,108 @@ async def backfill_cancel(job_id: str):
         raise HTTPException(404, "Unknown job")
     _CANCEL[job_id] = True
     return {"job_id": job_id, "cancelling": True}
+
+
+# =========================================================================
+# 单只标的按需补齐 — 实时页展示某只股票时调用
+# =========================================================================
+
+# 同一标的并发互斥 + 冷却: 盘中/周末本地已是最新时 start 仍 <= today, 不加冷却
+# 会每次切股都白打一次 TuShare。
+_SYMBOL_LOCKS: dict[str, asyncio.Lock] = {}
+_SYMBOL_SYNCED_AT: dict[str, float] = {}
+SYMBOL_COOLDOWN_SEC = 600
+
+
+async def _fetch_symbol_daily(
+    ts_code: str, market: str | None, start: date, end: date
+) -> list[dict]:
+    """取单只标的的日线记录, 已备好 DailyCandle 的列。"""
+    if (market or "").upper() == "ETF":
+        # pro.daily 只覆盖股票, ETF 走 fund_daily; 基金无复权因子
+        pro = ts.pro_api(settings.tushare_token)
+        loop = asyncio.get_running_loop()
+        df = await loop.run_in_executor(None, partial(
+            pro.fund_daily,
+            ts_code=ts_code,
+            start_date=start.strftime("%Y%m%d"),
+            end_date=end.strftime("%Y%m%d"),
+        ))
+        if df is None or df.empty:
+            return []
+        df = df.copy()
+        df["trade_date"] = pd.to_datetime(df["trade_date"]).dt.date
+        df["adj_factor"] = 1.0
+    else:
+        provider = TuShareProvider(token=settings.tushare_token)
+        df = await provider.fetch_daily(ts_code, start, end)
+        if df.empty:
+            return []
+        df = df.copy()
+
+    df["source"] = "tushare"
+    keep = ["ts_code", "trade_date", "open", "high", "low", "close",
+            "vol", "amount", "adj_factor", "source"]
+    return df[keep].to_dict("records")
+
+
+@router.post("/backfill/symbol/{ts_code}")
+async def backfill_symbol(ts_code: str, force: bool = False):
+    """把单只标的的日线补到今天。
+
+    实时页切股时调用 —— 全量 backfill 要跑几千只、几十分钟, 只看一只股票不该
+    等它。周/月K 由日线聚合, 所以补日线即三个周期一起补齐。
+    inserted > 0 时前端重拉一次K线。
+    """
+    lock = _SYMBOL_LOCKS.setdefault(ts_code, asyncio.Lock())
+    async with lock:
+        if not force and time.time() - _SYMBOL_SYNCED_AT.get(ts_code, 0.0) < SYMBOL_COOLDOWN_SEC:
+            return {"ts_code": ts_code, "inserted": 0, "latest": None, "skipped": "cooldown"}
+
+        async with async_session() as db:
+            latest = (await db.execute(
+                select(func.max(DailyCandle.trade_date))
+                .where(DailyCandle.ts_code == ts_code)
+            )).scalar_one_or_none()
+            market = (await db.execute(
+                select(StockBasic.market).where(StockBasic.ts_code == ts_code)
+            )).scalar_one_or_none()
+
+        today = date.today()
+        start = (latest + timedelta(days=1)) if latest else date(today.year - 7, 1, 1)
+        if start > today:
+            _SYMBOL_SYNCED_AT[ts_code] = time.time()
+            return {
+                "ts_code": ts_code, "inserted": 0,
+                "latest": latest.isoformat() if latest else None,
+                "skipped": "up-to-date",
+            }
+
+        try:
+            records = await _fetch_symbol_daily(ts_code, market, start, today)
+        except Exception as e:
+            raise HTTPException(502, f"补齐失败: {str(e)[:200]}")
+
+        inserted = 0
+        if records:
+            async with async_session() as db:
+                stmt = pg_insert(DailyCandle).values(records)
+                stmt = stmt.on_conflict_do_nothing(
+                    index_elements=["ts_code", "trade_date"]
+                )
+                res = await db.execute(stmt)
+                await db.commit()
+            # rowcount 是真正落库的行数; on_conflict 跳过的不算
+            inserted = res.rowcount if res.rowcount and res.rowcount > 0 else 0
+            latest = max(r["trade_date"] for r in records)
+
+        _SYMBOL_SYNCED_AT[ts_code] = time.time()
+        return {
+            "ts_code": ts_code,
+            "inserted": inserted,
+            "latest": latest.isoformat() if latest else None,
+            "skipped": None,
+        }
 
 
 # =========================================================================

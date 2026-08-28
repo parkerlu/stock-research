@@ -5,8 +5,10 @@
 // 日K 的最后一根由快照实时打补丁 (今开/最高/最低/现价/成交量),
 // 这样盘中日K末根跟着走, 不必等收盘入库。
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { useQuoteStore } from "../../stores/quoteStore";
 import { getMinute } from "../../api/quotes";
+import { syncSymbol } from "../../api/system";
 import type { MinuteData, Timeframe } from "../../types/quote";
 import { MinuteChart } from "./MinuteChart";
 import { OrderBook } from "./OrderBook";
@@ -16,6 +18,13 @@ import type { MainChartHandle } from "./MainChart";
 
 const POLL_MS = 5000;        // 开市中
 const IDLE_POLL_MS = 60000;  // 收市后偶尔探一次, 以便开市自动恢复
+
+const SPLIT_KEY = "live.split";
+const SPLIT_DEFAULT = 0.5;
+const SPLIT_MIN = 0.2;
+const SPLIT_MAX = 0.8;
+
+const clampSplit = (v: number) => Math.min(SPLIT_MAX, Math.max(SPLIT_MIN, v));
 
 export function LiveView() {
   const currentSymbol = useQuoteStore((s) => s.currentSymbol);
@@ -29,6 +38,41 @@ export function LiveView() {
   const dailyRef = useRef<MainChartHandle>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const alive = useRef(true);
+
+  // 左右分栏比例 —— 拖分割线调整, 记住上次
+  const panesRef = useRef<HTMLDivElement>(null);
+  const [split, setSplit] = useState<number>(() => {
+    const v = parseFloat(localStorage.getItem(SPLIT_KEY) ?? "");
+    return Number.isFinite(v) ? clampSplit(v) : SPLIT_DEFAULT;
+  });
+  const [dragging, setDragging] = useState(false);
+  useEffect(() => {
+    localStorage.setItem(SPLIT_KEY, String(split));
+  }, [split]);
+
+  const startDrag = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const el = panesRef.current;
+    if (!el) return;
+    // 窄屏下 .live-panes 变成上下排列, 拖拽轴随之改为纵向
+    const vertical = getComputedStyle(el).flexDirection === "column";
+    setDragging(true);
+
+    const onMove = (ev: MouseEvent) => {
+      const r = el.getBoundingClientRect();
+      const ratio = vertical
+        ? (ev.clientY - r.top) / r.height
+        : (ev.clientX - r.left) / r.width;
+      setSplit(clampSplit(ratio));
+    };
+    const onUp = () => {
+      setDragging(false);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }, []);
 
   // 右侧K线周期 (日/周/月), 记住上次选择
   const [tf, setTf] = useState<Timeframe>(() => {
@@ -114,6 +158,33 @@ export function LiveView() {
     };
   }, [currentSymbol, tick]);
 
+  // 切股时按需补齐该标的的日线 —— 全量 backfill 要跑几千只, 只看一只不该等它。
+  // 周/月K 由日线聚合, 补日线即三个周期一起补齐。补到新数据才重拉K线, 否则白闪。
+  // 结果按标的存, 这样"补齐中…"是渲染时算出来的, 不必在 effect 里同步 setState
+  const [syncDone, setSyncDone] = useState<{ symbol: string; text: string | null } | null>(null);
+  const syncMsg = syncDone?.symbol === currentSymbol ? syncDone.text : "补齐中…";
+
+  useEffect(() => {
+    if (!currentSymbol) return;
+    let cancelled = false;
+    syncSymbol(currentSymbol)
+      .then((r) => {
+        if (cancelled) return;
+        if (r.inserted > 0) dailyRef.current?.reload();
+        setSyncDone({
+          symbol: currentSymbol,
+          text: r.inserted > 0 ? `已补 ${r.inserted} 根` : null,
+        });
+      })
+      .catch(() => {
+        // 补齐失败不影响看盘 —— 图上仍是本地已有的数据
+        if (!cancelled) setSyncDone({ symbol: currentSymbol, text: "补齐失败" });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentSymbol]);
+
   const snap = minute?.snapshot ?? null;
   const up = (snap?.change_pct ?? 0) >= 0;
   const color = up ? "#eb5454" : "#26a69a";
@@ -158,13 +229,18 @@ export function LiveView() {
             <span className="live-badge live-off">● 已收市</span>
           )}
           {updatedAt && <span className="live-dim">{updatedAt}</span>}
+          {syncMsg && <span className="live-dim">{syncMsg}</span>}
           {err && <span className="live-err">{err}</span>}
         </div>
       </div>
 
-      {/* 左分时 / 右日K */}
-      <div className="live-panes">
-        <div className="live-pane">
+      {/* 左分时 / 右日K, 中间可拖动的分割线 */}
+      <div
+        ref={panesRef}
+        className={`live-panes${dragging ? " dragging" : ""}`}
+        style={{ "--live-split": `${(split * 100).toFixed(2)}%` } as CSSProperties}
+      >
+        <div className="live-pane live-pane-first">
           <div className="live-pane-title">分时</div>
           <div className="live-pane-split">
             <div className="live-pane-body">
@@ -176,6 +252,13 @@ export function LiveView() {
             </div>
           </div>
         </div>
+        <div
+          className="live-splitter"
+          role="separator"
+          title="拖动调整左右宽度, 双击复位"
+          onMouseDown={startDrag}
+          onDoubleClick={() => setSplit(SPLIT_DEFAULT)}
+        />
         <div className="live-pane">
           <div className="live-pane-title live-pane-title-row">
             <div className="live-tf">
