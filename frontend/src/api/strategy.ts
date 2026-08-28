@@ -70,8 +70,19 @@ export interface TemplateInfo {
   name: string;
 }
 
-export async function listTemplates(): Promise<TemplateInfo[]> {
-  return json(`${BASE}/backtests/templates`);
+// sort_order = user drag-drop order (see ScreeningPanel); "score" = composite metric
+export async function listTemplates(
+  sortBy: "sort_order" | "score" = "sort_order"
+): Promise<TemplateInfo[]> {
+  return json(`${BASE}/backtests/templates?sort_by=${sortBy}`);
+}
+
+export async function reorderStrategyPool(order: string[]): Promise<void> {
+  await fetch("/api/strategy-pool/reorder", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ order }),
+  });
 }
 
 export interface TryTemplateResult {

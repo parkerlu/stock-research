@@ -4,6 +4,7 @@ import { useStrategyStore } from "../../stores/strategyStore";
 import { startScan, getScanStatus, cancelScan } from "../../api/screening";
 import type { JobState, StockHit } from "../../api/screening";
 import { createPoolWithStocks } from "../../api/pools";
+import { reorderStrategyPool } from "../../api/strategy";
 
 function todayYYMMDD(): string {
   const d = new Date();
@@ -25,6 +26,26 @@ export function ScreeningPanel() {
   const [error, setError] = useState<string | null>(null);
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentJobId = useRef<string | null>(null);
+
+  // Drag-drop reordering of the strategy list (persisted via strategy-pool)
+  const dragFrom = useRef<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+
+  const handleDrop = async (to: number) => {
+    const from = dragFrom.current;
+    dragFrom.current = null;
+    setDragOverIdx(null);
+    if (from === null || from === to) return;
+    const arr = [...templates];
+    const [moved] = arr.splice(from, 1);
+    arr.splice(to, 0, moved);
+    useStrategyStore.setState({ templates: arr });
+    try {
+      await reorderStrategyPool(arr.map((t) => t.template_id));
+    } catch {
+      fetchTemplates(); // restore server truth on failure
+    }
+  };
 
   useEffect(() => {
     if (templates.length === 0) fetchTemplates();
@@ -140,13 +161,21 @@ export function ScreeningPanel() {
         <div className="screening-section-title">a) 选择策略</div>
         <div className="screening-strategy-list">
           {templates.length === 0 && <div className="screening-empty">加载策略中...</div>}
-          {templates.map((t) => (
+          {templates.map((t, i) => (
             <button
               key={t.template_id}
-              className={`screening-strategy-btn ${activeTpl === t.template_id ? "active" : ""}`}
+              className={`screening-strategy-btn ${activeTpl === t.template_id ? "active" : ""} ${
+                dragOverIdx === i ? "dragover" : ""
+              }`}
               disabled={isRunning}
               onClick={() => setActiveTpl(t.template_id)}
-              title={t.name}
+              title={`${t.name}（可拖拽排序）`}
+              draggable={!isRunning}
+              onDragStart={() => { dragFrom.current = i; }}
+              onDragOver={(e) => { e.preventDefault(); setDragOverIdx(i); }}
+              onDragLeave={() => setDragOverIdx((v) => (v === i ? null : v))}
+              onDrop={(e) => { e.preventDefault(); handleDrop(i); }}
+              onDragEnd={() => { dragFrom.current = null; setDragOverIdx(null); }}
             >
               <span className="screening-strategy-id">{t.template_id}</span>
               <span className="screening-strategy-name">{t.name}</span>

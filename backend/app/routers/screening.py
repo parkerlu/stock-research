@@ -56,12 +56,12 @@ async def _run_scan(job_id: str, template_id: str, lookback_days: int) -> None:
     fast_supported = (
         template_id.startswith("mm-") or
         template_id.startswith("rev-") or
-        template_id.startswith("426-")
+        template_id.startswith("426-") or
+        template_id.startswith("dt-")
     )
     if fast_supported:
         try:
             from app.services.screening_fast import fast_scan, _load_caches
-            from sqlalchemy import select
             async with async_session() as db:
                 names_rows = (await db.execute(
                     select(StockBasic.ts_code, StockBasic.name)
@@ -73,6 +73,9 @@ async def _run_scan(job_id: str, template_id: str, lookback_days: int) -> None:
             active_set = set(active_rows)
 
             cache = _load_caches()
+            if not cache.get("loaded"):
+                # 缓存文件不存在(如小内存生产机不部署缓存) — 走慢路径而非静默 0 命中
+                raise RuntimeError("fast cache files not present")
             stocks = cache.get("stocks", {})
             # Filter to active only
             active_codes = [c for c in stocks.keys() if c in active_set]
@@ -180,29 +183,12 @@ async def _run_scan(job_id: str, template_id: str, lookback_days: int) -> None:
                 if recent_n > lookback_days + 1:
                     continue
                 latest_close = float(df.iloc[-1]["close"])
-                buy_close = float(df.iloc[buy_idx]["close"])
-                gain = (latest_close / buy_close - 1) * 100 if buy_close > 0 else 0.0
-                # Per-stock max drawdown since the buy signal:
-                # running peak of close, worst (peak − low)/peak observed.
-                window = df.iloc[buy_idx:].reset_index(drop=True)
-                closes = window["close"].astype(float).values
-                lows = window["low"].astype(float).values
-                running_peak = closes[0]
-                worst_dd = 0.0
-                for i in range(1, len(window)):
-                    running_peak = max(running_peak, closes[i])
-                    if running_peak > 0:
-                        dd = (running_peak - lows[i]) / running_peak
-                        if dd > worst_dd:
-                            worst_dd = dd
                 hits.append(StockHit(
                     ts_code=code,
                     name=names.get(code),
                     signal_date=buy_date.isoformat(),
                     latest_date=df_dates[-1].isoformat(),
                     latest_close=latest_close,
-                    gain_since_signal_pct=round(gain, 2),
-                    max_drawdown_pct=round(worst_dd * 100, 2),
                 ))
             except Exception:
                 pass
@@ -210,7 +196,7 @@ async def _run_scan(job_id: str, template_id: str, lookback_days: int) -> None:
             job["progress"] = k + 1
             job["elapsed_sec"] = time.time() - t0
             # Update visible hits incrementally (sorted)
-            hits.sort(key=lambda h: (h.signal_date, h.gain_since_signal_pct), reverse=True)
+            hits.sort(key=lambda h: h.signal_date, reverse=True)
             job["hits"] = hits
 
             if (k + 1) % 25 == 0:

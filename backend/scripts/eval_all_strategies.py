@@ -31,6 +31,45 @@ EVAL_POOL = [
 ]
 
 
+_ML_SCORES_CACHE: dict[str, pd.DataFrame] | None = None
+
+
+def _load_ml_scores() -> dict[str, pd.DataFrame]:
+    """Load ml_scores.parquet into per-stock {ts_code: df[trade_date, ml_score]}."""
+    global _ML_SCORES_CACHE
+    if _ML_SCORES_CACHE is not None:
+        return _ML_SCORES_CACHE
+    p = ROOT / "cache" / "ml_scores.parquet"
+    if not p.exists():
+        print(f"WARN: {p} not found — dt-40/50 ML thresholds will be ignored",
+              flush=True)
+        _ML_SCORES_CACHE = {}
+        return _ML_SCORES_CACHE
+    raw = pd.read_parquet(p)
+    raw["trade_date"] = pd.to_datetime(raw["trade_date"]).dt.date
+    _ML_SCORES_CACHE = {
+        ts: g.set_index("trade_date")[["ml_score"]]
+        for ts, g in raw.groupby("ts_code")
+    }
+    print(f"  loaded ml_scores: {len(_ML_SCORES_CACHE)} stocks", flush=True)
+    return _ML_SCORES_CACHE
+
+
+def _attach_ml_score(df: pd.DataFrame, ts: str) -> pd.DataFrame:
+    """Left-join ml_score into df by trade_date. Missing scores → 0.0."""
+    scores = _load_ml_scores().get(ts)
+    if scores is None:
+        df["ml_score"] = 0.0
+        return df
+    df = df.copy()
+    df["trade_date"] = pd.to_datetime(df["trade_date"]).dt.date
+    df = df.merge(
+        scores.reset_index(), on="trade_date", how="left"
+    )
+    df["ml_score"] = df["ml_score"].fillna(0.0)
+    return df
+
+
 async def evaluate_template(template_id: str, codes: list[str]) -> dict:
     """Run all (stock, template_id) pairs and aggregate."""
     from app.db import async_session
@@ -55,6 +94,7 @@ async def evaluate_template(template_id: str, codes: list[str]) -> dict:
             if not candles or len(candles) < 130:
                 continue
             df = pd.DataFrame(candles)
+            df = _attach_ml_score(df, ts)
             tpl = cls()
             if hasattr(tpl, "ts_code"):
                 tpl.ts_code = ts

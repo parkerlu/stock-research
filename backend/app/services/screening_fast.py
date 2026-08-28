@@ -183,6 +183,25 @@ def _entry_mask_for(template_id: str, sd: dict) -> np.ndarray:
             return np.zeros(n, dtype=bool)
         return entry_fn(score, ind, spec["params"])
 
+    # dt-* (抄底逃顶) family — Momentum Line + 背驰 + W 双底融合
+    if template_id.startswith("dt-"):
+        from app.services.strategy_templates.diao_di import (
+            compute_momentum_line, dt_entry_mask,
+        )
+        open_ = sd["open"]
+        momentum = compute_momentum_line(close, low, high)
+        cfg = {
+            "dt-div":  {"modes": ("div",),     "ml": None, "tt": 0.95, "vm": 1.0},
+            "dt-pure": {"modes": ("deep_v",),  "ml": None, "tt": 0.95, "vm": 1.05},
+            "dt-20":   {"modes": ("deep_v",),  "ml": 0.20, "tt": 0.95, "vm": 1.05},
+            "dt-30":   {"modes": ("deep_v",),  "ml": 0.30, "tt": 0.95, "vm": 1.05},
+        }.get(template_id, {"modes": ("deep_v",), "ml": None, "tt": 0.95, "vm": 1.05})
+        return dt_entry_mask(
+            close, high, low, vol, momentum, open_=open_, score=score,
+            ml_thr=cfg["ml"], modes=cfg["modes"],
+            trend_tol=cfg["tt"], vol_mult=cfg["vm"],
+        )
+
     # tdx-* family — fall back to legacy slow path (rare strategies)
     return np.zeros(n, dtype=bool)
 
@@ -233,7 +252,7 @@ async def fast_scan_async(template_id: str, lookback_days: int, on_progress=None
             await asyncio.sleep(0)
     if on_progress:
         on_progress(total, total)
-    hits.sort(key=lambda h: (h["signal_date"], h["gain_since_signal_pct"]), reverse=True)
+    hits.sort(key=lambda h: h["signal_date"], reverse=True)
     return hits
 
 

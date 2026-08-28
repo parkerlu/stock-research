@@ -22,9 +22,11 @@ from .maimai_filter import (
     MaimaiFilterBroad40, MaimaiFilterBroad50,
     MaimaiPure40, MaimaiPure50,
 )
+from .maimai_zhun import MaimaiZhun
 from .reversal_filter import Reversal30, Reversal40, Reversal50, Reversal55, Reversal60
 from .tdx_classics import TDXTripleGold, TDXMACDGoldPit, TDXExpmaTrio, TDXDualKDJ
 from .chanlun_strategy import Chan1Buy, Chan2Buy, Chan12Buy, Chan1BuyWide, Chan1BuyStrict
+from .diao_di import DiaoDiPure, DiaoDi20, DiaoDi30, DiaoDiDiv
 
 TEMPLATE_REGISTRY: dict[str, type] = {
     # 🏆 Mined-426 V2 — top 10 from re-mining on 2031 stocks (2026-04-27).
@@ -39,6 +41,8 @@ TEMPLATE_REGISTRY: dict[str, type] = {
     "426-8":  Mined426V2_8,   # SMA 5/20 慢版      | IS 90.6%/+8.7% OOS 93.8%/+23.6%
     "426-9":  Mined426V2_9,   # 50日高点突破        | IS 80.4%/+7.9% OOS 77.8%/+11.6%
     "426-10": Mined426V2_10,  # BB 上轨突破        | IS 77.6%/+6.8% OOS 82.1%/+13.3%
+    # 🎯 买卖很准 合并版 — 纯指标边沿信号 (与副图指标同一实现, 2026-08-16)
+    "mmhz":        MaimaiZhun,             # 买: 买线非0→0; 卖: 卖线<100→100
     # 🎯 买卖很准 ML-filter — 87K 信号训练，贪婪 ATR 退出
     "mm-30":       MaimaiFilter30,         # 高频版 thr 0.30
     "mm-40":       MaimaiFilter40,         # 中频 thr 0.40
@@ -60,6 +64,11 @@ TEMPLATE_REGISTRY: dict[str, type] = {
     "tdx-macd-pit":     TDXMACDGoldPit,   # MACD 黄金坑抄底
     "tdx-expma-trio":   TDXExpmaTrio,     # EXPMA 三步擒牛
     "tdx-dual-kdj":     TDXDualKDJ,       # 日周 KDJ 共振
+    # 🎯 抄底逃顶 — Pine Momentum Line 移植
+    "dt-30":   DiaoDi30,      # 🏆 深 V + ml_score ≥ 0.30 (rank 12/42, 80% win)
+    "dt-20":   DiaoDi20,      # 深 V + ml_score ≥ 0.20 (中频版)
+    "dt-pure": DiaoDiPure,    # 深 V 反转无 ML (高频低准)
+    "dt-div":  DiaoDiDiv,     # 底背驰 (实验性，样本少)
     # 🌀 缠论 (Chan Theory) — 含包关系 + 分型 + 笔 + MACD 背驰
     "chan-1buy":        Chan1Buy,        # 1 类买点（底背驰）
     "chan-2buy":        Chan2Buy,        # 2 类买点（1 类后回踩不破底）

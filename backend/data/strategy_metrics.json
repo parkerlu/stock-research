@@ -1,11 +1,11 @@
 {
   "426-1": {
-    "trades": 4,
-    "stocks": 3,
-    "win_rate": 100.0,
-    "avg_ret": 8.16,
-    "max_loss": 0.85,
-    "avg_mdd": 4.0
+    "trades": 2508,
+    "stocks": 863,
+    "win_rate": 77.4,
+    "avg_ret": 6.89,
+    "max_loss": -20.6,
+    "eval": "1000股随机样本/8年窗口 2026-08-16; 真OOS(4-24后) 胜率67.6%"
   },
   "426-2": {
     "trades": 4,
@@ -314,5 +314,37 @@
     "avg_ret": 3.99,
     "max_loss": -12.75,
     "avg_mdd": 10.7
+  },
+  "dt-div": {
+    "trades": 3,
+    "stocks": 2,
+    "win_rate": 66.7,
+    "avg_ret": -0.32,
+    "max_loss": -9.86,
+    "avg_mdd": 9.2
+  },
+  "dt-pure": {
+    "trades": 18,
+    "stocks": 8,
+    "win_rate": 55.6,
+    "avg_ret": 0.72,
+    "max_loss": -18.5,
+    "avg_mdd": 14.9
+  },
+  "dt-20": {
+    "trades": 12,
+    "stocks": 8,
+    "win_rate": 58.3,
+    "avg_ret": 0.63,
+    "max_loss": -18.5,
+    "avg_mdd": 10.4
+  },
+  "dt-30": {
+    "trades": 5,
+    "stocks": 4,
+    "win_rate": 80.0,
+    "avg_ret": 9.78,
+    "max_loss": -10.19,
+    "avg_mdd": 6.3
   }
 }
