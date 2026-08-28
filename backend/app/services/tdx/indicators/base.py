@@ -17,6 +17,7 @@ import pandas as pd
 
 PaneType = Literal["main", "sub"]
 IconType = Literal["dot", "triangle_up", "triangle_down"]
+RenderType = Literal["line", "bar"]
 
 
 @dataclass
@@ -25,6 +26,10 @@ class IndicatorLine:
     values: list[float | None]
     color: str
     thickness: int = 1
+    # "bar" 渲染成从 0 起的实心柱（对应 TDX 的柱状副图）。同一序列在图例里
+    # 照常显示数值，只是画法不同。多条 bar 按声明顺序叠画，后画的盖在前面，
+    # 所以由高到低声明可以得到分层色带。
+    render: RenderType = "line"
 
 
 @dataclass

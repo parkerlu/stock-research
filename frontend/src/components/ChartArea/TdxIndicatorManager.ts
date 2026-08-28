@@ -36,12 +36,24 @@ function registerOnce(result: IndicatorResult): string {
     calcParams: [],
     minValue: result.y_axis_range?.[0] ?? null,
     maxValue: result.y_axis_range?.[1] ?? null,
-    figures: result.lines.map((l) => ({
-      key: l.name,
-      title: `${l.name}: `,
-      type: "line",
-      styles: () => ({ color: l.color, size: l.thickness }),
-    })),
+    // Bars render as solid columns from 0; declared high-to-low they overlay
+    // into layered colour bands (see 提前预知主力拉升).
+    figures: result.lines.map((l) =>
+      l.render === "bar"
+        ? {
+            key: l.name,
+            title: `${l.name}: `,
+            type: "bar",
+            baseValue: 0,
+            styles: () => ({ color: l.color, style: "fill" }),
+          }
+        : {
+            key: l.name,
+            title: `${l.name}: `,
+            type: "line",
+            styles: () => ({ color: l.color, size: l.thickness }),
+          }
+    ),
     calc: (dataList: KLineData[]) => {
       const current = resultCache.get(result.name);
       if (!current) return dataList.map(() => ({}));

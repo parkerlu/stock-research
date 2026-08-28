@@ -1,11 +1,12 @@
 """
-买卖很准 (Maimai Henzhun) — "Very Accurate Buy/Sell" indicator.
+买卖很准 (Maimai Henzhun) — "Very Accurate Buy/Sell" indicator, merged 2-line version.
 
 Port of the TDX formula that combines price-channel breakouts with a DMI /
-ADX strength filter. Displayed as five step-function lines on a 0..100
-pane, plus 买点/卖点 markers when the conditions fire.
+ADX strength filter. Original TDX source draws five step lines; this version
+merges them into ONE buy line and ONE sell line (2026-08-10, per user request)
+so the pane stays readable.
 
-Logic summary:
+Original TDX logic:
 
     你  := CLOSE
     老  := (LOW + HIGH + CLOSE) / 3            # typical price
@@ -28,15 +29,32 @@ Logic summary:
 
     准备现金 = IF(动向趋势线>88 AND 神偷线<5.8, 80, 0)
 
-    买点 = IF(LLV((你<买卖), 10), 1, 0)         # binary buy marker
-    卖点 = IF(HHV((你<好),   10), 1, 0)         # binary sell marker
+Merge rules (this version):
+
+    买 = MAX(急买奇准, 短买奇准, 准备现金)      # 0 / 50 / 80
+        高度 80 = 准备现金 (ADX 极端段) 也在场; 50 = 仅急买/短买
+    卖 = MIN(急卖奇准, 短卖奇准)                # 50 / 100, 保留原版取值
+        50 = 急卖<100 OR 短卖<100 → 近期从未跌破卖出阈值 = 强势上涨进行中
+        (急卖 HHV5 触发必含于 短卖 HHV10, 故 MIN 数学上等于 急卖 —
+         写成 MIN 只为对齐"OR 合并"的语义)
+
+Signal rules (用户定义, 2026-08-11 修正卖出方向):
+
+    买入信号 = 买[t-1] > 0 AND 买[t] == 0        # 从非0回落到0
+        含义: 连续超卖状态刚刚结束 → 反转确认
+    卖出信号 = 卖[t-1] < 100 AND 卖[t] == 100    # 从<100回到100
+        含义: 强势段被打破 (重新跌破卖出阈值) → 止盈离场
+        (⚠️ 不是强势段开始时卖 —— 早先版本把信号放在段首, 方向反了)
+
+    (原版的 买点/卖点 是"条件成立期间恒为 1", 在图上几乎连成一片;
+     改成边沿触发后每段状态只标一次, 信号可数、可回测。)
 """
 
 from __future__ import annotations
 
 import pandas as pd
 
-from app.services.tdx.functions import ABS, HHV, IF, LLV, MA, MAX, REF, SUM
+from app.services.tdx.functions import ABS, HHV, IF, LLV, MA, MAX, MIN, REF, SUM
 from app.services.tdx.indicators.base import (
     IndicatorHLine,
     IndicatorLine,
@@ -52,10 +70,11 @@ pane = "sub"
 min_bars = 15  # HHV(板, 10) over MA(5) needs ~15 bars to stabilize
 
 
-def compute(df: pd.DataFrame) -> IndicatorResult:
-    close, high, low = df["close"], df["high"], df["low"]
-    ts_col = df["timestamp"].astype("int64")
-
+def compute_lines(
+    close: pd.Series, high: pd.Series, low: pd.Series
+) -> tuple[pd.Series, pd.Series]:
+    """合并版 买/卖 线 — 指标绘制与选股策略 (strategy_templates/maimai_zhun.py)
+    共用的唯一实现。返回 (buy_line 0/50/80, sell_line 50/100)。"""
     # Core price-channel setup
     you = close
     lao = (low + high + close) / 3
@@ -69,10 +88,10 @@ def compute(df: pd.DataFrame) -> IndicatorResult:
 
     # HHV(bool, n) = 1 if any bar in last n is true (window-OR)
     # LLV(bool, n) = 1 if all bars in last n are true (window-AND)
-    jimai = IF(HHV(sell_cond, 5) > 0, 100.0, 50.0)    # 急卖奇准
-    duanmai = IF(HHV(sell_cond, 10) > 0, 100.0, 50.0)  # 短卖奇准
     jibuy = IF(LLV(buy_cond, 5) > 0, 50.0, 0.0)        # 急买奇准
     duanbuy = IF(LLV(buy_cond, 10) > 0, 50.0, 0.0)     # 短买奇准
+    jimai = IF(HHV(sell_cond, 5) > 0, 100.0, 50.0)     # 急卖奇准
+    duanmai = IF(HHV(sell_cond, 10) > 0, 100.0, 50.0)  # 短卖奇准
 
     # DMI / ADX section
     prev_close = REF(close, 1)
@@ -99,24 +118,38 @@ def compute(df: pd.DataFrame) -> IndicatorResult:
 
     zhunbei = IF((dongxiang > 88) & (shentou < 5.8), 80.0, 0.0)  # 准备现金
 
-    # Binary entry/exit markers
-    buy_signal = (LLV(buy_cond, 10) > 0).fillna(False)
-    sell_signal = (HHV(sell_cond, 10) > 0).fillna(False)
-    zhunbei_signal = (zhunbei == 80).fillna(False)
+    # ---- Merged lines ----
+    buy_line = MAX(MAX(jibuy, duanbuy), zhunbei).fillna(0.0)     # 0 / 50 / 80
+    sell_line = MIN(jimai, duanmai).fillna(100.0)                # 50 / 100
+    return buy_line, sell_line
 
-    markers = []
-    # 买点 markers — red up-triangle at y=10 (just above baseline)
-    for ts in ts_col[buy_signal].tolist():
-        markers.append(IndicatorMarker(
-            timestamp=ts, value=10,
-            color="#FF3333", icon="triangle_up",
-        ))
-    # 准备现金 "始" markers — magenta down-triangle at y=80
-    for ts in ts_col[zhunbei_signal].tolist():
-        markers.append(IndicatorMarker(
-            timestamp=ts, value=80,
-            color="#FF00FF", icon="triangle_down",
-        ))
+
+def compute_edges(
+    close: pd.Series, high: pd.Series, low: pd.Series
+) -> tuple[pd.Series, pd.Series]:
+    """边沿信号 (布尔): 买 = 买线 非0→0, 卖 = 卖线 <100→100。"""
+    buy_line, sell_line = compute_lines(close, high, low)
+    buy_fire = (buy_line.shift(1) > 0) & (buy_line == 0)
+    sell_fire = (sell_line.shift(1) < 100) & (sell_line == 100)
+    return buy_fire.fillna(False), sell_fire.fillna(False)
+
+
+def compute(df: pd.DataFrame) -> IndicatorResult:
+    close, high, low = df["close"], df["high"], df["low"]
+    ts_col = df["timestamp"].astype("int64")
+
+    buy_line, sell_line = compute_lines(close, high, low)
+    buy_fire = (buy_line.shift(1) > 0) & (buy_line == 0)         # 非0 -> 0
+    sell_fire = (sell_line.shift(1) < 100) & (sell_line == 100)  # <100 -> 100
+
+    markers = [
+        # 买入 — red up-triangle just above baseline
+        *(IndicatorMarker(timestamp=ts, value=8, color="#FF3333", icon="triangle_up")
+          for ts in ts_col[buy_fire.fillna(False)].tolist()),
+        # 卖出 — green down-triangle near the top
+        *(IndicatorMarker(timestamp=ts, value=92, color="#00CC00", icon="triangle_down")
+          for ts in ts_col[sell_fire.fillna(False)].tolist()),
+    ]
 
     return IndicatorResult(
         name=name,
@@ -125,15 +158,13 @@ def compute(df: pd.DataFrame) -> IndicatorResult:
         y_axis_range=(0, 100),
         timestamps=ts_col.tolist(),
         lines=[
-            IndicatorLine("急卖奇准", series_to_json(jimai), "#0088FF", thickness=1),
-            IndicatorLine("短卖奇准", series_to_json(duanmai), "#00FF00", thickness=1),
-            IndicatorLine("急买奇准", series_to_json(jibuy), "#FF3333", thickness=1),
-            IndicatorLine("短买奇准", series_to_json(duanbuy), "#FFFFFF", thickness=1),
-            IndicatorLine("准备现金", series_to_json(zhunbei), "#FF00FF", thickness=3),
+            IndicatorLine("买", series_to_json(buy_line), "#FF3333", thickness=2),
+            IndicatorLine("卖", series_to_json(sell_line), "#00CC00", thickness=2),
         ],
         hlines=[
             IndicatorHLine("顶", 100, "#55AA77", dashed=True),
-            IndicatorHLine("中", 50, "#FFFFFF", dashed=True),
+            IndicatorHLine("准备现金档 80", 80, "#FF00FF", dashed=True),
+            IndicatorHLine("买档 50", 50, "#888888", dashed=True),
             IndicatorHLine("底", 0, "#55AA77", dashed=True),
         ],
         markers=markers,

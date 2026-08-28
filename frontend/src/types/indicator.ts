@@ -3,6 +3,8 @@ export interface IndicatorLine {
   values: (number | null)[];
   color: string;
   thickness: number;
+  /** "bar" renders as solid columns from 0 (TDX 柱状副图); defaults to "line". */
+  render?: "line" | "bar";
 }
 
 export interface IndicatorHLine {
