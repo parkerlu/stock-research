@@ -71,6 +71,8 @@ const noMoreHistory = new Set<string>();
 export interface MainChartHandle {
   scrollToTimestamp: (timestamp: number) => void;
   getChart: () => Chart | null;
+  /** 推送一根实时K线 (盘中更新当日末根)。klinecharts v10 走 subscribeBar 回调。 */
+  pushBar: (bar: KLineData) => void;
 }
 
 export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
@@ -84,11 +86,16 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
   const tf = tfOverride ?? storeTimeframe;
   const [loading, setLoading] = useState(false);
 
+  // klinecharts 通过 subscribeBar 交给我们一个推送回调, 存起来供 pushBar 使用
+  const livePushRef = useRef<((bar: KLineData) => void) | null>(null);
+
   useImperativeHandle(ref, () => ({
     scrollToTimestamp: (ts: number) => {
       chartRef.current?.scrollToTimestamp(ts, 300);
     },
     getChart: () => chartRef.current,
+    // 若图表尚未订阅 (还没初始化完), 静默丢弃 —— 下一轮轮询会再推一次
+    pushBar: (bar: KLineData) => livePushRef.current?.(bar),
   }));
 
   useEffect(() => {
@@ -216,6 +223,14 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
           // "backward" (newer data) or "update" — not needed for now
           callback([], false);
         }
+      },
+      // 实时推送通道: klinecharts 把回调交给我们, LiveView 通过 pushBar 喂当日末根。
+      // 时间戳等于当日已有K线时它会原地更新, 不存在则追加一根。
+      subscribeBar: ({ callback }) => {
+        livePushRef.current = callback;
+      },
+      unsubscribeBar: () => {
+        livePushRef.current = null;
       },
     });
 

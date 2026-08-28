@@ -2,6 +2,7 @@ export type AppMode =
   | "strategy"
   | "screening"
   | "strategy-pool"
+  | "live"
   | "quote"
   | "pool"
   | "system";
@@ -33,6 +34,13 @@ export function NavBar({ mode, onModeChange }: Props) {
           onClick={() => onModeChange("strategy-pool")}
         >
           策略池
+        </button>
+        <button
+          className={mode === "live" ? "active" : ""}
+          onClick={() => onModeChange("live")}
+          title="分时 + 日K 实时看盘 (腾讯行情)"
+        >
+          实时
         </button>
         <button
           className={mode === "quote" ? "active" : ""}

@@ -1,6 +1,7 @@
 import type {
   CandleResponse,
   FavoriteItem,
+  MinuteData,
   SearchHistoryItem,
   Snapshot,
   StockInfo,
@@ -38,6 +39,19 @@ export async function getCandles(
 
 export async function getSnapshot(symbol: string): Promise<Snapshot> {
   return json(`${BASE}/quotes/${symbol}/snapshot`);
+}
+
+/** 当日分时 (腾讯) — 含实时快照与上证开闭市状态。 */
+export async function getMinute(symbol: string): Promise<MinuteData> {
+  return json(`${BASE}/quotes/${symbol}/minute`);
+}
+
+/** 批量实时快照 — 列表页一次拿全部。 */
+export async function getSnapshots(
+  codes: string[]
+): Promise<Record<string, Snapshot>> {
+  if (codes.length === 0) return {};
+  return json(`${BASE}/quotes/snapshots?codes=${encodeURIComponent(codes.join(","))}`);
 }
 
 export async function getSearchHistory(

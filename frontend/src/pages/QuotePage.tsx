@@ -8,6 +8,7 @@ import { ScreeningPanel } from "../components/ScreeningPanel";
 import { StrategyPoolPanel } from "../components/StrategyPoolPanel";
 import { SystemPanel } from "../components/SystemPanel";
 import { ChartArea } from "../components/ChartArea";
+import { LiveView } from "../components/ChartArea/LiveView";
 import { useStrategyStore } from "../stores/strategyStore";
 
 export function QuotePage() {
@@ -41,6 +42,11 @@ export function QuotePage() {
           <>
             <ScreeningPanel />
             <ChartArea tradeActions={actions} />
+          </>
+        ) : mode === "live" ? (
+          <>
+            <SearchPanel />
+            <LiveView />
           </>
         ) : mode === "strategy-pool" ? (
           <StrategyPoolPanel />
