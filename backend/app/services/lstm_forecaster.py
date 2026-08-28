@@ -106,10 +106,9 @@ def forecast(df: pd.DataFrame) -> dict | None:
 
     # Convert to predicted closes
     closes = anchor_close * np.exp(pred_log_returns)
-    # Confidence band: pre-computed empirical residual std on test set per horizon.
-    # Hard-coded conservative values (will be updated after training).
-    band_std = np.array([0.025, 0.035, 0.043, 0.050, 0.056])  # ~5d typical 5%
-    band = anchor_close * np.exp(band_std)
+    # Confidence band as ±1σ multiplier in log space (test residuals).
+    band_std = np.array([0.019, 0.028, 0.034, 0.040, 0.044])  # measured MAE/horizon
+    band = np.exp(band_std)   # multiplier, e.g. 1.019 ≈ ±1.9% on day-1
 
     anchor_date = df["trade_date"].iloc[-1]
     if hasattr(anchor_date, "isoformat"):

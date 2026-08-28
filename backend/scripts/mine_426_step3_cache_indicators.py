@@ -119,10 +119,10 @@ def precompute_donch(df: pd.DataFrame) -> dict:
     low = pd.Series(df["low"].astype(float))
     close = df["close"].values.astype(float)
 
-    h20 = high.rolling(20, min_periods=1).max().shift(1).fillna(method="bfill").values
-    l20 = low.rolling(20, min_periods=1).min().shift(1).fillna(method="bfill").values
-    h50 = high.rolling(50, min_periods=1).max().shift(1).fillna(method="bfill").values
-    l50 = low.rolling(50, min_periods=1).min().shift(1).fillna(method="bfill").values
+    h20 = high.rolling(20, min_periods=1).max().shift(1).bfill().values
+    l20 = low.rolling(20, min_periods=1).min().shift(1).bfill().values
+    h50 = high.rolling(50, min_periods=1).max().shift(1).bfill().values
+    l50 = low.rolling(50, min_periods=1).min().shift(1).bfill().values
 
     return {"high20": h20, "low20": l20, "high50": h50, "low50": l50}
 
