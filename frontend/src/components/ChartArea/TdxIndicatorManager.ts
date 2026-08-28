@@ -2,9 +2,12 @@ import type { KLineData } from "klinecharts";
 import { registerIndicator } from "klinecharts";
 import type { IndicatorResult } from "../../types/indicator";
 
-// Key under which we register klinecharts indicators. Includes result version
-// so re-creation with new data forces a re-registration.
+// klinecharts 的指标注册表是全局的, 注册名必须带周期: 多周期联动会把同一个
+// 指标同时挂在日/周/月三张图上, 名字不含周期的话三份数据会互相覆盖, 而且
+// calc 里按 timestamp 查表会大面积落空 —— 表现就是有两张图画不出线。
 const TDX_NAME_PREFIX = "TDX_";
+
+type Tf = "1d" | "1w" | "1m";
 
 interface TdxBarData {
   [key: string]: number;
@@ -13,8 +16,8 @@ interface TdxBarData {
 const resultCache = new Map<string, IndicatorResult>();
 const registeredNames = new Set<string>();
 
-function klineIndicatorName(tdxName: string): string {
-  return `${TDX_NAME_PREFIX}${tdxName}`;
+function klineIndicatorName(tdxName: string, tf: Tf): string {
+  return `${TDX_NAME_PREFIX}${tdxName}_${tf}`;
 }
 
 /**
@@ -22,9 +25,9 @@ function klineIndicatorName(tdxName: string): string {
  * Safe to call multiple times with different data for the same name — the
  * internal lookup table is updated and the chart re-draws on next tick.
  */
-function registerOnce(result: IndicatorResult): string {
-  const kcName = klineIndicatorName(result.name);
-  resultCache.set(result.name, result);
+function registerOnce(result: IndicatorResult, tf: Tf): string {
+  const kcName = klineIndicatorName(result.name, tf);
+  resultCache.set(kcName, result);
 
   if (registeredNames.has(kcName)) {
     return kcName;
@@ -55,7 +58,7 @@ function registerOnce(result: IndicatorResult): string {
           }
     ),
     calc: (dataList: KLineData[]) => {
-      const current = resultCache.get(result.name);
+      const current = resultCache.get(kcName);
       if (!current) return dataList.map(() => ({}));
 
       // Build timestamp -> index lookup from the cached result
@@ -74,7 +77,7 @@ function registerOnce(result: IndicatorResult): string {
       });
     },
     draw: ({ ctx, chart, bounding, yAxis, indicator }) => {
-      const current = resultCache.get(result.name);
+      const current = resultCache.get(kcName);
       if (!current) return false;
 
       // Horizontal reference lines
@@ -162,10 +165,10 @@ function registerOnce(result: IndicatorResult): string {
  * The chart will pick up the new data on next redraw when we call
  * `chart.overrideIndicator` or re-create the indicator.
  */
-export function setIndicatorData(result: IndicatorResult): string {
-  return registerOnce(result);
+export function setIndicatorData(result: IndicatorResult, tf: Tf): string {
+  return registerOnce(result, tf);
 }
 
-export function getKlineIndicatorName(tdxName: string): string {
-  return klineIndicatorName(tdxName);
+export function getKlineIndicatorName(tdxName: string, tf: Tf): string {
+  return klineIndicatorName(tdxName, tf);
 }

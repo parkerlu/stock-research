@@ -39,6 +39,9 @@ export function useTdxIndicators({
   const [active, setActive] = useState<string[]>(() => readLS(storageKey));
   const [busy, setBusy] = useState<string | null>(null);
   const paneIds = useRef<Record<string, string>>({});
+  // 已挂在图上的那批指标是按哪个周期注册的 —— 注册名带周期, 换周期时得先按
+  // 旧名字摘掉, 否则 overrideIndicator 找不到目标, 图上会留着旧周期的数据。
+  const appliedTf = useRef<string | null>(null);
 
   useEffect(() => {
     listIndicators().then(setAvailable).catch(() => setAvailable([]));
@@ -59,8 +62,8 @@ export function useTdxIndicators({
         alert(result.warnings.join("\n"));
         return false;
       }
-      setIndicatorData(result);
-      const kcName = getKlineIndicatorName(name);
+      setIndicatorData(result, timeframe);
+      const kcName = getKlineIndicatorName(name, timeframe);
       if (create) {
         const paneId = result.pane === "main" ? "candle_pane" : `tdx_${name}_pane`;
         chart.createIndicator(kcName, true, { id: paneId });
@@ -76,11 +79,17 @@ export function useTdxIndicators({
   const toggle = useCallback(
     async (name: string) => {
       const chart = getChart();
-      if (!chart || !symbol) return;
+      if (!symbol) return;
       if (active.includes(name)) {
-        chart.removeIndicator({ name: getKlineIndicatorName(name) });
+        chart?.removeIndicator({ name: getKlineIndicatorName(name, timeframe) });
         delete paneIds.current[name];
         setActive((p) => p.filter((n) => n !== name));
+        return;
+      }
+      // 多周期联动模式下主图没挂载, 但选择仍要生效 —— 联动视图的三张图订阅
+      // 的就是这份 active, 它们各自按自己的周期取数
+      if (!chart) {
+        setActive((p) => [...p, name]);
         return;
       }
       setBusy(name);
@@ -93,7 +102,7 @@ export function useTdxIndicators({
         setBusy(null);
       }
     },
-    [active, apply, getChart, symbol]
+    [active, apply, getChart, symbol, timeframe]
   );
 
   // 换股 / 换周期后重建已选指标。图表实例可能还没就绪, 轮询几次再放弃。
@@ -107,6 +116,18 @@ export function useTdxIndicators({
         if (tries++ < 20) setTimeout(run, 200);
         return;
       }
+      // 换周期: 旧注册名已失效, 先按旧周期把指标摘干净再重建
+      const chart = getChart();
+      if (appliedTf.current && appliedTf.current !== timeframe && chart) {
+        for (const name of Object.keys(paneIds.current)) {
+          chart.removeIndicator({
+            name: getKlineIndicatorName(name, appliedTf.current as typeof timeframe),
+          });
+        }
+        paneIds.current = {};
+      }
+      appliedTf.current = timeframe;
+
       for (const name of active) {
         if (cancelled) return;
         try {

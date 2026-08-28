@@ -32,6 +32,10 @@ interface Props {
   onBarSelected?: (date: string | null) => void;
 }
 
+// 首屏加载多长的历史 —— 按周期给, 不能一律 1 年: 1 年只有 52 根周线 / 12 根
+// 月线, MA60 之类的长周期指标直接算不出来 (图例显示 n/a)。
+const INIT_YEARS: Record<Timeframe, number> = { "1d": 1, "1w": 5, "1m": 15 };
+
 const TF_TO_PERIOD: Record<Timeframe, Period> = {
   "1d": { type: "day", span: 1 },
   "1w": { type: "week", span: 1 },
@@ -205,10 +209,12 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
           setLoading(true);
           loadingRef.current = true;
           const now = new Date();
-          const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+          const from = new Date(
+            now.getFullYear() - INIT_YEARS[tfVal], now.getMonth(), now.getDate()
+          );
 
           try {
-            const resp = await getCandles(symInfo.ticker, tfVal, fmtDate(oneYearAgo), fmtDate(now));
+            const resp = await getCandles(symInfo.ticker, tfVal, fmtDate(from), fmtDate(now));
             const data = resp.candles.map(mapCandle);
             candleCache.set(cacheKey, data);
             setLoading(false);

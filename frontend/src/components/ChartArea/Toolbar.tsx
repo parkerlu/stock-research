@@ -3,6 +3,7 @@ import { useQuoteStore } from "../../stores/quoteStore";
 import type { Timeframe } from "../../types/quote";
 import type { IndicatorMeta } from "../../types/indicator";
 import { listIndicators } from "../../api/indicators";
+import { MAIN_PANE_INDICATORS } from "./indicatorPanes";
 
 const TIMEFRAMES: { label: string; value: Timeframe }[] = [
   { label: "日", value: "1d" },
@@ -28,7 +29,7 @@ const OVERLAYS = [
   { label: "箭头", type: "arrow" },
 ];
 
-const MAIN_PANE_INDICATORS = new Set(["MA", "EMA", "BOLL", "SAR"]);
+
 
 interface Props {
   activeIndicators: string[];

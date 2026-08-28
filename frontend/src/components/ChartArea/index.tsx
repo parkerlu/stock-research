@@ -1,18 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuoteStore } from "../../stores/quoteStore";
 import type { TradeAction } from "../../types/strategy";
-import { getIndicator } from "../../api/indicators";
 import { MainChart } from "./MainChart";
 import type { MainChartHandle } from "./MainChart";
 import { Toolbar } from "./Toolbar";
 import { LinkedView } from "./LinkedView";
-import { getKlineIndicatorName, setIndicatorData } from "./TdxIndicatorManager";
+import { MAIN_PANE_INDICATORS } from "./indicatorPanes";
+import { useTdxIndicators } from "../../hooks/useTdxIndicators";
 
 interface Props {
   tradeActions?: TradeAction[] | null;
 }
 
-const MAIN_PANE_INDICATORS = new Set(["MA", "EMA", "BOLL", "SAR"]);
 const LS_STD_KEY = "chart.activeIndicators.v1";
 const LS_TDX_KEY = "chart.activeTdxIndicators.v1";
 
@@ -34,22 +33,29 @@ export function ChartArea({ tradeActions }: Props = {}) {
   const [activeIndicators, setActiveIndicators] = useState<string[]>(() =>
     readLS(LS_STD_KEY, ["MA"])
   );
-  const [activeTdxIndicators, setActiveTdxIndicators] = useState<string[]>(() =>
-    readLS(LS_TDX_KEY, [])
-  );
   const mainChartRef = useRef<MainChartHandle>(null);
-  const tdxPaneIds = useRef<Record<string, string>>({});
   const [tradeIdx, setTradeIdx] = useState(-1);
 
   const indicatorPaneIds = useRef<Record<string, string>>({});
+
+  // TDX 指标的选择/挂载统一交给 hook —— 换股、换周期、重建 pane 都在里面。
+  // 多周期联动模式下主图未挂载, hook 的 toggle 仍会更新选择, 联动视图据此
+  // 让三张图各按自己的周期取数。
+  const getMainChart = useCallback(
+    () => mainChartRef.current?.getChart() ?? null,
+    []
+  );
+  const tdx = useTdxIndicators({
+    getChart: getMainChart,
+    symbol: currentSymbol,
+    timeframe,
+    storageKey: LS_TDX_KEY,
+  });
 
   // Persist whenever state changes
   useEffect(() => {
     localStorage.setItem(LS_STD_KEY, JSON.stringify(activeIndicators));
   }, [activeIndicators]);
-  useEffect(() => {
-    localStorage.setItem(LS_TDX_KEY, JSON.stringify(activeTdxIndicators));
-  }, [activeTdxIndicators]);
 
   useEffect(() => {
     setTradeIdx(-1);
@@ -74,37 +80,6 @@ export function ChartArea({ tradeActions }: Props = {}) {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Apply persisted TDX indicators once chart + symbol are ready.
-  // Runs only on first symbol load (the existing refresh effect re-applies
-  // them on subsequent symbol/timeframe changes).
-  const tdxBootstrapped = useRef(false);
-  useEffect(() => {
-    if (tdxBootstrapped.current) return;
-    if (!currentSymbol || activeTdxIndicators.length === 0) return;
-    const chart = mainChartRef.current?.getChart();
-    if (!chart) return;
-    tdxBootstrapped.current = true;
-    (async () => {
-      const today = new Date().toISOString().slice(0, 10);
-      for (const name of activeTdxIndicators) {
-        try {
-          const result = await getIndicator(
-            name, currentSymbol, timeframe, "1990-01-01", today
-          );
-          setIndicatorData(result);
-          const kcName = getKlineIndicatorName(name);
-          const paneId =
-            result.pane === "main" ? "candle_pane" : `tdx_${name}_pane`;
-          chart.createIndicator(kcName, true, { id: paneId });
-          tdxPaneIds.current[name] = paneId;
-        } catch (err) {
-          console.error(`恢复 TDX 指标 ${name} 失败:`, err);
-        }
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentSymbol]);
 
   const goToTrade = useCallback(
     (idx: number) => {
@@ -148,80 +123,6 @@ export function ChartArea({ tradeActions }: Props = {}) {
     []
   );
 
-  const handleToggleTdxIndicator = useCallback(
-    async (name: string) => {
-      const chart = mainChartRef.current?.getChart();
-      if (!chart || !currentSymbol) return;
-
-      const kcName = getKlineIndicatorName(name);
-
-      if (activeTdxIndicators.includes(name)) {
-        // Remove by name — klinecharts will drop the pane when empty
-        chart.removeIndicator({ name: kcName });
-        delete tdxPaneIds.current[name];
-        setActiveTdxIndicators((prev) => prev.filter((n) => n !== name));
-        return;
-      }
-
-      // Add: fetch, register, create
-      try {
-        const result = await getIndicator(
-          name,
-          currentSymbol,
-          timeframe,
-          "1990-01-01",
-          new Date().toISOString().slice(0, 10)
-        );
-
-        if (result.warnings.length > 0) {
-          alert(result.warnings.join("\n"));
-          return;
-        }
-
-        setIndicatorData(result);
-        // For "main" pane indicators (e.g. MA, BOLL) overlay onto candle pane;
-        // "sub" pane indicators get their own bottom pane.
-        const paneId =
-          result.pane === "main" ? "candle_pane" : `tdx_${name}_pane`;
-        chart.createIndicator(kcName, true, { id: paneId });
-        tdxPaneIds.current[name] = paneId;
-        setActiveTdxIndicators((prev) => [...prev, name]);
-      } catch (err) {
-        console.error("加载 TDX 指标失败:", err);
-        alert("加载 TDX 指标失败");
-      }
-    },
-    [currentSymbol, timeframe, activeTdxIndicators]
-  );
-
-  // When stock or timeframe changes, refresh active TDX indicators with new data
-  useEffect(() => {
-    if (!currentSymbol || activeTdxIndicators.length === 0) return;
-    const chart = mainChartRef.current?.getChart();
-    if (!chart) return;
-
-    (async () => {
-      const today = new Date().toISOString().slice(0, 10);
-      for (const name of activeTdxIndicators) {
-        try {
-          const result = await getIndicator(
-            name,
-            currentSymbol,
-            timeframe,
-            "1990-01-01",
-            today
-          );
-          setIndicatorData(result);
-          // Force re-draw by overriding (filter by name since paneId is auto-generated)
-          chart.overrideIndicator({ name: getKlineIndicatorName(name) });
-        } catch (err) {
-          console.error(`刷新 TDX 指标 ${name} 失败:`, err);
-        }
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentSymbol, timeframe]);
-
   const handleSelectOverlay = useCallback((type: string) => {
     mainChartRef.current?.getChart()?.createOverlay(type);
   }, []);
@@ -233,9 +134,9 @@ export function ChartArea({ tradeActions }: Props = {}) {
     <div className="chart-area">
       <Toolbar
         activeIndicators={activeIndicators}
-        activeTdxIndicators={activeTdxIndicators}
+        activeTdxIndicators={tdx.active}
         onToggleIndicator={handleToggleIndicator}
-        onToggleTdxIndicator={handleToggleTdxIndicator}
+        onToggleTdxIndicator={tdx.toggle}
         onSelectOverlay={handleSelectOverlay}
       />
       {hasActions && (
@@ -263,7 +164,10 @@ export function ChartArea({ tradeActions }: Props = {}) {
       )}
       <div className="chart-body">
         {linkedMode ? (
-          <LinkedView />
+          <LinkedView
+            activeIndicators={activeIndicators}
+            activeTdxIndicators={tdx.active}
+          />
         ) : (
           <MainChart ref={mainChartRef} tradeActions={tradeActions} />
         )}
