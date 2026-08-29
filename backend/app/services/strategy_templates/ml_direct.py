@@ -611,6 +611,13 @@ class MLDirectTop1TightLock(MLDirectDecision):
     def name(self) -> str:
         return "MLDirect_Top1_TightLock"
 
+    @staticmethod
+    def parameter_candidates() -> list[dict]:
+        """参数已在 __init__ 里写死 —— 必须覆盖父类, 否则父类那份带
+        buy_threshold 等键的字典会被 generate_all_candidates() 拿去
+        cls(**params), 而本类 __init__ 不收参数 -> TypeError。"""
+        return [{}]
+
 
 class MLDirectTop2MidGreedy(MLDirectDecision):
     """TOP 2 from 500-variant sweep — "Mid-Greedy".
@@ -636,6 +643,13 @@ class MLDirectTop2MidGreedy(MLDirectDecision):
     def name(self) -> str:
         return "MLDirect_Top2_MidGreedy"
 
+    @staticmethod
+    def parameter_candidates() -> list[dict]:
+        """参数已在 __init__ 里写死 —— 必须覆盖父类, 否则父类那份带
+        buy_threshold 等键的字典会被 generate_all_candidates() 拿去
+        cls(**params), 而本类 __init__ 不收参数 -> TypeError。"""
+        return [{}]
+
 
 class MLDirectTop3HighGreedy(MLDirectDecision):
     """TOP 3 from 500-variant sweep — "High-Activation Greedy".
@@ -660,6 +674,13 @@ class MLDirectTop3HighGreedy(MLDirectDecision):
     @property
     def name(self) -> str:
         return "MLDirect_Top3_HighGreedy"
+
+    @staticmethod
+    def parameter_candidates() -> list[dict]:
+        """参数已在 __init__ 里写死 —— 必须覆盖父类, 否则父类那份带
+        buy_threshold 等键的字典会被 generate_all_candidates() 拿去
+        cls(**params), 而本类 __init__ 不收参数 -> TypeError。"""
+        return [{}]
 
 
 class MLDirectATRSwing(MLDirectDecision):
@@ -688,6 +709,13 @@ class MLDirectATRSwing(MLDirectDecision):
     def name(self) -> str:
         return "MLDirect_ATRSwing"
 
+    @staticmethod
+    def parameter_candidates() -> list[dict]:
+        """参数已在 __init__ 里写死 —— 必须覆盖父类, 否则父类那份带
+        buy_threshold 等键的字典会被 generate_all_candidates() 拿去
+        cls(**params), 而本类 __init__ 不收参数 -> TypeError。"""
+        return [{}]
+
 
 class MLDirectClassicGreedy(MLDirectDecision):
     """⚡ 经典 trail，活跃且高胜率.
@@ -711,6 +739,13 @@ class MLDirectClassicGreedy(MLDirectDecision):
     @property
     def name(self) -> str:
         return "MLDirect_ClassicGreedy"
+
+    @staticmethod
+    def parameter_candidates() -> list[dict]:
+        """参数已在 __init__ 里写死 —— 必须覆盖父类, 否则父类那份带
+        buy_threshold 等键的字典会被 generate_all_candidates() 拿去
+        cls(**params), 而本类 __init__ 不收参数 -> TypeError。"""
+        return [{}]
 
 
 class MLDirectFastTurnover(MLDirectDecision):
@@ -737,6 +772,13 @@ class MLDirectFastTurnover(MLDirectDecision):
     def name(self) -> str:
         return "MLDirect_FastTurnover"
 
+    @staticmethod
+    def parameter_candidates() -> list[dict]:
+        """参数已在 __init__ 里写死 —— 必须覆盖父类, 否则父类那份带
+        buy_threshold 等键的字典会被 generate_all_candidates() 拿去
+        cls(**params), 而本类 __init__ 不收参数 -> TypeError。"""
+        return [{}]
+
 
 class MLDirectHighFreqV2(MLDirectDecision):
     """⚡ 12x trades AT 77% win rate.
@@ -761,6 +803,13 @@ class MLDirectHighFreqV2(MLDirectDecision):
     def name(self) -> str:
         return "MLDirect_HighFreqV2"
 
+    @staticmethod
+    def parameter_candidates() -> list[dict]:
+        """参数已在 __init__ 里写死 —— 必须覆盖父类, 否则父类那份带
+        buy_threshold 等键的字典会被 generate_all_candidates() 拿去
+        cls(**params), 而本类 __init__ 不收参数 -> TypeError。"""
+        return [{}]
+
 
 class MLDirectMaxFreq(MLDirectDecision):
     """🔥 15x trades — maximum frequency at acceptable accuracy.
@@ -784,6 +833,13 @@ class MLDirectMaxFreq(MLDirectDecision):
     @property
     def name(self) -> str:
         return "MLDirect_MaxFreq"
+
+    @staticmethod
+    def parameter_candidates() -> list[dict]:
+        """参数已在 __init__ 里写死 —— 必须覆盖父类, 否则父类那份带
+        buy_threshold 等键的字典会被 generate_all_candidates() 拿去
+        cls(**params), 而本类 __init__ 不收参数 -> TypeError。"""
+        return [{}]
 
 
 class MLDirectHighFreq(MLDirectDecision):
@@ -812,4 +868,11 @@ class MLDirectHighFreq(MLDirectDecision):
     @property
     def name(self) -> str:
         return "MLDirect_HighFreq"
+
+    @staticmethod
+    def parameter_candidates() -> list[dict]:
+        """参数已在 __init__ 里写死 —— 必须覆盖父类, 否则父类那份带
+        buy_threshold 等键的字典会被 generate_all_candidates() 拿去
+        cls(**params), 而本类 __init__ 不收参数 -> TypeError。"""
+        return [{}]
 
