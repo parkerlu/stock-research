@@ -17,7 +17,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-from datetime import date, datetime
+from datetime import date, timedelta, datetime
+
+import json
 
 import httpx
 import pandas as pd
@@ -28,6 +30,19 @@ logger = logging.getLogger(__name__)
 
 QT_URL = "https://qt.gtimg.cn/q={codes}"
 MINUTE_URL = "https://web.ifzq.gtimg.cn/appstock/app/minute/query?code={code}"
+# 历史K线。fq 传 "qfq" 取前复权, 空串取不复权。
+#
+# ⚠️ count 实测上限约 800: 传更大的值接口反而退回默认 640 行, 所以要分段请求。
+# ⚠️ 这个接口一次只能查一只票, 且有未公开的 IP 限流 —— 实测 8 路并发跑约
+#    2400 次请求后被 TLS 层直接断连(不是错误码, 是 SSL EOF), 恢复用了约 3 小时。
+#    单票按需取数用它很好(11.6 年 2833 行只要 1.6 秒, 前复权直出);
+#    全市场批量回补请走 TuShare 的 pro.daily(trade_date=...) 按交易日取,
+#    2833 次调用即可覆盖全市场, 配额明确可控。
+#    若必须用本接口批量, 建议串行 + 1 秒间隔, 不要并发。
+KLINE_URL = ("https://web.ifzq.gtimg.cn/appstock/app/fqkline/get"
+             "?param={code},day,{start},{end},{count},{fq}")
+_KLINE_MAX = 700          # 单次请求的安全行数
+_KLINE_CHUNK_DAYS = 1000  # 约 700 个交易日
 _TIMEOUT = 8.0
 
 # qt 数组字段索引 (0-based)。实测 603319.SH:
@@ -266,10 +281,77 @@ class TencentProvider(DataProvider):
             "bars": bars,
         }
 
-    # ---------- 历史数据不支持 — 交给 manager 回落 ----------
+    # ---------- 历史日线 ----------
+
+    async def _kline_chunk(self, code: str, s: date, e: date, fq: str) -> list[list]:
+        url = KLINE_URL.format(code=code, start=s.isoformat(), end=e.isoformat(),
+                               count=_KLINE_MAX, fq=fq)
+        try:
+            txt = await self._get_text(url)
+            node = json.loads(txt).get("data", {}).get(code)
+        except Exception as exc:
+            logger.warning("tencent kline %s %s~%s failed: %s", code, s, e, exc)
+            return []
+        if not isinstance(node, dict):
+            return []
+        # 前复权在 qfqday, 不复权在 day
+        rows = node.get("qfqday") or node.get("day") or []
+        return [r for r in rows if isinstance(r, list) and len(r) >= 6]
 
     async def fetch_daily(self, ts_code: str, start: date, end: date) -> pd.DataFrame:
-        return pd.DataFrame()
+        """前复权日线。腾讯直接给复权价, 不必再合并 adj_factor。
+
+        腾讯 K 线只有成交量没有成交额, 而成交额是流动性排序的依据 —— 这里额外
+        取一份不复权价, 用 vol(手) × 100 × 不复权收盘 / 1000 折算出千元成交额
+        (与 TuShare 口径实测差 ~0.1%)。
+        """
+        code = to_tencent_code(ts_code)
+        if not code:
+            return pd.DataFrame()
+
+        # 分段: 单次最多 ~700 行
+        spans: list[tuple[date, date]] = []
+        cur = start
+        while cur <= end:
+            nxt = min(cur + timedelta(days=_KLINE_CHUNK_DAYS), end)
+            spans.append((cur, nxt))
+            cur = nxt + timedelta(days=1)
+
+        qfq_rows: list[list] = []
+        raw_rows: list[list] = []
+        for s_, e_ in spans:
+            qfq_rows += await self._kline_chunk(code, s_, e_, "qfq")
+            raw_rows += await self._kline_chunk(code, s_, e_, "")
+        if not qfq_rows:
+            return pd.DataFrame()
+
+        # 行格式: [日期, 开, 收, 高, 低, 量(手), ...]
+        def to_df(rows: list[list], cols: list[str]) -> pd.DataFrame:
+            df = pd.DataFrame([r[:6] for r in rows], columns=cols)
+            df = df.drop_duplicates(subset=["trade_date"])
+            for c in cols[1:]:
+                df[c] = pd.to_numeric(df[c], errors="coerce")
+            df["trade_date"] = pd.to_datetime(df["trade_date"]).dt.date
+            return df.dropna(subset=["open", "high", "low", "close"])
+
+        cols = ["trade_date", "open", "close", "high", "low", "vol"]
+        df = to_df(qfq_rows, cols)
+        if raw_rows:
+            raw = to_df(raw_rows, cols)[["trade_date", "close"]].rename(
+                columns={"close": "raw_close"})
+            df = df.merge(raw, on="trade_date", how="left")
+        else:
+            df["raw_close"] = df["close"]
+        df["raw_close"] = df["raw_close"].fillna(df["close"])
+        # 成交额(千元) = 手 × 100股 × 价 / 1000
+        df["amount"] = (df["vol"] * 100 * df["raw_close"] / 1000).round(3)
+        df["ts_code"] = ts_code
+        df["adj_factor"] = 1.0        # 已是前复权价, 下游无需再调整
+        df = df[(df.trade_date >= start) & (df.trade_date <= end)]
+        return df.sort_values("trade_date")[
+            ["ts_code", "trade_date", "open", "high", "low", "close",
+             "vol", "amount", "adj_factor"]
+        ].reset_index(drop=True)
 
     async def fetch_stock_basic(self) -> pd.DataFrame:
         return pd.DataFrame()
