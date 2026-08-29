@@ -52,6 +52,7 @@ Signal rules (用户定义, 2026-08-11 修正卖出方向):
 
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 
 from app.services.tdx.functions import ABS, HHV, IF, LLV, MA, MAX, MIN, REF, SUM
@@ -107,12 +108,15 @@ def compute_lines(
     dmp = SUM(IF((hd > 0) & (hd > ld), hd, 0.0), 5)
     dmm = SUM(IF((ld > 0) & (ld > hd), ld, 0.0), 5)
 
-    # Guard against divide-by-zero
-    td_safe = td.replace(0, pd.NA)
+    # Guard against divide-by-zero.
+    # np.nan 而非 pd.NA: pd.NA 会把 float64 序列变成 object dtype, 后续 MA()
+    # 的 rolling 直接抛 DataError。零值在停牌/一字板 (TR=0) 的票上真实存在,
+    # 603319 恰好没有所以一直没暴露。
+    td_safe = td.replace(0, np.nan)
     shentou = dmp * 100 / td_safe     # 神偷线
     fuzhu = dmm * 100 / td_safe       # 辅助线
 
-    denom = (fuzhu + shentou).replace(0, pd.NA)
+    denom = (fuzhu + shentou).replace(0, np.nan)
     dongxiang_raw = ABS(fuzhu - shentou) / denom * 100
     dongxiang = MA(dongxiang_raw, 3)  # 动向趋势线
 
