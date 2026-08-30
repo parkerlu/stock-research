@@ -8,12 +8,15 @@ from __future__ import annotations
 from types import ModuleType
 
 from app.services.tdx.indicators import (
+    chande_momentum,
     chao_di_tao_ding,
     didian_zuhe,
     dongli_xian,
     ma,
     maimai_henzhun,
     multi_kdj,
+    pretty_good_oscillator,
+    relative_volatility_index,
     zhuli_lasheng,
     zhuli_lasheng_tiqian,
 )
@@ -27,6 +30,10 @@ _INDICATORS: dict[str, ModuleType] = {
     chao_di_tao_ding.name: chao_di_tao_ding,
     zhuli_lasheng.name: zhuli_lasheng,
     zhuli_lasheng_tiqian.name: zhuli_lasheng_tiqian,
+    # Pine 移植 — 24 个候选里净边际前 3 (已扣随机入场基线, 见各模块 docstring)
+    relative_volatility_index.name: relative_volatility_index,
+    pretty_good_oscillator.name: pretty_good_oscillator,
+    chande_momentum.name: chande_momentum,
 }
 
 
