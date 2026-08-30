@@ -7,13 +7,14 @@ import uuid
 from datetime import timedelta
 
 import pandas as pd
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import distinct, select
 
 from app.db import async_session, get_db
 from app.models.schema import DailyCandle, StockBasic
 from app.services.factory_service import get_candle_dicts
+from app.services.portfolio_scan import STRATEGIES, STRATEGY_LABEL, portfolio_scan
 from app.services.strategy_templates import TEMPLATE_REGISTRY
 
 router = APIRouter(prefix="/api/screening", tags=["screening"])
@@ -248,3 +249,71 @@ async def cancel_scan(job_id: str):
         raise HTTPException(404, "Unknown job")
     _CANCEL[job_id] = True
     return {"job_id": job_id, "cancelling": True}
+
+
+# =========================================================================
+# 组合信号 — 回测验证过的三源组合, 每日出可执行的买入清单
+# =========================================================================
+
+class PortfolioRequest(BaseModel):
+    lookback_days: int = 3
+    top_n: int = 20
+
+
+_PF_JOBS: dict[str, dict] = {}
+
+
+async def _run_portfolio(job_id: str, lookback_days: int, top_n: int) -> None:
+    job = _PF_JOBS[job_id]
+    job["status"] = "running"
+    t0 = time.time()
+
+    def on_progress(k: int, total: int) -> None:
+        job["progress"], job["total"] = k, total
+        job["elapsed_sec"] = time.time() - t0
+
+    try:
+        async with async_session() as db:
+            res = await portfolio_scan(db, lookback_days, top_n, on_progress)
+        job.update(res)
+        job["status"] = "completed"
+    except Exception as e:  # noqa: BLE001
+        job["status"] = "error"
+        job["error"] = str(e)[:300]
+    job["elapsed_sec"] = round(time.time() - t0, 1)
+
+
+@router.get("/portfolio/config")
+async def portfolio_config():
+    """组合配置说明 —— 前端展示用, 也提醒改参数就不是那个回测结果了。"""
+    return {
+        "strategies": [{"id": s, "label": STRATEGY_LABEL.get(s, s)} for s in STRATEGIES],
+        "slots": 20,
+        "rank_rule": "低流动性优先",
+        "min_amount_wan": 500,
+        "backtest": {
+            "period": "2015-01 ~ 2026-08 (11.6 年, 全 universe 4306 只)",
+            "final": "14.52x", "cagr": 25.8, "max_drawdown": 30.0,
+            "longest_drawdown_days": 463,
+            "benchmark": "等权买入持有 2.25x / 年化 7.2% / 回撤 59.5%",
+            "capacity_wan": 500,
+        },
+    }
+
+
+@router.post("/portfolio/start")
+async def portfolio_start(req: PortfolioRequest, background_tasks: BackgroundTasks):
+    job_id = uuid.uuid4().hex
+    _PF_JOBS[job_id] = {"job_id": job_id, "status": "pending", "progress": 0,
+                        "total": 0, "picks": [], "as_of": None,
+                        "scanned": 0, "elapsed_sec": 0.0, "error": None}
+    background_tasks.add_task(_run_portfolio, job_id, req.lookback_days, req.top_n)
+    return {"job_id": job_id}
+
+
+@router.get("/portfolio/{job_id}")
+async def portfolio_status(job_id: str):
+    job = _PF_JOBS.get(job_id)
+    if not job:
+        raise HTTPException(404, "Unknown job")
+    return job

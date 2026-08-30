@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { PortfolioSection } from "./PortfolioSection";
 import { useQuoteStore } from "../../stores/quoteStore";
 import { useStrategyStore } from "../../stores/strategyStore";
 import { startScan, getScanStatus, cancelScan } from "../../api/screening";
@@ -157,6 +158,8 @@ export function ScreeningPanel() {
 
   return (
     <div className="screening-panel">
+      <PortfolioSection onPick={(code, name) => setCurrentStock(code, name ?? code)} />
+
       <div className="screening-section">
         <div className="screening-section-title">a) 选择策略</div>
         <div className="screening-strategy-list">
