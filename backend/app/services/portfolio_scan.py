@@ -19,6 +19,7 @@
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from datetime import date, timedelta
@@ -45,6 +46,14 @@ MIN_AMOUNT_K = 5000      # 20 日均额下限, 千元 (= 500 万)
 HISTORY_DAYS = 400       # 缠论需要足够的历史才能识别笔和背驰
 MIN_BARS = 130
 
+# ⚠️ 分批扫描, 不要改回"一次性拉全市场"。
+# 曾经的写法是单条 SQL 拉全部 ~5500 只 × 400 天 ≈ 140 万行再 groupby, 本地
+# 24G 内存上 21 秒跑完, 但生产机只有 1.6G —— 直接把机器压到 SSH 都连不上。
+# 现在按票分块: 取一批 -> 算完 -> 释放, 峰值内存只跟 CHUNK 有关, 与全市场
+# 规模无关。代价是慢一些(生产约 1~2 分钟), 换来的是内存可预测。
+CHUNK = 300              # 每批股票数
+MAX_CONCURRENT = 1       # 同时只允许一个扫描任务
+
 
 def _universe_filter(ts_code: str, name: str | None) -> bool:
     if ts_code.startswith(("688", "92", "8", "4")):
@@ -54,40 +63,38 @@ def _universe_filter(ts_code: str, name: str | None) -> bool:
     return True
 
 
-async def load_panel(db: AsyncSession, end: date) -> tuple[dict[str, pd.DataFrame], dict[str, str]]:
-    """一次性拉全市场近 HISTORY_DAYS 的日线, 按票分组.
+async def _list_universe(db: AsyncSession) -> tuple[list[str], dict[str, str]]:
+    """先只取代码和名称 —— 几千行, 内存可忽略。"""
+    basics = (await db.execute(
+        select(StockBasic.ts_code, StockBasic.name, StockBasic.is_active)
+    )).all()
+    names = {c: n for c, n, _ in basics}
+    codes = [c for c, n, a in basics
+             if a is not False and _universe_filter(c, n)]
+    return sorted(codes), names
 
-    逐票查询在 5000+ 只票上要几分钟; 单次批量查询几秒就够, 代价是峰值内存 ——
-    所以只取需要的列并降到 float32 (生产机只有 1.6G 内存)。
-    """
+
+async def _load_chunk(db: AsyncSession, codes: list[str], end: date) -> dict[str, pd.DataFrame]:
+    """取一批票的近 HISTORY_DAYS 日线并做前复权。"""
     start = end - timedelta(days=HISTORY_DAYS)
     rows = (await db.execute(
         select(DailyCandle.ts_code, DailyCandle.trade_date, DailyCandle.open,
                DailyCandle.high, DailyCandle.low, DailyCandle.close,
                DailyCandle.vol, DailyCandle.amount, DailyCandle.adj_factor)
-        .where(DailyCandle.trade_date >= start, DailyCandle.trade_date <= end)
+        .where(DailyCandle.ts_code.in_(codes),
+               DailyCandle.trade_date >= start,
+               DailyCandle.trade_date <= end)
     )).all()
     if not rows:
-        return {}, {}
-
+        return {}
     df = pd.DataFrame(rows, columns=["ts_code", "trade_date", "open", "high", "low",
                                      "close", "vol", "amount", "adj_factor"])
-    basics = (await db.execute(
-        select(StockBasic.ts_code, StockBasic.name, StockBasic.is_active)
-    )).all()
-    names = {c: n for c, n, _ in basics}
-    active = {c for c, _, a in basics if a is not False}
-    keep = {c for c in df.ts_code.unique()
-            if c in active and _universe_filter(c, names.get(c))}
-    df = df[df.ts_code.isin(keep)]
-
-    for c in ("open", "high", "low", "close", "amount", "adj_factor"):
+    for c in ("open", "high", "low", "close", "amount", "adj_factor", "vol"):
         df[c] = pd.to_numeric(df[c], errors="coerce").astype("float64")
-    df["vol"] = pd.to_numeric(df["vol"], errors="coerce").astype("float64")
     df = df.dropna(subset=["open", "high", "low", "close"])
     df["trade_date"] = pd.to_datetime(df["trade_date"])
 
-    panel: dict[str, pd.DataFrame] = {}
+    out: dict[str, pd.DataFrame] = {}
     for cd, g in df.groupby("ts_code", sort=False):
         if len(g) < MIN_BARS:
             continue
@@ -98,21 +105,11 @@ async def load_panel(db: AsyncSession, end: date) -> tuple[dict[str, pd.DataFram
             f = (g.adj_factor / latest).values
             for c in ("open", "high", "low", "close"):
                 g[c] = (g[c].values * f).round(4)
-        panel[cd] = g[["trade_date", "open", "high", "low", "close", "vol", "amount"]]
-    return panel, names
+        out[cd] = g[["trade_date", "open", "high", "low", "close", "vol", "amount"]]
+    return out
 
 
-def scan_panel(
-    panel: dict[str, pd.DataFrame],
-    names: dict[str, str],
-    lookback_days: int,
-    top_n: int,
-    on_progress=None,
-) -> list[dict]:
-    """在已加载的面板上跑三个策略, 返回按组合规则排序的候选。"""
-    end = max(g.trade_date.iloc[-1] for g in panel.values())
-    cutoff = end - pd.Timedelta(days=lookback_days)
-
+def build_instances() -> dict:
     insts = {}
     for tid in STRATEGIES:
         cls = TEMPLATE_REGISTRY[tid]
@@ -121,16 +118,19 @@ def scan_panel(
             insts[tid] = cls(**params) if params else cls()
         except Exception as exc:          # noqa: BLE001
             log.warning("组合扫描: 策略 %s 无法实例化 — %s", tid, exc)
+    return insts
 
-    # 按信号源分桶 —— 三个源的信号密度差 15 倍 (近5日: chan-1buy-wide 48 只 /
-    # chan-2buy 696 / tdx-dual-kdj 600), 若全局只按流动性排序, 稀疏的
-    # chan-1buy-wide 会被完全挤掉。回测里三个源是持续竞争同一批仓位的, 每个
-    # 都实际贡献了交易, 所以这里按源配额取, 再合并按流动性排。
-    buckets: dict[str, list[dict]] = {tid: [] for tid in STRATEGIES}
-    hits: dict[str, dict] = {}
-    for k, (cd, g) in enumerate(panel.items()):
-        if on_progress:
-            on_progress(k, len(panel))
+
+def scan_chunk(
+    panel: dict[str, pd.DataFrame],
+    names: dict[str, str],
+    insts: dict,
+    cutoff: pd.Timestamp,
+    buckets: dict[str, list[dict]],
+    hits: dict[str, dict],
+) -> None:
+    """扫一批票, 命中累积进 buckets / hits (跨批共享)。"""
+    for cd, g in panel.items():
         amt20 = g.amount.rolling(20).mean()
         liq = float(amt20.iloc[-1]) if not np.isnan(amt20.iloc[-1]) else 0.0
         if liq < MIN_AMOUNT_K:
@@ -168,12 +168,21 @@ def scan_panel(
             )
             buckets[tid].append(hits[cd])
 
-    # 每源内部按流动性升序 (低流动性优先 —— 回测里这条决定了年化 25.8% vs 15~16%),
-    # 然后轮流取, 直到凑满 top_n。信号少的源取完就不再占额度。
-    #
-    # ⚠️ 不要把"多源触发"当排序键: 回测里三个源平等竞争仓位, 若让双源优先,
-    # 出来的 20 只会被 chan-2buy+kdj 垄断 (实测 20/20)。多源命中仍记在
-    # strategies 里作为参考强度, 但不影响入选。
+
+
+def rank_picks(buckets: dict[str, list[dict]], top_n: int) -> list[dict]:
+    """把各源桶合成最终清单。
+
+    每源内部按流动性升序 (低流动性优先 —— 回测里这条决定了年化 25.8% vs 15~16%),
+    然后轮流取, 直到凑满 top_n。信号少的源取完就不再占额度。
+
+    ⚠️ 不要把"多源触发"当排序键: 回测里三个源平等竞争仓位, 若让双源优先,
+    出来的 20 只会被 chan-2buy+kdj 垄断 (实测 20/20)。多源命中仍记在
+    strategies 里作为参考强度, 但不影响入选。
+
+    ⚠️ 也不要纯按流动性全局排: 三个源信号密度差 15 倍 (近5日 48 / 696 / 600),
+    稀疏的 chan-1buy-wide 会被完全挤掉。
+    """
     for tid in buckets:
         buckets[tid].sort(key=lambda h: h["amount_20d_wan"])
     out: list[dict] = []
@@ -202,20 +211,49 @@ def scan_panel(
     return out
 
 
+
+
+# 同时只允许一个扫描 —— 两个并发扫描会让峰值内存翻倍, 在 1.6G 的机器上致命
+_scan_lock = asyncio.Semaphore(MAX_CONCURRENT)
+
+
 async def portfolio_scan(
     db: AsyncSession, lookback_days: int = 3, top_n: int = 20, on_progress=None
 ) -> dict:
-    t0 = time.time()
-    end = (await db.execute(
-        select(DailyCandle.trade_date).order_by(DailyCandle.trade_date.desc()).limit(1)
-    )).scalar_one_or_none()
-    if not end:
-        return {"as_of": None, "picks": [], "scanned": 0, "elapsed_sec": 0.0}
-    panel, names = await load_panel(db, end)
-    picks = scan_panel(panel, names, lookback_days, top_n, on_progress)
-    return {
-        "as_of": str(end),
-        "picks": picks,
-        "scanned": len(panel),
-        "elapsed_sec": round(time.time() - t0, 1),
-    }
+    """分批扫描全市场。峰值内存只跟 CHUNK 有关, 与市场规模无关。"""
+    if _scan_lock.locked():
+        raise RuntimeError("已有扫描在运行 —— 同时只允许一个 (内存保护)")
+
+    async with _scan_lock:
+        t0 = time.time()
+        end = (await db.execute(
+            select(DailyCandle.trade_date).order_by(DailyCandle.trade_date.desc()).limit(1)
+        )).scalar_one_or_none()
+        if not end:
+            return {"as_of": None, "picks": [], "scanned": 0, "elapsed_sec": 0.0}
+
+        codes, names = await _list_universe(db)
+        cutoff = pd.Timestamp(end) - pd.Timedelta(days=lookback_days)
+        insts = build_instances()
+        buckets: dict[str, list[dict]] = {tid: [] for tid in STRATEGIES}
+        hits: dict[str, dict] = {}
+        scanned = 0
+
+        for i in range(0, len(codes), CHUNK):
+            chunk = codes[i:i + CHUNK]
+            panel = await _load_chunk(db, chunk, end)
+            scan_chunk(panel, names, insts, cutoff, buckets, hits)
+            scanned += len(panel)
+            panel.clear()               # 尽早释放, 让 GC 回收这一批
+            del panel
+            if on_progress:
+                on_progress(min(i + CHUNK, len(codes)), len(codes))
+            await asyncio.sleep(0)      # 让出事件循环, 别饿死其它请求
+
+        picks = rank_picks(buckets, top_n)
+        return {
+            "as_of": str(end),
+            "picks": picks,
+            "scanned": scanned,
+            "elapsed_sec": round(time.time() - t0, 1),
+        }
