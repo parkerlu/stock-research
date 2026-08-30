@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuoteStore } from "../../stores/quoteStore";
 import type { TradeAction } from "../../types/strategy";
 import { MainChart } from "./MainChart";
-import type { MainChartHandle } from "./MainChart";
+import type { MainChartHandle, MeasureResult } from "./MainChart";
 import { Toolbar } from "./Toolbar";
 import { LinkedView } from "./LinkedView";
 import { MAIN_PANE_INDICATORS } from "./indicatorPanes";
@@ -26,6 +26,39 @@ function readLS(key: string, fallback: string[]): string[] {
   }
 }
 
+function MeasureBar({ result }: { result: MeasureResult | null }) {
+  if (!result) {
+    return (
+      <div className="measure-bar measure-hint">
+        📏 测量中 —— 点第一根 K 线定起点，再点第二根出结果
+      </div>
+    );
+  }
+  const cls = result.changePct >= 0 ? "up" : "down";
+  const sign = (v: number) => (v > 0 ? "+" : "");
+  return (
+    <div className="measure-bar">
+      <span className="m-range">{result.fromDate} → {result.toDate}</span>
+      <span className="m-item"><i>{result.bars}</i> 根K</span>
+      <span className="m-item"><i>{result.calendarDays}</i> 自然日</span>
+      <span className="m-sep" />
+      <span className="m-item">起 <i>{result.fromClose.toFixed(2)}</i></span>
+      <span className="m-item">止 <i>{result.toClose.toFixed(2)}</i></span>
+      <span className={`m-pct ${cls}`}>
+        {sign(result.changePct)}{result.changePct.toFixed(2)}%
+      </span>
+      <span className="m-sep" />
+      <span className="m-item">
+        区间{result.extremeLabel} <i>{result.extremeValue.toFixed(2)}</i>
+        <em>({result.extremeDate})</em>
+      </span>
+      <span className={`m-pct ${cls}`}>
+        {sign(result.extremePct)}{result.extremePct.toFixed(2)}%
+      </span>
+    </div>
+  );
+}
+
 export function ChartArea({ tradeActions }: Props = {}) {
   const linkedMode = useQuoteStore((s) => s.linkedMode);
   const currentSymbol = useQuoteStore((s) => s.currentSymbol);
@@ -35,6 +68,8 @@ export function ChartArea({ tradeActions }: Props = {}) {
   );
   const mainChartRef = useRef<MainChartHandle>(null);
   const [tradeIdx, setTradeIdx] = useState(-1);
+  const [measuring, setMeasuring] = useState(false);
+  const [measure, setMeasure] = useState<MeasureResult | null>(null);
 
   const indicatorPaneIds = useRef<Record<string, string>>({});
 
@@ -138,7 +173,10 @@ export function ChartArea({ tradeActions }: Props = {}) {
         onToggleIndicator={handleToggleIndicator}
         onToggleTdxIndicator={tdx.toggle}
         onSelectOverlay={handleSelectOverlay}
+        measuring={measuring}
+        onToggleMeasure={() => setMeasuring((v) => !v)}
       />
+      {measuring && <MeasureBar result={measure} />}
       {hasActions && (
         <div className="trade-nav">
           <button
@@ -169,7 +207,12 @@ export function ChartArea({ tradeActions }: Props = {}) {
             activeTdxIndicators={tdx.active}
           />
         ) : (
-          <MainChart ref={mainChartRef} tradeActions={tradeActions} />
+          <MainChart
+            ref={mainChartRef}
+            tradeActions={tradeActions}
+            measuring={measuring}
+            onMeasure={setMeasure}
+          />
         )}
       </div>
     </div>

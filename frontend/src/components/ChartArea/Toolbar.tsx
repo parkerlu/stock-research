@@ -37,6 +37,8 @@ interface Props {
   onToggleIndicator: (name: string, isMainPane: boolean) => void;
   onToggleTdxIndicator: (name: string) => void;
   onSelectOverlay: (type: string) => void;
+  measuring: boolean;
+  onToggleMeasure: () => void;
 }
 
 export function Toolbar({
@@ -45,6 +47,8 @@ export function Toolbar({
   onToggleIndicator,
   onToggleTdxIndicator,
   onSelectOverlay,
+  measuring,
+  onToggleMeasure,
 }: Props) {
   const timeframe = useQuoteStore((s) => s.timeframe);
   const setTimeframe = useQuoteStore((s) => s.setTimeframe);
@@ -152,6 +156,16 @@ export function Toolbar({
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="toolbar-group">
+        <button
+          className={measuring ? "active" : ""}
+          onClick={onToggleMeasure}
+          title="测量: 依次点两根K线, 算出跨度 / 涨跌幅 / 区间极值"
+        >
+          📏 测量
+        </button>
       </div>
 
       <div className="toolbar-group" style={{ marginLeft: "auto" }}>

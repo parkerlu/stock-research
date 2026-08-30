@@ -24,13 +24,36 @@ export interface ForecastResult {
   forecast: ForecastDay[];
 }
 
+/** 两根K线之间的测量结果。 */
+export interface MeasureResult {
+  fromDate: string;
+  toDate: string;
+  bars: number;          // 含首尾的K线根数
+  calendarDays: number;  // 自然日跨度
+  fromClose: number;
+  toClose: number;
+  changePct: number;     // A收盘 -> B收盘
+  /** 上涨看区间最高、下跌看区间最低, 相对 A 收盘的幅度 */
+  extremeLabel: "最高" | "最低";
+  extremeValue: number;
+  extremePct: number;
+  extremeDate: string;
+}
+
 interface Props {
   timeframe?: Timeframe;
   className?: string;
   tradeActions?: TradeAction[] | null;
   forecast?: ForecastResult | null;
   onBarSelected?: (date: string | null) => void;
+  /** 测量模式: 依次点两根K线出结果, 再点一次开始新一轮 */
+  measuring?: boolean;
+  onMeasure?: (r: MeasureResult | null) => void;
 }
+
+// 图表字体。klinecharts 默认 12px, 在高分屏上读起来费劲。
+const TOOLTIP_FONT_SIZE = 15;   // K线图例 + 指标图例 (最常读)
+const AXIS_FONT_SIZE = 13;      // 坐标轴刻度 + 十字光标标签
 
 // 首屏加载多长的历史 —— 按周期给, 不能一律 1 年: 1 年只有 52 根周线 / 12 根
 // 月线, MA60 之类的长周期指标直接算不出来 (图例显示 n/a)。
@@ -82,7 +105,8 @@ export interface MainChartHandle {
 }
 
 export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
-  { timeframe: tfOverride, className, tradeActions, forecast, onBarSelected },
+  { timeframe: tfOverride, className, tradeActions, forecast, onBarSelected,
+    measuring = false, onMeasure },
   ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -94,6 +118,13 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
 
   // klinecharts 通过 subscribeBar 交给我们一个推送回调, 存起来供 pushBar 使用
   const livePushRef = useRef<((bar: KLineData) => void) | null>(null);
+
+  // 测量状态。点击 effect 只在挂载时绑一次, 所以这些要走 ref 而不是闭包捕获
+  const measuringRef = useRef(measuring);
+  const onMeasureRef = useRef(onMeasure);
+  const measureAnchor = useRef<number | null>(null);
+  measuringRef.current = measuring;
+  onMeasureRef.current = onMeasure;
 
   // reload 与 init 取数的竞态: klinecharts 的 resetData 会强制 _loading=false 再
   // 发一次 init, 但它不会作废在途的旧回调 —— 旧回调后落地就会用补齐前的数据盖掉
@@ -153,6 +184,9 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
           priceMark: { last: { show: false } },
           tooltip: {
             legend: {
+              // 默认 12px 在高分屏上读起来吃力, 图例是最常看的信息, 放大加粗
+              size: TOOLTIP_FONT_SIZE,
+              weight: "bold",
               template: ({ current, prev }: any) => {
                 const prevClose = Number(prev?.close ?? current?.close ?? 0);
                 const close = Number(current?.close ?? 0);
@@ -178,6 +212,17 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
               },
             },
           },
+        },
+        indicator: {
+          tooltip: {
+            legend: { size: TOOLTIP_FONT_SIZE, weight: "bold" },
+          },
+        },
+        xAxis: { tickText: { size: AXIS_FONT_SIZE } },
+        yAxis: { tickText: { size: AXIS_FONT_SIZE } },
+        crosshair: {
+          horizontal: { text: { size: AXIS_FONT_SIZE } },
+          vertical: { text: { size: AXIS_FONT_SIZE } },
         },
       },
     });
@@ -294,6 +339,13 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
     chartRef.current.setPeriod(TF_TO_PERIOD[tf]);
   }, [tf]);
 
+  // 关掉测量模式 / 换股换周期 -> 清除测量痕迹
+  useEffect(() => {
+    measureAnchor.current = null;
+    chartRef.current?.removeOverlay({ groupId: "measure" });
+    if (!measuring) onMeasureRef.current?.(null);
+  }, [measuring, currentSymbol, tf]);
+
   useEffect(() => {
     if (!currentSymbol || !chartRef.current) return;
     chartRef.current.setSymbol({ ticker: currentSymbol });
@@ -324,6 +376,69 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
       });
     };
 
+    const fmtDate = (ts: number) => {
+      const d = new Date(ts);
+      return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+    };
+
+    /** 第一次点定 A, 第二次点定 B 并算结果, 第三次点重新开始。 */
+    const handleMeasureClick = (idx: number) => {
+      const bars = chart.getDataList() as Array<{
+        timestamp: number; high: number; low: number; close: number;
+      }>;
+      const a = measureAnchor.current;
+      if (a === null || a === idx) {
+        measureAnchor.current = idx;
+        chart.removeOverlay({ groupId: "measure" });
+        chart.createOverlay({
+          name: "verticalStraightLine", groupId: "measure", lock: true,
+          points: [{ timestamp: bars[idx].timestamp, value: bars[idx].close }],
+          styles: { line: { color: "#e8b54d", size: 1, style: "dashed" } },
+        });
+        onMeasureRef.current?.(null);
+        return;
+      }
+      const [i1, i2] = a < idx ? [a, idx] : [idx, a];
+      const seg = bars.slice(i1, i2 + 1);
+      const fromClose = seg[0].close;
+      const toClose = seg[seg.length - 1].close;
+      const up = toClose >= fromClose;
+      // 上涨看区间最高, 下跌看区间最低 —— 衡量这一段走出去多远
+      let ext = seg[0];
+      for (const b of seg) {
+        if (up ? b.high > ext.high : b.low < ext.low) ext = b;
+      }
+      const extVal = up ? ext.high : ext.low;
+      const ms = seg[seg.length - 1].timestamp - seg[0].timestamp;
+
+      chart.removeOverlay({ groupId: "measure" });
+      chart.createOverlay({
+        name: "segment", groupId: "measure", lock: true,
+        points: [
+          { timestamp: seg[0].timestamp, value: fromClose },
+          { timestamp: seg[seg.length - 1].timestamp, value: toClose },
+        ],
+        styles: {
+          line: { color: up ? "#e94560" : "#4caf50", size: 2 },
+          point: { color: up ? "#e94560" : "#4caf50", borderColor: "#171c26" },
+        },
+      });
+
+      onMeasureRef.current?.({
+        fromDate: fmtDate(seg[0].timestamp),
+        toDate: fmtDate(seg[seg.length - 1].timestamp),
+        bars: seg.length,
+        calendarDays: Math.round(ms / 86400000),
+        fromClose, toClose,
+        changePct: (toClose / fromClose - 1) * 100,
+        extremeLabel: up ? "最高" : "最低",
+        extremeValue: extVal,
+        extremePct: (extVal / fromClose - 1) * 100,
+        extremeDate: fmtDate(ext.timestamp),
+      });
+      measureAnchor.current = null;
+    };
+
     // Mouse-down anywhere in the chart container → resolve nearest bar via pixel→data
     const onClick = (e: MouseEvent) => {
       const rect = container.getBoundingClientRect();
@@ -338,6 +453,10 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
       const dataList = chart.getDataList() as { timestamp?: number }[];
       const idx = dataList.findIndex((b) => b.timestamp === ts);
       if (idx >= 0) {
+        if (measuringRef.current) {
+          handleMeasureClick(idx);
+          return;
+        }
         selectedIndex = idx;
         moveCrosshairTo(idx);
         // Notify parent of selection (for forecast-from-bar)

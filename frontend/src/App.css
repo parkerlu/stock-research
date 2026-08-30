@@ -1924,3 +1924,27 @@ body {
   color: #000;
   font-weight: 600;
 }
+
+/* ===== K线测量条 ===== */
+.measure-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 7px 14px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.measure-bar.measure-hint { color: var(--text-muted); }
+.measure-bar .m-range { color: var(--text-primary); font-weight: 600; }
+.measure-bar .m-item i { font-style: normal; color: var(--text-primary); font-weight: 600; }
+.measure-bar .m-item em { font-style: normal; color: var(--text-muted); margin-left: 4px; }
+.measure-bar .m-sep {
+  width: 1px; height: 14px; background: var(--border); display: inline-block;
+}
+.measure-bar .m-pct { font-weight: 700; font-size: 14px; }
+.measure-bar .m-pct.up { color: #e94560; }
+.measure-bar .m-pct.down { color: #4caf50; }
