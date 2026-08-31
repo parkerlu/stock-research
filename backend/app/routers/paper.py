@@ -200,10 +200,16 @@ async def _run_job(job_id: str, name: str, until: date | None):
             )).scalar_one_or_none()
             if not end:
                 job["status"] = "error"; job["error"] = "库里没有行情数据"; return
-            start = acct.last_run_date or acct.started_on
+            # 同 scheduler: 首次结算时起始日本身要算进去
+            if acct.last_run_date:
+                start, inclusive = acct.last_run_date, False
+            else:
+                start, inclusive = acct.started_on, True
             days = (await db.execute(
-                select(DailyCandle.trade_date).where(DailyCandle.trade_date > start,
-                                                     DailyCandle.trade_date <= end)
+                select(DailyCandle.trade_date)
+                .where(DailyCandle.trade_date >= start if inclusive
+                       else DailyCandle.trade_date > start,
+                       DailyCandle.trade_date <= end)
                 .group_by(DailyCandle.trade_date).order_by(DailyCandle.trade_date)
             )).scalars().all()
             job["total"] = len(days)

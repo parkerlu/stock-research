@@ -310,10 +310,19 @@ async def _settle_paper() -> None:
         if not end:
             return
         for acct in accounts:
-            start = acct.last_run_date or acct.started_on
+            # ⚠️ 还没结算过时, 起始日本身也要算进去。原来一律用 > start, 于是
+            # started_on 落在交易日的账户会跳过自己的第一天 —— 实操盘定在
+            # 2026-09-01 (周二, 交易日), 会从 9/2 才开始。之前没暴露是因为演示盘
+            # 的起点 2022-01-01 是节假日, > 它正好得到 01-04。
+            if acct.last_run_date:
+                start, inclusive = acct.last_run_date, False
+            else:
+                start, inclusive = acct.started_on, True
             days = (await db.execute(
                 select(DailyCandle.trade_date)
-                .where(DailyCandle.trade_date > start, DailyCandle.trade_date <= end)
+                .where(DailyCandle.trade_date >= start if inclusive
+                       else DailyCandle.trade_date > start,
+                       DailyCandle.trade_date <= end)
                 .group_by(DailyCandle.trade_date)
                 .order_by(DailyCandle.trade_date)
             )).scalars().all()
