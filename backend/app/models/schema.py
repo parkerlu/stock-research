@@ -174,6 +174,8 @@ class PaperPosition(Base):
     init_shares: Mapped[int] = mapped_column(Integer)
     shares: Mapped[int] = mapped_column(Integer)          # 当前剩余
     stop_price: Mapped[float] = mapped_column(Numeric(12, 4))
+    # 移动止盈用: 持仓期间见过的最高价
+    peak_price: Mapped[float | None] = mapped_column(Numeric(12, 4), nullable=True)
     tier1_done: Mapped[bool] = mapped_column(Boolean, default=False)
     tier2_done: Mapped[bool] = mapped_column(Boolean, default=False)
     realized_pnl: Mapped[float] = mapped_column(Numeric(16, 2), default=0)

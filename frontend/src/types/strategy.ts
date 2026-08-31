@@ -61,7 +61,7 @@ export interface TradeDetail {
 
 export interface TradeAction {
   date: string;
-  type: "buy" | "sell";
+  type: "buy" | "sell" | "signal";
   /** 覆盖默认标签 —— 虚拟盘要区分 减半/止盈/止损, 不只是"卖" */
   label?: string;
   price: number;

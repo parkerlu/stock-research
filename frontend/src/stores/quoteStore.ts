@@ -26,8 +26,12 @@ interface QuoteState {
   focusSeq: number;
   /** 该股在虚拟盘里的买卖标记, 交给 MainChart 画在K线上 */
   paperMarks: TradeAction[] | null;
+  /** 回放已推进到的日期 —— K线上画竖线, 提醒线右边是回放还没走到的未来 */
+  replayDate: string | null;
   jumpToDate: (symbol: string, name: string, date: string,
-               marks?: TradeAction[]) => void;
+               marks?: TradeAction[], replayDate?: string | null) => void;
+  /** 回放日期单独更新 —— 点"下一日"时线要立刻跟着移动, 不用重新点股票 */
+  setReplayDate: (date: string | null) => void;
   clearFocusDate: () => void;
 
   timeframe: Timeframe;
@@ -52,7 +56,7 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
   currentSymbol: "",
   currentName: "",
   setCurrentStock: (symbol, name) => {
-    set({ currentSymbol: symbol, currentName: name, paperMarks: null });
+    set({ currentSymbol: symbol, currentName: name, paperMarks: null, replayDate: null });
     get().fetchSnapshot();
     get().fetchHistory();
   },
@@ -60,14 +64,16 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
   focusDate: null,
   focusSeq: 0,
   paperMarks: null,
-  jumpToDate: (symbol, name, date, marks) => {
+  replayDate: null,
+  jumpToDate: (symbol, name, date, marks, replayDate) => {
     const changed = get().currentSymbol !== symbol;
     set((st) => ({ currentSymbol: symbol, currentName: name,
                    focusDate: date, focusSeq: st.focusSeq + 1,
-                   paperMarks: marks ?? null }));
+                   paperMarks: marks ?? null, replayDate: replayDate ?? null }));
     if (changed) { get().fetchSnapshot(); get().fetchHistory(); }
   },
   clearFocusDate: () => set({ focusDate: null }),
+  setReplayDate: (date) => set({ replayDate: date }),
 
   timeframe: "1d",
   setTimeframe: (tf) => set({ timeframe: tf }),

@@ -6,9 +6,10 @@ import { getCandles } from "../../api/quotes";
 import { useQuoteStore } from "../../stores/quoteStore";
 import type { Candle, Timeframe } from "../../types/quote";
 import type { TradeAction } from "../../types/strategy";
-import { buildTradeLabel, registerTradeMarker } from "./tradeOverlays";
+import { buildTradeLabel, registerReplayDivider, registerTradeMarker } from "./tradeOverlays";
 
 registerTradeMarker();
+registerReplayDivider();
 
 export interface ForecastDay {
   day: number;
@@ -44,6 +45,8 @@ interface Props {
   timeframe?: Timeframe;
   className?: string;
   tradeActions?: TradeAction[] | null;
+  /** 回放已推进到的日期 (YYYY-MM-DD)。画一条竖线区分"已回放"和"尚未到达的未来"。 */
+  replayDate?: string | null;
   forecast?: ForecastResult | null;
   onBarSelected?: (date: string | null) => void;
   /** 测量模式: 依次点两根K线出结果, 再点一次开始新一轮 */
@@ -107,8 +110,16 @@ export interface MainChartHandle {
   focusDate: (dateStr: string) => void;
 }
 
+/** scrollToTimestamp 会把目标K线顶到最右边, 标记和分割线就贴着边缘看不清。
+ *  往后挪 ~25 根再滚, 目标就落在偏右但留有余量的位置。 */
+function anchorTs(list: { timestamp: number }[], ts: number): number {
+  const i = list.findIndex((b) => b.timestamp >= ts);
+  if (i < 0) return ts;
+  return list[Math.min(i + 25, list.length - 1)]?.timestamp ?? ts;
+}
+
 export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
-  { timeframe: tfOverride, className, tradeActions, forecast, onBarSelected,
+  { timeframe: tfOverride, className, tradeActions, replayDate, forecast, onBarSelected,
     measuring = false, onMeasure },
   ref
 ) {
@@ -136,6 +147,7 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
   const pendingReloadRef = useRef(false);
   // 要定位的历史日期: 影响 init 取数的起点, 数据落地后再滚过去
   const focusFromRef = useRef<string | null>(null);
+  const focusToRef = useRef<string | null>(null);
   const focusTsRef = useRef<number | null>(null);
 
   const doReload = () => {
@@ -173,13 +185,19 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
           chartRef.current?.getPeriod() ?? TF_TO_PERIOD["1d"])}`);
       // 已经加载到这一天就直接滚, 免得白重取一次
       if (cached && cached.length > 0 && cached[0].timestamp <= ts) {
-        chartRef.current?.scrollToTimestamp(ts, 300);
+        chartRef.current?.scrollToTimestamp(anchorTs(cached, ts), 300);
+        setTimeout(() => chartRef.current?.resize(), 360);
         return;
       }
-      // 多留半年余量, 定位点落在屏幕中间而不是最左边
+      // 只取目标日附近的窗口, 前 9 个月 + 后 3 个月。
+      // 回放 2022 年不该把 2026 年的走势整段铺在眼前, 顺带也少拉几千根K线。
       const from = new Date(ts);
-      from.setMonth(from.getMonth() - 6);
+      from.setMonth(from.getMonth() - 9);
+      const to = new Date(ts);
+      to.setMonth(to.getMonth() + 3);
+      const today = new Date();
       focusFromRef.current = fmtDate(from);
+      focusToRef.current = fmtDate(to < today ? to : today);
       if (loadingRef.current) pendingReloadRef.current = true;
       else doReload();
     },
@@ -252,6 +270,7 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
       },
     });
     chartRef.current = chart ?? null;
+    (window as unknown as Record<string, unknown>).__kc = chart;
 
     chart?.createIndicator("VOL", false, { id: "volume_pane" });
 
@@ -285,19 +304,53 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
           // focusDate 指定了更早的起点就用它 —— 否则那一天不在数据里, 滚不过去
           const fromStr = focusFromRef.current && focusFromRef.current < fmtDate(from)
             ? focusFromRef.current : fmtDate(from);
+          const toStr = focusToRef.current ?? fmtDate(now);
           focusFromRef.current = null;
+          focusToRef.current = null;
 
           try {
-            const resp = await getCandles(symInfo.ticker, tfVal, fromStr, fmtDate(now));
+            const resp = await getCandles(symInfo.ticker, tfVal, fromStr, toStr);
             const data = resp.candles.map(mapCandle);
             candleCache.set(cacheKey, data);
             setLoading(false);
             callback(data, { forward: true, backward: false });
+            // ⚠️ 图表可能是在面板刚打开、还没有 symbol 时初始化的, 那时纵轴定在
+            // 默认的 0~10 且**不会**因为后来数据到位而重算 —— 结果价格 5.5~7.2
+            // 的股票被压成贴着 6.00 的一条线。数据首次落地后强制重算一次。
+            // ⚠️ 未解决的已知问题: 从虚拟盘切股后, 纵轴渲染出来是 0~11,
+            // 而 K 线实际只在 3.16~4.29 这一小段, 被压成一条。
+            // 已经排除的: 不是 auto-calc 被关 (getAutoCalcTickFlag()===true),
+            // 不是区间算错 (getRange() 与可视数据一致, pixelToValue 也对得上),
+            // 不是刻度算错 (getTicks() 返回的正是 17.00/18.00/... 这类正确值),
+            // 不是实例泄漏 (canvas 恰好 10 个), 不是 DPR (DPR=1 同样复现),
+            // 不是加载了太多历史 (把取数窗口收到 12 个月后依旧复现)。
+            // 试过 resize()、setPaneOptions({axis})、buildTicks(true) 以及
+            // layout({measureWidth,update,buildYAxisTick}) 都推不动画布。
+            // 即模型层全对、只有绘制不跟随。留待专门排查 klinecharts 的绘制层。
+            requestAnimationFrame(() => {
+              const c = chartRef.current as unknown as {
+                layout?: (o: Record<string, boolean>) => void; resize: () => void;
+              } | null;
+              if (!c) return;
+              if (typeof c.layout === "function") {
+                c.layout({ measureWidth: true, update: true, buildYAxisTick: true });
+              } else {
+                c.resize();     // 库版本变了就退回去, 至少不报错
+              }
+            });
             const ft = focusTsRef.current;
             if (ft != null) {
               focusTsRef.current = null;
               // 等 klinecharts 把数据画完再滚, 否则 scrollToTimestamp 找不到那根
-              setTimeout(() => chartRef.current?.scrollToTimestamp(ft, 300), 60);
+              setTimeout(() => {
+                const c = chartRef.current;
+                const list = (c?.getDataList() ?? []) as { timestamp: number }[];
+                c?.scrollToTimestamp(anchorTs(list, ft), 300);
+                // 跳转会重新取数, 但 Y 轴不会自己跟着重算 —— 实测数据区间
+                // 17.7~29.5 时坐标轴还停在 0~10, K线整个飞出画面。resize()
+                // 会强制重算纵轴。
+                setTimeout(() => c?.resize(), 360);
+              }, 60);
             }
           } catch (err) {
             console.error("Failed to load candles:", err);
@@ -656,7 +709,7 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
           const ts = new Date(action.date + "T00:00:00Z").getTime();
           const bar = dataList.find((b) => b.timestamp === ts);
           const anchor =
-            action.type === "buy"
+            action.type === "buy" || action.type === "signal"
               ? bar?.low ?? action.price
               : bar?.high ?? action.price;
           const label = action.label ?? buildTradeLabel(
@@ -677,6 +730,39 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
 
     return () => clearTimeout(timer);
   }, [tradeActions]);
+
+  // 回放分割线
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    chart.removeOverlay({ groupId: "replay-divider" });
+    if (!replayDate) return;
+    const ts = new Date(replayDate + "T00:00:00Z").getTime();
+    if (Number.isNaN(ts)) return;
+
+    // ⚠️ 锚点的 value 会被算进 Y 轴范围。跳转会触发一次重新取数, 固定延时里
+    // getDataList() 还是空的, 取不到价就退成 0 —— 整个价格轴被拉到 0~最高价,
+    // K线全挤在顶部。所以要等数据真的到位, 且**宁可不画也不用 0**。
+    let tries = 0;
+    let timer: ReturnType<typeof setTimeout>;
+    const attempt = () => {
+      const list = chart.getDataList() as Array<{ timestamp: number; close: number }>;
+      const bar = list.find((b) => b.timestamp === ts);
+      if (!bar) {
+        if (++tries < 20) timer = setTimeout(attempt, 250);
+        return;
+      }
+      chart.createOverlay({
+        name: "replayDivider",
+        groupId: "replay-divider",
+        lock: true,
+        points: [{ timestamp: ts, value: bar.close }],
+        extendData: { text: `回放至 ${replayDate}` },
+      });
+    };
+    timer = setTimeout(attempt, 500);
+    return () => clearTimeout(timer);
+  }, [replayDate]);
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>

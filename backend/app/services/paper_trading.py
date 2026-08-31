@@ -54,6 +54,10 @@ DEFAULT_CONFIG = {
     "tier1_frac": 0.5,       # 卖出比例
     "tier2_pct": 0.08,       # 第二批(清仓)
     "breakeven": True,       # 首批后止损上移到成本
+    # 移动止盈(可选): 设了 trail_pct 就用它取代固定的 tier2 清仓 ——
+    # 涨到 trail_arm_pct 后开始跟踪, 从最高点回撤 trail_pct 才卖。
+    "trail_pct": None,
+    "trail_arm_pct": None,
     "min_amount_k": 5000,    # 20日均额下限(千元)
     "max_hold_days": 60,     # 保险丝
     # ---- 交易成本: A股是三笔独立的费, 不能揉成一个百分比 ----
@@ -254,7 +258,22 @@ async def run_day(db: AsyncSession, acct: PaperAccount, day: date,
             p.tier1_done = True
             if cfg["breakeven"]:
                 p.stop_price = entry          # 保本: 此后这笔不可能亏
-        if p.shares > 0 and p.tier1_done and not p.tier2_done and h >= entry * (1 + cfg["tier2_pct"]):
+        # 第二批: 固定止盈 或 移动止盈(贪婪)
+        # 固定 +8% 清仓的问题是把大涨的票也在 +8% 砍掉; 移动止盈让利润继续跑,
+        # 只在回撤 trail_pct 时才走。代价是每次都要还回去一段回撤。
+        if p.shares > 0 and p.tier1_done and not p.tier2_done and cfg.get("trail_pct"):
+            trail = float(cfg["trail_pct"])
+            arm = entry * (1 + float(cfg.get("trail_arm_pct", cfg["tier2_pct"])))
+            peak = max(float(p.peak_price or 0), h)
+            if h >= arm:
+                p.peak_price = round(peak, 4)
+                # 移动止损抬到 峰值*(1-trail), 且不低于保本价
+                new_stop = max(peak * (1 - trail), entry)
+                if new_stop > float(p.stop_price):
+                    p.stop_price = round(new_stop, 4)
+            elif peak > float(p.peak_price or 0):
+                p.peak_price = round(peak, 4)
+        elif p.shares > 0 and p.tier1_done and not p.tier2_done and h >= entry * (1 + cfg["tier2_pct"]):
             px = max(o, entry * (1 + cfg["tier2_pct"]))
             _sell(p.shares, px, "tier2", f"+{cfg['tier2_pct']:.0%} 清仓")
             p.tier2_done = True

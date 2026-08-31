@@ -63,8 +63,20 @@ function EquityChart({ points, initial }: { points: EquityPoint[]; initial: numb
 /** 虚拟盘成交 -> K线标记。tier1/tier2/stop/timeout 都是卖, 但标签要分清楚,
  *  复用上面表格用的 ACTION_LABEL, 免得两处文案对不上。 */
 function toMarks(rows: PaperTrade[], code: string): TradeAction[] {
-  return rows
-    .filter((t) => t.ts_code === code)
+  const mine = rows.filter((t) => t.ts_code === code);
+  // 信号日单独标一个 —— 信号在收盘后确认, 次日开盘才成交, 两者不是同一根K线。
+  // 信号日已经写在买入成交的 note 里 ("chan-2buy 信号 YYYY-MM-DD")。
+  const signals: TradeAction[] = [];
+  for (const t of mine) {
+    const m = t.action === "buy" ? /(\d{4}-\d{2}-\d{2})/.exec(t.note ?? "") : null;
+    if (m && m[1] !== t.date) {
+      signals.push({
+        date: m[1], type: "signal", price: t.price, shares: 0, amount: 0,
+        position_level: 0, label: "信号",
+      });
+    }
+  }
+  return signals.concat(mine
     .map((t) => ({
       date: t.date,
       type: (t.action === "buy" ? "buy" : "sell") as "buy" | "sell",
@@ -76,7 +88,7 @@ function toMarks(rows: PaperTrade[], code: string): TradeAction[] {
       pnl_pct: t.pnl_pct ?? undefined,
       label: `${ACTION_LABEL[t.action] ?? t.action} ${t.price.toFixed(2)}`
              + (t.pnl_pct != null ? ` ${t.pnl_pct >= 0 ? "+" : ""}${t.pnl_pct.toFixed(1)}%` : ""),
-    }));
+    })));
 }
 
 export function PaperPanel() {
@@ -101,6 +113,7 @@ export function PaperPanel() {
   const isDemo = acct === DEMO_ACCOUNT;
   const setCurrentStock = useQuoteStore((s) => s.setCurrentStock);
   const jumpToDate = useQuoteStore((s) => s.jumpToDate);
+  const setReplayDate = useQuoteStore((s) => s.setReplayDate);
 
   const reload = useCallback(async (name = acct) => {
     try {
@@ -109,6 +122,8 @@ export function PaperPanel() {
         getPaperSignals(name, 20).catch(() => ({ picks: [] as SignalPick[] })),
       ]);
       setSt(s);
+      // 回放推进一天, 右侧K线上的"今日"线就跟着移动
+      setReplayDate(s.last_run_date ?? null);
       // 换账户时把日期框对齐到该账户的实际起点 (同一账户内不覆盖用户正在改的值)
       if (s.started_on && syncedFor.current !== name) {
         syncedFor.current = name;
@@ -121,7 +136,7 @@ export function PaperPanel() {
     } catch (x) {
       setErr(x instanceof Error ? x.message : "加载失败");
     }
-  }, [acct]);
+  }, [acct, setReplayDate]);
 
   /** 演示盘: 走一个交易日 */
   const stepOnce = useCallback(async () => {
@@ -230,7 +245,6 @@ export function PaperPanel() {
                         await resetPaper(DEMO_ACCOUNT, startDate);
                         await reload(DEMO_ACCOUNT);
                       }}>重新开始</button>
-              <span className="pp-cur">当前 {st.last_run_date ?? "未开始"}</span>
             </span>
           ) : (
             <span className="pp-asof">
@@ -252,6 +266,8 @@ export function PaperPanel() {
                 <option value={600}>中</option>
                 <option value={150}>快</option>
               </select>
+              {/* 回放当前日期是回放盘最要紧的一个数 —— 放在最后、加粗白字 */}
+              <span className="pp-cur">当前 {st.last_run_date ?? "未开始"}</span>
             </>
           ) : (
             <button className="pp-run" onClick={advance} disabled={busy}>
@@ -361,7 +377,7 @@ export function PaperPanel() {
             <tbody>
               {st.holdings.map((h) => (
                 <tr key={h.ts_code} title="点击查看该股买入当日的K线"
-                    onClick={() => jumpToDate(h.ts_code, h.name ?? h.ts_code, h.open_date, toMarks(trades, h.ts_code))}>
+                    onClick={() => jumpToDate(h.ts_code, h.name ?? h.ts_code, h.open_date, toMarks(trades, h.ts_code), st.last_run_date)}>
                   <td className="pp-name">
                     <b>{h.name ?? ""}</b><em>{h.ts_code}</em>
                   </td>
@@ -397,7 +413,7 @@ export function PaperPanel() {
                 {trades.slice(0, 60).map((t, i) => (
                   <tr key={i} title="点击查看该笔成交当日的K线"
                       onClick={() => jumpToDate(t.ts_code, t.name ?? t.ts_code, t.date,
-                                                toMarks(trades, t.ts_code))}>
+                                                toMarks(trades, t.ts_code), st.last_run_date)}>
                     <td className="pp-rd">{t.date.slice(5)}</td>
                     <td className="pp-name"><b>{t.name ?? t.ts_code}</b></td>
                     <td><span className={`pp-act pp-act-${t.action}`}>
@@ -429,7 +445,7 @@ export function PaperPanel() {
             <tbody>
               {trades.map((t, i) => (
                 <tr key={i} title="点击查看该笔成交当日的K线"
-                    onClick={() => jumpToDate(t.ts_code, t.name ?? t.ts_code, t.date, toMarks(trades, t.ts_code))}>
+                    onClick={() => jumpToDate(t.ts_code, t.name ?? t.ts_code, t.date, toMarks(trades, t.ts_code), st.last_run_date)}>
                   <td>{t.date.slice(5)}</td>
                   <td className="pp-name"><b>{t.name ?? ""}</b><em>{t.ts_code}</em></td>
                   <td><span className={`pp-act pp-act-${t.action}`}>{ACTION_LABEL[t.action] ?? t.action}</span></td>
@@ -458,7 +474,7 @@ export function PaperPanel() {
             <tbody>
               {st.closed.map((c, i) => (
                 <tr key={i} title="点击查看该股买入当日的K线"
-                    onClick={() => jumpToDate(c.ts_code, c.name ?? c.ts_code, c.open_date, toMarks(trades, c.ts_code))}>
+                    onClick={() => jumpToDate(c.ts_code, c.name ?? c.ts_code, c.open_date, toMarks(trades, c.ts_code), st.last_run_date)}>
                   <td className="pp-name"><b>{c.name ?? ""}</b><em>{c.ts_code}</em></td>
                   <td>{c.open_date.slice(5)}</td>
                   <td>{c.close_date.slice(5)}</td>

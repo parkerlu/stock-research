@@ -67,6 +67,7 @@ export function ChartArea({ tradeActions }: Props = {}) {
   const focusSeq = useQuoteStore((s) => s.focusSeq);
   const clearFocusDate = useQuoteStore((s) => s.clearFocusDate);
   const paperMarks = useQuoteStore((s) => s.paperMarks);
+  const replayDate = useQuoteStore((s) => s.replayDate);
   // 策略回测的标记优先; 没有时才画虚拟盘的成交
   const marks = tradeActions && tradeActions.length ? tradeActions : paperMarks;
   const [activeIndicators, setActiveIndicators] = useState<string[]>(() =>
@@ -227,6 +228,7 @@ export function ChartArea({ tradeActions }: Props = {}) {
           <MainChart
             ref={mainChartRef}
             tradeActions={marks}
+            replayDate={replayDate}
             measuring={measuring}
             onMeasure={setMeasure}
           />
