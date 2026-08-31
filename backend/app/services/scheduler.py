@@ -28,9 +28,11 @@ async def _sync_stocks():
     log.info("=== scheduled stock sync started ===")
     today = date.today()
 
+    from app.services.paper_trading import _universe_ok
+
     async with async_session() as db:
         rows = (await db.execute(
-            select(StockBasic.ts_code, StockBasic.is_active)
+            select(StockBasic.ts_code, StockBasic.name, StockBasic.is_active)
         )).all()
         latest_rows = (await db.execute(
             select(DailyCandle.ts_code, func.max(DailyCandle.trade_date).label("latest"))
@@ -39,12 +41,20 @@ async def _sync_stocks():
 
     latest_map = {ts_code: d for ts_code, d in latest_rows}
     targets = []
-    for ts_code, active in rows:
+    skipped = 0
+    for ts_code, name, active in rows:
         if active is False:
+            continue
+        # 688/北交所/ST 连数据都不同步 —— 策略层本来就永远不买它们
+        # (_universe_ok 白名单: 沪 60 / 深 00 / 深 30), 每晚白拉 ~900 只是
+        # 纯浪费。代价: 这些票在行情页里会停留在最后一次同步的数据上。
+        if not _universe_ok(ts_code, name):
+            skipped += 1
             continue
         latest = latest_map.get(ts_code)
         if latest is None or latest < today:
             targets.append((ts_code, latest))
+    log.info("universe 过滤跳过 %d 只 (688/北交所/ST)", skipped)
 
     log.info("stocks to update: %d", len(targets))
     if not targets:
