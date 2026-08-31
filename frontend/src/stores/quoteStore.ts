@@ -32,6 +32,8 @@ interface QuoteState {
                marks?: TradeAction[], replayDate?: string | null) => void;
   /** 回放日期单独更新 —— 点"下一日"时线要立刻跟着移动, 不用重新点股票 */
   setReplayDate: (date: string | null) => void;
+  /** 单独刷新当前股票的成交标记 —— 回放推进一天后, 图上要立刻多出新的买卖点 */
+  setPaperMarks: (marks: TradeAction[] | null) => void;
   clearFocusDate: () => void;
 
   timeframe: Timeframe;
@@ -74,6 +76,7 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
   },
   clearFocusDate: () => set({ focusDate: null }),
   setReplayDate: (date) => set({ replayDate: date }),
+  setPaperMarks: (marks) => set({ paperMarks: marks }),
 
   timeframe: "1d",
   setTimeframe: (tf) => set({ timeframe: tf }),

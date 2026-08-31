@@ -58,6 +58,14 @@ DEFAULT_CONFIG = {
     # 涨到 trail_arm_pct 后开始跟踪, 从最高点回撤 trail_pct 才卖。
     "trail_pct": None,
     "trail_arm_pct": None,
+    # tier2 只卖掉初始仓位的这个比例, 剩下的交给移动止盈。
+    # 1.0 = 到 +8% 全清 (现状); 0.25 = 再卖 1/4, 留 1/4 去跑。
+    # 全仓跟踪的问题是"跟踪的代价每笔都付、收益只在极少数票上兑现",
+    # 留小尾巴可以把代价按比例砍掉, 而大牛股的上涨照样吃得到。
+    "tier2_frac": 1.0,
+    # 只在"这笔明显不一样"时才跟踪: 从买入到摸到 +8% 用了几个交易日,
+    # 越快说明动能越强。None = 不做条件判断, 一律跟踪。
+    "trail_max_days_to_arm": None,
     "min_amount_k": 5000,    # 20日均额下限(千元)
     "max_hold_days": 60,     # 保险丝
     # ---- 交易成本: A股是三笔独立的费, 不能揉成一个百分比 ----
@@ -261,13 +269,38 @@ async def run_day(db: AsyncSession, acct: PaperAccount, day: date,
         # 第二批: 固定止盈 或 移动止盈(贪婪)
         # 固定 +8% 清仓的问题是把大涨的票也在 +8% 砍掉; 移动止盈让利润继续跑,
         # 只在回撤 trail_pct 时才走。代价是每次都要还回去一段回撤。
-        if p.shares > 0 and p.tier1_done and not p.tier2_done and cfg.get("trail_pct"):
+        # ⚠️ 这里不能带 "not p.tier2_done" —— 部分减仓后 tier2_done 已置真,
+        # 但剩下的尾巴还要继续跟踪, 带上就再也不抬止损了。
+        if p.shares > 0 and p.tier1_done and cfg.get("trail_pct"):
             trail = float(cfg["trail_pct"])
-            arm = entry * (1 + float(cfg.get("trail_arm_pct", cfg["tier2_pct"])))
+            arm_pct = float(cfg.get("trail_arm_pct") or cfg["tier2_pct"])
+            arm = entry * (1 + arm_pct)
             peak = max(float(p.peak_price or 0), h)
             if h >= arm:
+                # 条件跟踪: 摸到 arm 太慢的就不给它跟踪机会, 直接按固定止盈清掉
+                fast = True
+                cap = cfg.get("trail_max_days_to_arm")
+                if cap is not None:
+                    fast = (day - p.open_date).days <= int(cap) * 1.6
+                frac = float(cfg.get("tier2_frac", 1.0))
+                if not fast:
+                    px = max(o, arm)
+                    _sell(p.shares, px, "tier2", f"+{arm_pct:.0%} 清仓(动能不足)")
+                    p.tier2_done = True
+                    p.status = "closed"; p.close_date = day; p.close_reason = "tier2"
+                    continue
+                if frac < 1.0 and not p.tier2_done:      # 只减仓一次
+                    # 先落袋一部分, 剩下的尾巴才去跟踪
+                    n = int(p.init_shares * frac / cfg["lot"]) * cfg["lot"]
+                    n = min(n, p.shares)
+                    if n > 0:
+                        _sell(n, max(o, arm), "tier2", f"+{arm_pct:.0%} 减仓, 余仓跟踪")
+                    p.tier2_done = True
+                    if p.shares <= 0:
+                        p.status = "closed"; p.close_date = day
+                        p.close_reason = "tier2"
+                        continue
                 p.peak_price = round(peak, 4)
-                # 移动止损抬到 峰值*(1-trail), 且不低于保本价
                 new_stop = max(peak * (1 - trail), entry)
                 if new_stop > float(p.stop_price):
                     p.stop_price = round(new_stop, 4)

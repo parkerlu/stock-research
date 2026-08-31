@@ -114,6 +114,14 @@ export function PaperPanel() {
   const setCurrentStock = useQuoteStore((s) => s.setCurrentStock);
   const jumpToDate = useQuoteStore((s) => s.jumpToDate);
   const setReplayDate = useQuoteStore((s) => s.setReplayDate);
+  const setPaperMarks = useQuoteStore((s) => s.setPaperMarks);
+  // 用 ref 读, 避免把它们塞进 reload 的依赖里导致每次换股都重新拉一遍数据
+  const curSymRef = useRef("");
+  const hasMarksRef = useRef(false);
+  // 标记内容的指纹 —— 每步都无脑重建会清空再画, 图上闪一下
+  const markSigRef = useRef("");
+  curSymRef.current = useQuoteStore((s) => s.currentSymbol);
+  hasMarksRef.current = useQuoteStore((s) => s.paperMarks) !== null;
 
   const reload = useCallback(async (name = acct) => {
     try {
@@ -124,6 +132,18 @@ export function PaperPanel() {
       setSt(s);
       // 回放推进一天, 右侧K线上的"今日"线就跟着移动
       setReplayDate(s.last_run_date ?? null);
+      // 这一天如果对当前正在看的票有买卖动作, K线上的标记也要立刻跟着出现,
+      // 否则得重新点一次持仓行才看得到。只在图上本来就是虚拟盘标记时才刷新,
+      // 免得把从行情页打开的图也接管了。
+      if (hasMarksRef.current && curSymRef.current) {
+        const next = toMarks(t.trades, curSymRef.current);
+        const sig = `${curSymRef.current}|` +
+          next.map((m) => `${m.date}${m.type}${m.price}`).join(",");
+        if (sig !== markSigRef.current) {
+          markSigRef.current = sig;
+          setPaperMarks(next);
+        }
+      }
       // 换账户时把日期框对齐到该账户的实际起点 (同一账户内不覆盖用户正在改的值)
       if (s.started_on && syncedFor.current !== name) {
         syncedFor.current = name;
@@ -136,7 +156,13 @@ export function PaperPanel() {
     } catch (x) {
       setErr(x instanceof Error ? x.message : "加载失败");
     }
-  }, [acct, setReplayDate]);
+  }, [acct, setReplayDate, setPaperMarks]);
+
+  /** 在右侧K线打开某只票并定位到某天, 同时带上它的全部成交标记 */
+  const openInChart = useCallback((code: string, nm: string | null, day: string) => {
+    markSigRef.current = "";        // 换股/换日期 -> 指纹作废, 下次必定重画
+    jumpToDate(code, nm ?? code, day, toMarks(trades, code), st?.last_run_date ?? null);
+  }, [jumpToDate, trades, st]);
 
   /** 演示盘: 走一个交易日 */
   const stepOnce = useCallback(async () => {
@@ -377,7 +403,7 @@ export function PaperPanel() {
             <tbody>
               {st.holdings.map((h) => (
                 <tr key={h.ts_code} title="点击查看该股买入当日的K线"
-                    onClick={() => jumpToDate(h.ts_code, h.name ?? h.ts_code, h.open_date, toMarks(trades, h.ts_code), st.last_run_date)}>
+                    onClick={() => openInChart(h.ts_code, h.name, h.open_date)}>
                   <td className="pp-name">
                     <b>{h.name ?? ""}</b><em>{h.ts_code}</em>
                   </td>
@@ -412,8 +438,7 @@ export function PaperPanel() {
               <tbody>
                 {trades.slice(0, 60).map((t, i) => (
                   <tr key={i} title="点击查看该笔成交当日的K线"
-                      onClick={() => jumpToDate(t.ts_code, t.name ?? t.ts_code, t.date,
-                                                toMarks(trades, t.ts_code), st.last_run_date)}>
+                      onClick={() => openInChart(t.ts_code, t.name, t.date)}>
                     <td className="pp-rd">{t.date.slice(5)}</td>
                     <td className="pp-name"><b>{t.name ?? t.ts_code}</b></td>
                     <td><span className={`pp-act pp-act-${t.action}`}>
@@ -445,7 +470,7 @@ export function PaperPanel() {
             <tbody>
               {trades.map((t, i) => (
                 <tr key={i} title="点击查看该笔成交当日的K线"
-                    onClick={() => jumpToDate(t.ts_code, t.name ?? t.ts_code, t.date, toMarks(trades, t.ts_code), st.last_run_date)}>
+                    onClick={() => openInChart(t.ts_code, t.name, t.date)}>
                   <td>{t.date.slice(5)}</td>
                   <td className="pp-name"><b>{t.name ?? ""}</b><em>{t.ts_code}</em></td>
                   <td><span className={`pp-act pp-act-${t.action}`}>{ACTION_LABEL[t.action] ?? t.action}</span></td>
@@ -474,7 +499,7 @@ export function PaperPanel() {
             <tbody>
               {st.closed.map((c, i) => (
                 <tr key={i} title="点击查看该股买入当日的K线"
-                    onClick={() => jumpToDate(c.ts_code, c.name ?? c.ts_code, c.open_date, toMarks(trades, c.ts_code), st.last_run_date)}>
+                    onClick={() => openInChart(c.ts_code, c.name, c.open_date)}>
                   <td className="pp-name"><b>{c.name ?? ""}</b><em>{c.ts_code}</em></td>
                   <td>{c.open_date.slice(5)}</td>
                   <td>{c.close_date.slice(5)}</td>
