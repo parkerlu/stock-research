@@ -31,7 +31,7 @@ from datetime import date, timedelta
 
 import numpy as np
 import pandas as pd
-from sqlalchemy import select, update
+from sqlalchemy import exists, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.schema import (
@@ -62,9 +62,12 @@ DEFAULT_CONFIG = {
     "transfer_pct": 0.00001,    # 过户费 万0.1, 双边
     # ---- 入场方式 ----
     # "next_open"    : 信号日的下一个交易日开盘买 (最保守)
-    # "signal_close" : 信号日尾盘按收盘价买 (早一天, 且仍无未来函数 ——
-    #                  分型需要 F+1 走完才成立, 信号日定在 F+2, 所以信号在
-    #                  F+2 开盘前就已确定, 尾盘买用的全是已知信息)
+    # "signal_close" : 信号日(F+2)尾盘按收盘价买
+    # "fractal_close": 分型次根(F+1)尾盘按收盘价买 —— 最早的合法时点。
+    #   实测 250 只票 219 个 2 买信号, 首次可算出的滞后**全部恰好是 1 根K**,
+    #   且首次出现后再没消失过, 所以 F+1 收盘时信号已经成立。
+    #   唯一保留意见: 实盘 14:55 下单时 F+1 这根的最高/最低还没最终确定,
+    #   理论上分型形态可能在最后 5 分钟被破坏。这部分无法用日线数据检验。
     "entry_mode": "next_open",
     "entry_slip_pct": 0.0,      # 尾盘抢单愿意多付的比例, 如 0.002 = 高 0.2%
     "lot": 100,
@@ -259,9 +262,10 @@ async def run_day(db: AsyncSession, acct: PaperAccount, day: date,
     held = {p.ts_code for p in open_now}
 
     if free > 0:
+        _mode = cfg.get("entry_mode", "next_open")
         cands = await scan_signals(
             db, day, exclude=held, on_progress=on_progress,
-            require_next=cfg.get("entry_mode") != "signal_close")
+            require_next=_mode == "next_open", mode=_mode)
         # ⚠️ 每仓目标必须按"当前净值"算, 不是初始资金 —— 用初始资金就是固定
         # 金额下注, 赚到的钱永远躺在现金里不再投出去, 十年下来差好几倍。
         mv_now = 0.0
@@ -277,8 +281,8 @@ async def run_day(db: AsyncSession, acct: PaperAccount, day: date,
         for cd in cands:
             if free <= 0:
                 break
-            if cfg.get("entry_mode") == "signal_close":
-                price = cd["signal_close"]      # 信号日尾盘成交
+            if _mode in ("signal_close", "fractal_close"):
+                price = cd["signal_close"]      # 当日尾盘成交 (day 的收盘价)
                 buy_on = cd["signal_date"]
             else:
                 price = cd["next_open"]         # 次日开盘成交
@@ -341,17 +345,34 @@ async def run_day(db: AsyncSession, acct: PaperAccount, day: date,
 
 
 async def scan_signals(db: AsyncSession, day: date, exclude: set[str] | None = None,
-                       on_progress=None, require_next: bool = True) -> list[dict]:
+                       on_progress=None, require_next: bool = True,
+                       mode: str = "next_open") -> list[dict]:
     """当日可操作的 chan-2buy 买点, 按低流动性优先排序.
 
     从 chan_signal 预计算表读 —— 现算 4400 只票要 75 秒, 回放时点一下走一天
     根本没法用。表里的 trade_date 已含 CONFIRM_LAG, 这里不用再处理 lag。
     """
     exclude = exclude or set()
-    codes = (await db.execute(
-        select(ChanSignal.ts_code)
-        .where(ChanSignal.trade_date == day, ChanSignal.kind == "2")
-    )).scalars().all()
+    if mode == "fractal_close":
+        # 要的是"分型的下一根K正好是 day"的信号。表里 trade_date = 分型 + 2 根,
+        # 所以条件等价于: day 与 trade_date 之间, 该票再没有别的K线。
+        # (不能直接按日期加减 —— 停牌会让自然日和K线根数对不上。)
+        codes = (await db.execute(
+            select(ChanSignal.ts_code).where(
+                ChanSignal.kind == "2",
+                ChanSignal.trade_date > day,
+                ChanSignal.trade_date <= day + timedelta(days=20),
+                ~exists(select(DailyCandle.ts_code).where(
+                    DailyCandle.ts_code == ChanSignal.ts_code,
+                    DailyCandle.trade_date > day,
+                    DailyCandle.trade_date < ChanSignal.trade_date)),
+            )
+        )).scalars().all()
+    else:
+        codes = (await db.execute(
+            select(ChanSignal.ts_code)
+            .where(ChanSignal.trade_date == day, ChanSignal.kind == "2")
+        )).scalars().all()
     codes = [c for c in codes if c not in exclude]
     if not codes:
         return []
