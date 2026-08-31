@@ -317,16 +317,18 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
             // ⚠️ 图表可能是在面板刚打开、还没有 symbol 时初始化的, 那时纵轴定在
             // 默认的 0~10 且**不会**因为后来数据到位而重算 —— 结果价格 5.5~7.2
             // 的股票被压成贴着 6.00 的一条线。数据首次落地后强制重算一次。
-            // ⚠️ 未解决的已知问题: 从虚拟盘切股后, 纵轴渲染出来是 0~11,
-            // 而 K 线实际只在 3.16~4.29 这一小段, 被压成一条。
-            // 已经排除的: 不是 auto-calc 被关 (getAutoCalcTickFlag()===true),
-            // 不是区间算错 (getRange() 与可视数据一致, pixelToValue 也对得上),
-            // 不是刻度算错 (getTicks() 返回的正是 17.00/18.00/... 这类正确值),
-            // 不是实例泄漏 (canvas 恰好 10 个), 不是 DPR (DPR=1 同样复现),
-            // 不是加载了太多历史 (把取数窗口收到 12 个月后依旧复现)。
-            // 试过 resize()、setPaneOptions({axis})、buildTicks(true) 以及
-            // layout({measureWidth,update,buildYAxisTick}) 都推不动画布。
-            // 即模型层全对、只有绘制不跟随。留待专门排查 klinecharts 的绘制层。
+            // 【已定位】"切股后纵轴渲染成 0~11、K线压成一条"其实是两个问题:
+            // 1) 模型层竞态(真 bug, 偶发): scrollToTimestamp 之后可视窗口可能
+            //    整个滑出数据范围, 空窗口让 klinecharts 回落到默认 0~10 区间
+            //    (createRangeImp 里 min/max 无数据时取 0/10, 加 gap 后 -1~12)。
+            //    下面 focusTs 链的末尾加了"落点校验"兜底。
+            // 2) 合成器旧帧(占绝大多数复现, 非 klinecharts bug): 逐帧 hook
+            //    updateMain 证明切股后每次绘制的 range 都正确, canvas 光栅
+            //    (toDataURL) 也正确, 但 Chromium 在页面静止 ~1.5s 后按需出帧
+            //    (无头截图/被遮挡窗口)会回退到切股瞬间 Y 轴宽度 51→66→51 抖动
+            //    重建 backing store 之前的旧纹理 —— 看起来就是"停在 0~11"。
+            //    直接往 ctx fillRect 都上不了屏, 但 DOM 改动能上屏, 即只有
+            //    canvas 纹理被回退。靠 init useEffect 里的 rAF 心跳规避。
             requestAnimationFrame(() => {
               const c = chartRef.current as unknown as {
                 layout?: (o: Record<string, boolean>) => void; resize: () => void;
@@ -350,6 +352,20 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
                 // 17.7~29.5 时坐标轴还停在 0~10, K线整个飞出画面。resize()
                 // 会强制重算纵轴。
                 setTimeout(() => c?.resize(), 360);
+                // 落点校验: 滚动动画 + 补历史取数的竞态偶发把可视窗口甩出
+                // 数据范围(窗口里 0 根K线 → 纵轴回落默认 0~10)。等动画和
+                // resize 都结束后检查一次, 空了就直接跳回锚点。
+                setTimeout(() => {
+                  const cc = chartRef.current;
+                  if (!cc) return;
+                  const vr = cc.getVisibleRange();
+                  const n = cc.getDataList().length;
+                  if (n > 0 && (vr.to <= 0 || vr.from >= n)) {
+                    const l2 = cc.getDataList() as { timestamp: number }[];
+                    cc.scrollToTimestamp(anchorTs(l2, ft), 0);
+                    cc.resize();
+                  }
+                }, 500);
               }, 60);
             }
           } catch (err) {
@@ -413,7 +429,20 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
     });
     ro.observe(containerRef.current);
 
+    // ⚠️ workaround (Chromium 合成器旧帧, 详见 getBars init 回调里的注释):
+    // 切股时 Y 轴宽度 51→66→51 抖动导致 canvas backing store 两次重建;
+    // 此后页面一旦静止 ~1.5s, Chromium 按需出帧(无头截图、被遮挡/后台窗口)
+    // 会回退到重建前的旧纹理 —— 模型和光栅全对, 唯独屏幕/截图停在旧刻度。
+    // 实测: 任何一次性补救(updatePane 全量重绘、el.width 重建纹理、
+    // --disable-accelerated-2d-canvas)都会在下次闲置后复现; 只有渲染器持续
+    // 产帧时合成器才始终持有最新纹理。空 rAF 心跳: 无绘制、无布局, 只是让
+    // 渲染器保持出帧。klinecharts v10.0.0-beta1 自身绘制已验证无误。
+    let heartbeatId = requestAnimationFrame(function beat() {
+      heartbeatId = requestAnimationFrame(beat);
+    });
+
     return () => {
+      cancelAnimationFrame(heartbeatId);
       ro.disconnect();
       if (containerRef.current) {
         dispose(containerRef.current);
