@@ -190,9 +190,24 @@ export function PaperPanel() {
           )}
         </div>
         <div className="pp-actions">
-          <span className="pp-asof">
-            {st.started_on} 起 · 当前 {st.last_run_date ?? "未开始"}
-          </span>
+          {isDemo ? (
+            <span className="pp-asof">
+              从
+              <input type="date" className="pp-date" value={startDate}
+                     onChange={(e) => setStartDate(e.target.value)} />
+              <button className="pp-reset-btn" title="清空并从这一天重新开始 (10 万本金 / 10 仓位)"
+                      onClick={async () => {
+                        setPlaying(false);
+                        await resetPaper(DEMO_ACCOUNT, startDate);
+                        await reload(DEMO_ACCOUNT);
+                      }}>重新开始</button>
+              <span className="pp-cur">当前 {st.last_run_date ?? "未开始"}</span>
+            </span>
+          ) : (
+            <span className="pp-asof">
+              {st.started_on} 起 · 当前 {st.last_run_date ?? "未开始"}
+            </span>
+          )}
           {isDemo ? (
             <>
               <button className="pp-run" onClick={() => void stepOnce()} disabled={playing}>
@@ -269,20 +284,6 @@ export function PaperPanel() {
           {st.float_pnl >= 0 ? "+" : ""}{money(st.float_pnl)}</b></span>
         <span>已平仓 {st.n_closed} 笔</span>
       </div>
-
-      {isDemo && (
-        <div className="pp-reset">
-          <span>从</span>
-          <input type="date" value={startDate}
-                 onChange={(e) => setStartDate(e.target.value)} />
-          <span>重新开始 (10 万本金 / 10 仓位)</span>
-          <button onClick={async () => {
-            setPlaying(false);
-            await resetPaper(DEMO_ACCOUNT, startDate);
-            await reload(DEMO_ACCOUNT);
-          }}>重置</button>
-        </div>
-      )}
 
       {err && <div className="screening-error">{err}</div>}
 
