@@ -102,7 +102,21 @@ CONFIRM_LAG = 2
 
 
 def _universe_ok(ts_code: str, name: str | None) -> bool:
-    if ts_code.startswith(("688", "92", "8", "4")):
+    """只保留 A 股主板/中小板/创业板的正常股票.
+
+    ⚠️ 必须用白名单, 不能只黑名单几个前缀。原来的写法只挡了 688/92/8/4,
+    结果 ETF 和 LOF 全漏进来了 —— 实测混进过国债ETF、地方政府债ETF、黄金ETF、
+    原油LOF, 甚至货币基金(华宝现金添益)。货币基金根本不会跌, 等于现金。
+
+    数量上只占 1.5% 的成交, 但危害极大: 股灾时只有这些防御资产出买点, 策略
+    就自动躲进去, 把最大回撤压到不真实的水平。回测里看到"熊市几乎不回撤",
+    十有八九就是这个。
+
+    代码段: 沪 60xxxx 主板 / 深 000-003xxx 主板中小板 / 深 30xxxx 创业板。
+    68 科创板、5xxxxx 与 1xxxxx 基金、8/4/92 北交所, 一律排除。
+    """
+    code = ts_code.split(".")[0]
+    if not (code.startswith("60") or code.startswith("00") or code.startswith("30")):
         return False
     return not (name and ("ST" in name or "退" in name))
 
