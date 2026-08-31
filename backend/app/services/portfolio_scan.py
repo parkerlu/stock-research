@@ -239,16 +239,25 @@ async def portfolio_scan(
         hits: dict[str, dict] = {}
         scanned = 0
 
-        for i in range(0, len(codes), CHUNK):
-            chunk = codes[i:i + CHUNK]
-            panel = await _load_chunk(db, chunk, end)
-            scan_chunk(panel, names, insts, cutoff, buckets, hits)
+        # 流水线: 取数和计算各占约一半耗时(实测 300 只 4.3s / 4.2s), 且都随票数
+        # 线性增长 —— 调大批次没用, 但可以重叠: 一边算当前批, 一边预取下一批。
+        # scan_chunk 是 CPU 密集的同步代码, 丢进线程池才不会阻塞取数的 await。
+        loop = asyncio.get_running_loop()
+        chunks = [codes[i:i + CHUNK] for i in range(0, len(codes), CHUNK)]
+        panel = await _load_chunk(db, chunks[0], end) if chunks else {}
+        for idx in range(len(chunks)):
+            nxt = (
+                asyncio.create_task(_load_chunk(db, chunks[idx + 1], end))
+                if idx + 1 < len(chunks) else None
+            )
+            await loop.run_in_executor(
+                None, scan_chunk, panel, names, insts, cutoff, buckets, hits
+            )
             scanned += len(panel)
             panel.clear()               # 尽早释放, 让 GC 回收这一批
-            del panel
             if on_progress:
-                on_progress(min(i + CHUNK, len(codes)), len(codes))
-            await asyncio.sleep(0)      # 让出事件循环, 别饿死其它请求
+                on_progress(min((idx + 1) * CHUNK, len(codes)), len(codes))
+            panel = await nxt if nxt is not None else {}
 
         picks = rank_picks(buckets, top_n)
         return {

@@ -11,6 +11,21 @@ services:
       POSTGRES_USER: stock
       POSTGRES_PASSWORD: __REDACTED_DB_PASSWORD__
       POSTGRES_DB: stock_db
+    # 机器升到 8G 后仍在用默认的 shared_buffers=128MB —— daily_candle 已有
+    # 1144 万行, 组合扫描要反复读 400 天窗口, 128M 缓存不够, 每批都回盘。
+    # 1G shared_buffers + 6G effective_cache_size 是 8G 机器的常规配比。
+    command:
+      - postgres
+      - -c
+      - shared_buffers=1GB
+      - -c
+      - effective_cache_size=6GB
+      - -c
+      - work_mem=32MB
+      - -c
+      - maintenance_work_mem=256MB
+      - -c
+      - random_page_cost=1.1
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
     restart: unless-stopped
