@@ -2,18 +2,24 @@
 // 三块: 账户总览 / 当前持仓(含浮盈与三档价位) / 全部动作流水。
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  DEMO_ACCOUNT,
+  LIVE_ACCOUNT,
   getPaperConfig,
   getPaperEquity,
   getPaperRun,
+  getPaperSignals,
   getPaperStatus,
   getPaperTrades,
+  resetPaper,
   runPaper,
+  stepPaper,
 } from "../../api/paper";
 import type {
   EquityPoint,
   PaperConfig,
   PaperStatus,
   PaperTrade,
+  SignalPick,
 } from "../../api/paper";
 import { useQuoteStore } from "../../stores/quoteStore";
 
@@ -62,26 +68,65 @@ export function PaperPanel() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [showRules, setShowRules] = useState(false);
+  const [acct, setAcct] = useState<string>(LIVE_ACCOUNT);
+  const [signals, setSignals] = useState<SignalPick[]>([]);
+  const [playing, setPlaying] = useState(false);
+  const [speed, setSpeed] = useState(600);
+  const [startDate, setStartDate] = useState("2020-01-02");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const playRef = useRef(false);
+  const isDemo = acct === DEMO_ACCOUNT;
   const setCurrentStock = useQuoteStore((s) => s.setCurrentStock);
 
-  const reload = useCallback(async () => {
+  const reload = useCallback(async (name = acct) => {
     try {
-      const [s, t, e] = await Promise.all([
-        getPaperStatus(), getPaperTrades(200), getPaperEquity(),
+      const [s, t, e, g] = await Promise.all([
+        getPaperStatus(name), getPaperTrades(name, 200), getPaperEquity(name),
+        getPaperSignals(name, 20).catch(() => ({ picks: [] as SignalPick[] })),
       ]);
       setSt(s);
       setTrades(t.trades);
+      setSignals(g.picks ?? []);
       if (e.exists) setEq({ initial: e.initial, points: e.points });
       setErr(null);
     } catch (x) {
       setErr(x instanceof Error ? x.message : "加载失败");
     }
-  }, []);
+  }, [acct]);
+
+  /** 演示盘: 走一个交易日 */
+  const stepOnce = useCallback(async () => {
+    try {
+      const r = await stepPaper(acct, 1);
+      await reload(acct);
+      if (r.done) { playRef.current = false; setPlaying(false); }
+      return !r.done;
+    } catch (x) {
+      playRef.current = false; setPlaying(false);
+      setErr(x instanceof Error ? x.message : "推进失败");
+      return false;
+    }
+  }, [acct, reload]);
+
+  // 自动播放 —— 用 ref 控制, 避免 setInterval 在异步推进未完成时叠加
+  useEffect(() => {
+    if (!playing) return;
+    playRef.current = true;
+    let stop = false;
+    const loop = async () => {
+      while (playRef.current && !stop) {
+        const ok = await stepOnce();
+        if (!ok) break;
+        await new Promise((r) => setTimeout(r, speed));
+      }
+    };
+    void loop();
+    return () => { stop = true; playRef.current = false; };
+  }, [playing, speed, stepOnce]);
 
   useEffect(() => {
     getPaperConfig().then(setCfg).catch(() => setCfg(null));
-    reload();
+    reload(acct);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
@@ -128,7 +173,16 @@ export function PaperPanel() {
       <div className="pp-head">
         <div className="pp-title">
           <span>💼 虚拟盘</span>
-          <span className="pp-acct">{st.name}</span>
+          <div className="pp-switch">
+            <button className={!isDemo ? "on" : ""}
+                    onClick={() => { setPlaying(false); setAcct(LIVE_ACCOUNT); reload(LIVE_ACCOUNT); }}>
+              实操盘
+            </button>
+            <button className={isDemo ? "on" : ""}
+                    onClick={() => { setAcct(DEMO_ACCOUNT); reload(DEMO_ACCOUNT); }}>
+              演示回放
+            </button>
+          </div>
           {cfg && (
             <button className="pp-rules-btn" onClick={() => setShowRules((v) => !v)}>
               规则 {showRules ? "▴" : "▾"}
@@ -137,11 +191,29 @@ export function PaperPanel() {
         </div>
         <div className="pp-actions">
           <span className="pp-asof">
-            {st.started_on} 起 · 结算至 {st.last_run_date ?? "—"}
+            {st.started_on} 起 · 当前 {st.last_run_date ?? "未开始"}
           </span>
-          <button className="pp-run" onClick={advance} disabled={busy}>
-            {busy ? "推进中…" : "推进到最新"}
-          </button>
+          {isDemo ? (
+            <>
+              <button className="pp-run" onClick={() => void stepOnce()} disabled={playing}>
+                下一日 ▸
+              </button>
+              <button className={`pp-run pp-play${playing ? " on" : ""}`}
+                      onClick={() => setPlaying((v) => !v)}>
+                {playing ? "⏸ 暂停" : "▶ 自动"}
+              </button>
+              <select className="pp-speed" value={speed}
+                      onChange={(e) => setSpeed(Number(e.target.value))}>
+                <option value={1200}>慢</option>
+                <option value={600}>中</option>
+                <option value={150}>快</option>
+              </select>
+            </>
+          ) : (
+            <button className="pp-run" onClick={advance} disabled={busy}>
+              {busy ? "推进中…" : "推进到最新"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -198,7 +270,39 @@ export function PaperPanel() {
         <span>已平仓 {st.n_closed} 笔</span>
       </div>
 
+      {isDemo && (
+        <div className="pp-reset">
+          <span>从</span>
+          <input type="date" value={startDate}
+                 onChange={(e) => setStartDate(e.target.value)} />
+          <span>重新开始 (10 万本金 / 10 仓位)</span>
+          <button onClick={async () => {
+            setPlaying(false);
+            await resetPaper(DEMO_ACCOUNT, startDate);
+            await reload(DEMO_ACCOUNT);
+          }}>重置</button>
+        </div>
+      )}
+
       {err && <div className="screening-error">{err}</div>}
+
+      {signals.length > 0 && (
+        <div className="pp-signals">
+          <div className="pp-signals-t">
+            当日候选 {signals.length} 只（低流动性优先，前 {Math.min(signals.length, 20)}）
+          </div>
+          <div className="pp-signals-list">
+            {signals.map((p) => (
+              <span key={p.ts_code}
+                    className={`pp-sig${p.held ? " held" : ""}`}
+                    onClick={() => setCurrentStock(p.ts_code, p.name ?? p.ts_code)}
+                    title={`${p.amount_20d_wan} 万 · 次日开盘 ${p.next_open}`}>
+                {p.name ?? p.ts_code}{p.held && " ✓"}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="pp-tabs">
         <button className={tab === "holdings" ? "active" : ""} onClick={() => setTab("holdings")}>

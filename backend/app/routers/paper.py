@@ -8,7 +8,7 @@ from datetime import date
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import delete as sa_delete, select
 
 from app.db import async_session
 from app.models.schema import (
@@ -22,7 +22,13 @@ from app.services import paper_trading as pt
 
 router = APIRouter(prefix="/api/paper", tags=["paper"])
 
-DEFAULT_ACCOUNT = "chan2-10w"
+# 两个独立账户, 互不干扰:
+#   LIVE_ACCOUNT   实操盘 —— 2026-09-01 起, 每晚数据抓取完自动推进一天, 只能向前
+#   DEMO_ACCOUNT   演示盘 —— 任意历史起点, 手动"下一日"回放, 可随时重置
+# 分开的原因: 演示盘会被反复 reset, 实操盘的记录必须只增不改。
+LIVE_ACCOUNT = "live-2026"
+DEMO_ACCOUNT = "demo"
+DEFAULT_ACCOUNT = LIVE_ACCOUNT
 
 
 class CreateRequest(BaseModel):
@@ -76,6 +82,7 @@ async def status(name: str = DEFAULT_ACCOUNT):
         if not acct:
             return {"exists": False, "name": name}
 
+        as_of_date = acct.last_run_date or acct.started_on
         positions = (await db.execute(
             select(PaperPosition).where(PaperPosition.account_id == acct.id)
             .order_by(PaperPosition.open_date.desc())
@@ -84,9 +91,12 @@ async def status(name: str = DEFAULT_ACCOUNT):
         holdings, closed = [], []
         market_value = 0.0
         for p in positions:
+            # ⚠️ 必须按"回放当日"取价, 不能用最新价 —— 回放 2020 年时用 2026 年
+            # 的收盘价算浮盈就是未来函数, 演示会显得神准。
             last = (await db.execute(
                 select(DailyCandle.close, DailyCandle.trade_date)
-                .where(DailyCandle.ts_code == p.ts_code)
+                .where(DailyCandle.ts_code == p.ts_code,
+                       DailyCandle.trade_date <= as_of_date)
                 .order_by(DailyCandle.trade_date.desc()).limit(1)
             )).first()
             px = float(last[0]) if last else float(p.open_price)
@@ -108,7 +118,7 @@ async def status(name: str = DEFAULT_ACCOUNT):
                     "tier1_price": round(entry * (1 + pt.DEFAULT_CONFIG["tier1_pct"]), 4),
                     "tier2_price": round(entry * (1 + pt.DEFAULT_CONFIG["tier2_pct"]), 4),
                     "tier1_done": p.tier1_done,
-                    "hold_days": (date.today() - p.open_date).days,
+                    "hold_days": (as_of_date - p.open_date).days,
                 })
             else:
                 closed.append({
@@ -133,6 +143,7 @@ async def status(name: str = DEFAULT_ACCOUNT):
             "float_pnl": round(sum(h["float_pnl"] for h in holdings), 2),
             "started_on": str(acct.started_on),
             "last_run_date": str(acct.last_run_date) if acct.last_run_date else None,
+            "as_of": str(as_of_date),
             "n_open": len(holdings), "n_closed": len(closed),
             "holdings": holdings, "closed": closed[:50],
         }
@@ -226,3 +237,81 @@ async def run_status(job_id: str):
     if not job:
         raise HTTPException(404, "Unknown job")
     return job
+
+
+# =========================================================================
+# 回放控制 —— 演示盘: 设定起始日, 逐日推进看持仓与浮盈变化
+# =========================================================================
+
+class StepRequest(BaseModel):
+    name: str = DEFAULT_ACCOUNT
+    days: int = 1               # 一次推进几个交易日
+
+
+class ResetRequest(BaseModel):
+    name: str = DEFAULT_ACCOUNT
+    capital: float = 100_000.0
+    slots: int = 10
+    start: date                 # 回放起点, 必填 —— 演示盘的意义就在这里
+
+
+@router.post("/reset")
+async def reset(req: ResetRequest):
+    """清空并从指定日期重新开始 —— 演示用。"""
+    async with async_session() as db:
+        acct = await pt.get_account(db, req.name)
+        if acct:
+            for tbl in (PaperTrade, PaperPosition, PaperEquity):
+                await db.execute(sa_delete(tbl).where(tbl.account_id == acct.id))
+            await db.execute(sa_delete(PaperAccount).where(PaperAccount.id == acct.id))
+            await db.commit()
+        acct = await pt.create_account(db, req.name, req.capital, req.slots, req.start)
+        await db.commit()
+        return {"id": acct.id, "name": acct.name, "capital": float(acct.initial_capital),
+                "slots": acct.slots, "started_on": str(acct.started_on)}
+
+
+@router.post("/step")
+async def step(req: StepRequest):
+    """推进 N 个交易日并直接返回结果 —— 供"下一日"按钮同步调用。
+
+    信号走 chan_signal 预计算表, 所以一天只要几十毫秒, 点着不卡。
+    """
+    async with async_session() as db:
+        acct = await pt.get_account(db, req.name)
+        if not acct:
+            raise HTTPException(404, f"账户 {req.name} 不存在")
+        cur = acct.last_run_date or acct.started_on
+        days = (await db.execute(
+            select(DailyCandle.trade_date).where(DailyCandle.trade_date > cur)
+            .group_by(DailyCandle.trade_date)
+            .order_by(DailyCandle.trade_date).limit(max(1, min(req.days, 60)))
+        )).scalars().all()
+        if not days:
+            return {"advanced": 0, "as_of": str(cur), "done": True,
+                    "message": "已到数据末端"}
+        results = []
+        for d in days:
+            results.append(await pt.run_day(db, acct, d))
+        await db.commit()
+        return {"advanced": len(days), "as_of": str(days[-1]), "done": False,
+                "steps": results}
+
+
+@router.get("/signals")
+async def signals(name: str = DEFAULT_ACCOUNT, limit: int = 20):
+    """回放当日出现的候选买点 —— 展示"股票池"用, 与实际下单顺序一致。"""
+    async with async_session() as db:
+        acct = await pt.get_account(db, name)
+        if not acct:
+            return {"exists": False, "picks": []}
+        day = acct.last_run_date or acct.started_on
+        held = set((await db.execute(
+            select(PaperPosition.ts_code).where(PaperPosition.account_id == acct.id,
+                                                PaperPosition.status == "open")
+        )).scalars().all())
+        picks = await pt.scan_signals(db, day, exclude=set())
+        return {"exists": True, "as_of": str(day),
+                "picks": [{**p, "signal_date": str(p["signal_date"]),
+                           "buy_date": str(p["buy_date"]),
+                           "held": p["ts_code"] in held} for p in picks[:limit]]}

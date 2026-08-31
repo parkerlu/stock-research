@@ -205,11 +205,53 @@ async def _sync_etfs():
     log.info("=== ETF sync done: %d rows inserted ===", inserted)
 
 
+async def _settle_paper() -> None:
+    """虚拟盘逐日结算 —— 必须排在行情同步之后, 否则用的是昨天的价格。"""
+    from sqlalchemy import select
+
+    from app.models.schema import PaperAccount
+    from app.services import paper_trading as pt
+
+    async with async_session() as db:
+        # 只自动推进实操盘 —— 演示盘由人手动回放, 不能被定时任务推着走
+        accounts = (await db.execute(
+            select(PaperAccount).where(PaperAccount.is_active.is_(True),
+                                       PaperAccount.name.notlike("demo%"))
+        )).scalars().all()
+        if not accounts:
+            return
+        end = (await db.execute(
+            select(DailyCandle.trade_date)
+            .order_by(DailyCandle.trade_date.desc()).limit(1)
+        )).scalar_one_or_none()
+        if not end:
+            return
+        for acct in accounts:
+            start = acct.last_run_date or acct.started_on
+            days = (await db.execute(
+                select(DailyCandle.trade_date)
+                .where(DailyCandle.trade_date > start, DailyCandle.trade_date <= end)
+                .group_by(DailyCandle.trade_date)
+                .order_by(DailyCandle.trade_date)
+            )).scalars().all()
+            for d in days:
+                res = await pt.run_day(db, acct, d)
+                await db.commit()
+                log.info("paper[%s] %s -> 净值 %s, 动作 %d",
+                         acct.name, d, res.get("equity"), len(res.get("actions", [])))
+
+
 async def daily_sync_job():
-    """Main scheduled job: sync stocks then ETFs."""
+    """Main scheduled job: sync stocks then ETFs, then settle paper accounts."""
     log.info("====== daily sync triggered at 15:30 ======")
     await _sync_stocks()
     await _sync_etfs()
+    try:
+        await _settle_paper()
+    except Exception as exc:                      # noqa: BLE001
+        # 虚拟盘出错不能影响行情同步的结果 —— 记日志, 下次调度会补上
+        # (run_day 对已结算日期是幂等的)
+        log.exception("paper settlement failed: %s", exc)
     log.info("====== daily sync complete ======")
 
 

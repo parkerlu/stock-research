@@ -215,3 +215,23 @@ class PaperEquity(Base):
     market_value: Mapped[float] = mapped_column(Numeric(16, 2))
     equity: Mapped[float] = mapped_column(Numeric(16, 2))
     n_positions: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class ChanSignal(Base):
+    """缠论买点的预计算缓存.
+
+    虚拟盘回放需要"点一下走一天", 而每天现算 4400 只票的缠论要 75 秒 ——
+    根本没法交互。但整段历史一次性算完只要几十秒(信号本身不依赖回放进度),
+    所以把结果落表, 回放时变成一次索引查询。
+
+    trade_date 存的是**可操作日**(分型 + CONFIRM_LAG), 不是分型日 ——
+    直接对应下单日的前一天, 消费方不用再关心 lag。
+    """
+    __tablename__ = "chan_signal"
+    __table_args__ = (Index("ix_chan_signal_date", "trade_date", "kind"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ts_code: Mapped[str] = mapped_column(String(12), index=True)
+    trade_date: Mapped[date] = mapped_column(Date, index=True)
+    kind: Mapped[str] = mapped_column(String(4))          # "1" | "2"
+    fractal_date: Mapped[date] = mapped_column(Date)      # 分型日(事后位置), 供核对

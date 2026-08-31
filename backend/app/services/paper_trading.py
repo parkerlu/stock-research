@@ -35,6 +35,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.schema import (
+    ChanSignal,
     DailyCandle,
     PaperAccount,
     PaperEquity,
@@ -292,50 +293,66 @@ async def run_day(db: AsyncSession, acct: PaperAccount, day: date,
 
 async def scan_signals(db: AsyncSession, day: date, exclude: set[str] | None = None,
                        on_progress=None) -> list[dict]:
-    """当日出 chan-2buy 买点的票, 按低流动性优先排序。
+    """当日可操作的 chan-2buy 买点, 按低流动性优先排序.
 
-    分批扫描 —— 一次性拉全市场会压垮小内存机器 (踩过一次, 见 portfolio_scan)。
+    从 chan_signal 预计算表读 —— 现算 4400 只票要 75 秒, 回放时点一下走一天
+    根本没法用。表里的 trade_date 已含 CONFIRM_LAG, 这里不用再处理 lag。
     """
     exclude = exclude or set()
-    basics = (await db.execute(
-        select(StockBasic.ts_code, StockBasic.name, StockBasic.is_active)
-    )).all()
-    names = {c: n for c, n, _ in basics}
-    codes = [c for c, n, a in basics
-             if a is not False and _universe_ok(c, n) and c not in exclude]
+    codes = (await db.execute(
+        select(ChanSignal.ts_code)
+        .where(ChanSignal.trade_date == day, ChanSignal.kind == "2")
+    )).scalars().all()
+    codes = [c for c in codes if c not in exclude]
+    if not codes:
+        return []
+
+    names = dict((await db.execute(
+        select(StockBasic.ts_code, StockBasic.name)
+        .where(StockBasic.ts_code.in_(codes))
+    )).all())
+    actives = set((await db.execute(
+        select(StockBasic.ts_code).where(StockBasic.ts_code.in_(codes),
+                                         StockBasic.is_active.is_(True))
+    )).scalars().all())
 
     # 次日开盘价 —— 信号日的下一个交易日
     nxt = (await db.execute(
         select(DailyCandle.trade_date).where(DailyCandle.trade_date > day)
+        .group_by(DailyCandle.trade_date)
         .order_by(DailyCandle.trade_date).limit(1)
     )).scalar_one_or_none()
+    if not nxt:
+        return []          # 没有下一个交易日 -> 买不进
 
     out: list[dict] = []
-    CHUNK = 300
-    for i in range(0, len(codes), CHUNK):
-        for cd in codes[i:i + CHUNK]:
-            df = await _load_one(db, cd, day)
-            if df is None or df.trade_date.iloc[-1] != day:
-                continue
-            amt20 = df.amount.rolling(20).mean().iloc[-1]
-            if np.isnan(amt20) or amt20 < DEFAULT_CONFIG["min_amount_k"]:
-                continue
-            c = df.close.values
-            if len(c) > 1 and c[-1] > c[-2] * 1.099:      # 涨停买不进
-                continue
-            if not _signal_today(df):
-                continue     # 已含 CONFIRM_LAG, 无前视
-            nx = None
-            if nxt:
-                nx = (await db.execute(
-                    select(DailyCandle.open).where(DailyCandle.ts_code == cd,
-                                                   DailyCandle.trade_date == nxt)
-                )).scalar_one_or_none()
-            out.append({"ts_code": cd, "name": names.get(cd),
-                        "signal_date": day, "buy_date": nxt or day,
-                        "next_open": float(nx) if nx else float(c[-1]),
-                        "amount_20d_wan": round(float(amt20) / 10, 1)})
-        if on_progress:
-            on_progress(min(i + CHUNK, len(codes)), len(codes))
+    for cd in codes:
+        if cd not in actives or not _universe_ok(cd, names.get(cd)):
+            continue
+        # 20 日均额 + 涨停判定, 只取最后 25 根
+        rows = (await db.execute(
+            select(DailyCandle.close, DailyCandle.amount)
+            .where(DailyCandle.ts_code == cd, DailyCandle.trade_date <= day)
+            .order_by(DailyCandle.trade_date.desc()).limit(25)
+        )).all()
+        if len(rows) < 21:
+            continue
+        closes = [float(r[0]) for r in rows]
+        amts = [float(r[1]) for r in rows]
+        amt20 = sum(amts[:20]) / 20
+        if amt20 < DEFAULT_CONFIG["min_amount_k"]:
+            continue
+        if closes[0] > closes[1] * 1.099:      # 涨停买不进
+            continue
+        nx = (await db.execute(
+            select(DailyCandle.open).where(DailyCandle.ts_code == cd,
+                                           DailyCandle.trade_date == nxt)
+        )).scalar_one_or_none()
+        if nx is None:
+            continue                            # 次日停牌
+        out.append({"ts_code": cd, "name": names.get(cd),
+                    "signal_date": day, "buy_date": nxt,
+                    "next_open": float(nx),
+                    "amount_20d_wan": round(amt20 / 10, 1)})
     out.sort(key=lambda x: x["amount_20d_wan"])     # 低流动性优先
     return out
