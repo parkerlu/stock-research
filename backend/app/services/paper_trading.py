@@ -56,9 +56,41 @@ DEFAULT_CONFIG = {
     "breakeven": True,       # 首批后止损上移到成本
     "min_amount_k": 5000,    # 20日均额下限(千元)
     "max_hold_days": 60,     # 保险丝
-    "fee_pct": 0.0010,       # 佣金+印花税(双边合计估计)
+    # ---- 交易成本: A股是三笔独立的费, 不能揉成一个百分比 ----
+    "commission_pct": 0.0003,   # 佣金 万3, 买卖双边
+    "commission_min": 5.0,      # ⚠️ 佣金最低 5 元 —— 对 10 万小账户是主要成本
+    "transfer_pct": 0.00001,    # 过户费 万0.1, 双边
+    # ---- 入场方式 ----
+    # "next_open"    : 信号日的下一个交易日开盘买 (最保守)
+    # "signal_close" : 信号日尾盘按收盘价买 (早一天, 且仍无未来函数 ——
+    #                  分型需要 F+1 走完才成立, 信号日定在 F+2, 所以信号在
+    #                  F+2 开盘前就已确定, 尾盘买用的全是已知信息)
+    "entry_mode": "next_open",
+    "entry_slip_pct": 0.0,      # 尾盘抢单愿意多付的比例, 如 0.002 = 高 0.2%
     "lot": 100,
 }
+
+# 印花税: 卖出单边收取, 税率变过。2008-09-19~2023-08-27 千分之一,
+# 2023-08-28 起减半到万分之五。回测跨越这个日期, 必须按成交日取值,
+# 否则 2022 年的成本会被低估一半。
+STAMP_CUT_DATE = date(2023, 8, 28)
+STAMP_PCT_OLD = 0.0010
+STAMP_PCT_NEW = 0.0005
+
+
+def trade_fee(amount: float, is_sell: bool, day: date,
+              cfg: dict | None = None) -> float:
+    """一笔成交的真实费用 = 佣金(有下限) + 过户费 + 卖出印花税.
+
+    单个仓位才 1 万块, 万3 佣金只有 3 元, 实际按 5 元下限收 —— 等于 0.05%;
+    减半卖出的 5 千块更是等于 0.1%。把这三笔揉成一个固定百分比会算错。
+    """
+    cfg = cfg or DEFAULT_CONFIG
+    commission = max(amount * cfg["commission_pct"], cfg["commission_min"])
+    fee = commission + amount * cfg["transfer_pct"]
+    if is_sell:
+        fee += amount * (STAMP_PCT_OLD if day < STAMP_CUT_DATE else STAMP_PCT_NEW)
+    return fee
 HISTORY_DAYS = 400
 MIN_BARS = 130
 # 与 _ChanlunBase._confirm_lag 一致 —— 改这里必须同步改策略, 否则虚拟盘和
@@ -173,7 +205,7 @@ async def run_day(db: AsyncSession, acct: PaperAccount, day: date,
         def _sell(shares: int, price: float, action: str, reason: str | None = None):
             nonlocal cash
             amt = shares * price
-            fee = amt * cfg["fee_pct"]
+            fee = trade_fee(amt, is_sell=True, day=day, cfg=cfg)
             pnl = shares * (price - entry) - fee
             cash += amt - fee
             db.add(PaperTrade(
@@ -227,28 +259,45 @@ async def run_day(db: AsyncSession, acct: PaperAccount, day: date,
     held = {p.ts_code for p in open_now}
 
     if free > 0:
-        cands = await scan_signals(db, day, exclude=held, on_progress=on_progress)
-        per = (cash + sum(0 for _ in open_now)) / max(free, 1)
-        # 每仓目标 = 初始资金/仓位数, 但不超过可用现金
-        target = float(acct.initial_capital) / acct.slots
+        cands = await scan_signals(
+            db, day, exclude=held, on_progress=on_progress,
+            require_next=cfg.get("entry_mode") != "signal_close")
+        # ⚠️ 每仓目标必须按"当前净值"算, 不是初始资金 —— 用初始资金就是固定
+        # 金额下注, 赚到的钱永远躺在现金里不再投出去, 十年下来差好几倍。
+        mv_now = 0.0
+        for p in open_now:
+            px = (await db.execute(
+                select(DailyCandle.close)
+                .where(DailyCandle.ts_code == p.ts_code, DailyCandle.trade_date <= day)
+                .order_by(DailyCandle.trade_date.desc()).limit(1)
+            )).scalar_one_or_none()
+            if px:
+                mv_now += p.shares * float(px)
+        target = (cash + mv_now) / acct.slots
         for cd in cands:
             if free <= 0:
                 break
-            price = cd["next_open"]
+            if cfg.get("entry_mode") == "signal_close":
+                price = cd["signal_close"]      # 信号日尾盘成交
+                buy_on = cd["signal_date"]
+            else:
+                price = cd["next_open"]         # 次日开盘成交
+                buy_on = cd["buy_date"]
             if price is None or price <= 0:
                 continue
+            price = price * (1 + cfg.get("entry_slip_pct", 0.0))
             budget = min(target, cash)
             shares = int(budget // (price * cfg["lot"])) * cfg["lot"]
             if shares < cfg["lot"]:
                 continue
             amt = shares * price
-            fee = amt * cfg["fee_pct"]
+            fee = trade_fee(amt, is_sell=False, day=buy_on, cfg=cfg)
             if amt + fee > cash:
                 continue
             cash -= amt + fee
             pos = PaperPosition(
                 account_id=acct.id, ts_code=cd["ts_code"], name=cd["name"],
-                open_date=cd["buy_date"], open_price=round(price, 4),
+                open_date=buy_on, open_price=round(price, 4),
                 init_shares=shares, shares=shares,
                 stop_price=round(price * (1 - cfg["stop_pct"]), 4),
                 status="open",
@@ -257,7 +306,7 @@ async def run_day(db: AsyncSession, acct: PaperAccount, day: date,
             await db.flush()
             db.add(PaperTrade(
                 account_id=acct.id, position_id=pos.id, ts_code=cd["ts_code"],
-                name=cd["name"], trade_date=cd["buy_date"], action="buy",
+                name=cd["name"], trade_date=buy_on, action="buy",
                 price=round(price, 4), shares=shares, amount=round(amt, 2),
                 fee=round(fee, 2), note=f"chan-2buy 信号 {cd['signal_date']}",
             ))
@@ -292,7 +341,7 @@ async def run_day(db: AsyncSession, acct: PaperAccount, day: date,
 
 
 async def scan_signals(db: AsyncSession, day: date, exclude: set[str] | None = None,
-                       on_progress=None) -> list[dict]:
+                       on_progress=None, require_next: bool = True) -> list[dict]:
     """当日可操作的 chan-2buy 买点, 按低流动性优先排序.
 
     从 chan_signal 预计算表读 —— 现算 4400 只票要 75 秒, 回放时点一下走一天
@@ -322,8 +371,8 @@ async def scan_signals(db: AsyncSession, day: date, exclude: set[str] | None = N
         .group_by(DailyCandle.trade_date)
         .order_by(DailyCandle.trade_date).limit(1)
     )).scalar_one_or_none()
-    if not nxt:
-        return []          # 没有下一个交易日 -> 买不进
+    if not nxt and require_next:
+        return []          # 次日开盘买 -> 没有下一个交易日就买不进
 
     out: list[dict] = []
     for cd in codes:
@@ -347,12 +396,15 @@ async def scan_signals(db: AsyncSession, day: date, exclude: set[str] | None = N
         nx = (await db.execute(
             select(DailyCandle.open).where(DailyCandle.ts_code == cd,
                                            DailyCandle.trade_date == nxt)
-        )).scalar_one_or_none()
-        if nx is None:
-            continue                            # 次日停牌
+        )).scalar_one_or_none() if nxt else None
+        # ⚠️ 只有"次日开盘买"才能因次日停牌而放弃。尾盘买模式下, 下单那一刻
+        # 根本不知道明天停不停牌 —— 拿它做过滤就是未来函数。
+        if require_next and nx is None:
+            continue
         out.append({"ts_code": cd, "name": names.get(cd),
                     "signal_date": day, "buy_date": nxt,
-                    "next_open": float(nx),
+                    "next_open": float(nx) if nx is not None else None,
+                    "signal_close": closes[0],
                     "amount_20d_wan": round(amt20 / 10, 1)})
     out.sort(key=lambda x: x["amount_20d_wan"])     # 低流动性优先
     return out
