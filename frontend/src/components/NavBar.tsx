@@ -3,6 +3,7 @@ export type AppMode =
   | "screening"
   | "strategy-pool"
   | "live"
+  | "paper"
   | "quote"
   | "pool"
   | "system";
@@ -41,6 +42,13 @@ export function NavBar({ mode, onModeChange }: Props) {
           title="分时 + 日K 实时看盘 (腾讯行情)"
         >
           实时
+        </button>
+        <button
+          className={mode === "paper" ? "active" : ""}
+          onClick={() => onModeChange("paper")}
+          title="虚拟盘 — chan-2buy 最优配置的实盘跟踪"
+        >
+          虚拟盘
         </button>
         <button
           className={mode === "quote" ? "active" : ""}

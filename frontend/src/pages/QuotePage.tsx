@@ -9,6 +9,7 @@ import { StrategyPoolPanel } from "../components/StrategyPoolPanel";
 import { SystemPanel } from "../components/SystemPanel";
 import { ChartArea } from "../components/ChartArea";
 import { LiveView } from "../components/ChartArea/LiveView";
+import { PaperPanel } from "../components/PaperPanel";
 import { useStrategyStore } from "../stores/strategyStore";
 
 export function QuotePage() {
@@ -48,6 +49,11 @@ export function QuotePage() {
           <>
             <SearchPanel />
             <LiveView />
+          </>
+        ) : mode === "paper" ? (
+          <>
+            <PaperPanel />
+            <ChartArea />
           </>
         ) : mode === "strategy-pool" ? (
           <StrategyPoolPanel />

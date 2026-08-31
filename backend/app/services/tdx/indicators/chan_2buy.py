@@ -5,10 +5,19 @@
 ----------
     笔 (Stroke)   主图上的折线, 上涨笔红 / 下跌笔绿 —— 含包处理 + 分型识别后
                   连成的骨架, 缠论的所有判断都建立在它之上
-    1类买点        红色上三角, 画在该 bar 的低点下方
-                  = 最后一笔下跌创了新低, 但 MACD 负面积小于前一笔下跌 (底背驰)
-    2类买点        黄色上三角
-                  = 1类之后第一次反弹(顶分型)再回踩(底分型), 且新低不破 1类的低点
+    1类/2类 分型点  **空心小圆点**, 画在分型那根 K 的低点下方。
+                  ⚠️ 这是事后位置 —— 分型是"3 根合并K 的中间那根", 右邻那根
+                  出来之前你根本不知道它是分型。当天看不到, 不可交易。
+    可操作买点      **实心三角** (1类红 / 2类黄), 画在分型 + CONFIRM_LAG 根之后,
+                  与 chan-1buy / chan-2buy 策略的实际下单位置完全一致。
+
+⚠️ 为什么要分两种标记
+--------------------
+只画分型点会让指标看起来"神准" —— 三角永远落在最低点上, 但那是未来函数。
+实测确认滞后: 中位 1 根 / 均值 1.47 / 95分位 3 根 / 最大 9 根;
+lag=2 覆盖 89.5%, lag=3 覆盖 96.3%。策略用 lag=2, 再加"信号次日开盘买入",
+实际总滞后 3 根 —— 所以回测口径是干净的, 但指标必须把这个差别画出来,
+否则看图的人会以为能买在那个位置。
 
 为什么单独收录 2 类
 ------------------
@@ -54,6 +63,8 @@ from app.services.tdx.indicators.base import (
 name = "chan_buy"
 label = "缠论买点 (1类/2类)"
 pane = "main"          # 笔要画在 K 线上
+# 与 _ChanlunBase._confirm_lag 一致
+CONFIRM_LAG = 2
 # 笔需要至少 5 根原始K, 背驰判断要 MACD(26) 预热, 再加几笔的历史
 min_bars = 120
 
@@ -102,16 +113,22 @@ def compute(df: pd.DataFrame) -> IndicatorResult:
     span = float(np.nanmax(h) - np.nanmin(l)) if n else 0.0
     off = span * 0.012 if span > 0 else 0.0
 
-    markers = [
-        *(IndicatorMarker(timestamp=int(ts_col.iloc[b.bar_idx]),
-                          value=float(l[b.bar_idx]) - off,
-                          color="#FF3333", icon="triangle_up")
-          for b in c1 if 0 <= b.bar_idx < n),
-        *(IndicatorMarker(timestamp=int(ts_col.iloc[b.bar_idx]),
-                          value=float(l[b.bar_idx]) - off,
-                          color="#E8B54D", icon="triangle_up")
-          for b in c2 if 0 <= b.bar_idx < n),
-    ]
+    markers: list[IndicatorMarker] = []
+    # 分型点 —— 事后位置, 用暗色小圆点, 提醒"当天看不到"
+    for b in c1 + c2:
+        if 0 <= b.bar_idx < n:
+            markers.append(IndicatorMarker(
+                timestamp=int(ts_col.iloc[b.bar_idx]),
+                value=float(l[b.bar_idx]) - off,
+                color="#5C6675", icon="dot"))
+    # 可操作买点 —— 分型 + lag, 与策略下单位置一致
+    for b, color in [(x, "#FF3333") for x in c1] + [(x, "#E8B54D") for x in c2]:
+        j = b.bar_idx + CONFIRM_LAG
+        if 0 <= j < n:
+            markers.append(IndicatorMarker(
+                timestamp=int(ts_col.iloc[j]),
+                value=float(l[j]) - off * 2,
+                color=color, icon="triangle_up"))
 
     warnings: list[str] = []
     if not strokes:

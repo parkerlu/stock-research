@@ -136,3 +136,82 @@ class BacktestRun(Base):
     equity_curve: Mapped[list | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+
+# =========================================================================
+# 虚拟盘 (Paper Trading) — 按验证过的 chan-2buy 最优配置实盘跟踪
+# =========================================================================
+
+class PaperAccount(Base):
+    """一个虚拟账户。config 存策略参数, 改参数应新建账户而非改旧的 ——
+    否则历史成交和当前规则对不上, 跟踪记录就失去意义。"""
+    __tablename__ = "paper_account"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(60), unique=True)
+    initial_capital: Mapped[float] = mapped_column(Numeric(16, 2))
+    cash: Mapped[float] = mapped_column(Numeric(16, 2))
+    slots: Mapped[int] = mapped_column(Integer, default=10)
+    config: Mapped[dict] = mapped_column(JSON, default=dict)
+    started_on: Mapped[date] = mapped_column(Date)
+    # 已推进到哪一天 —— 防止同一天重复结算
+    last_run_date: Mapped[date | None] = mapped_column(Date)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class PaperPosition(Base):
+    """一笔持仓。分批止盈后 shares 递减, 清零即 status=closed。"""
+    __tablename__ = "paper_position"
+    __table_args__ = (Index("ix_paper_pos_acct", "account_id", "status"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    account_id: Mapped[int] = mapped_column(Integer, index=True)
+    ts_code: Mapped[str] = mapped_column(String(12), index=True)
+    name: Mapped[str | None] = mapped_column(String(64))
+    open_date: Mapped[date] = mapped_column(Date)
+    open_price: Mapped[float] = mapped_column(Numeric(12, 4))
+    init_shares: Mapped[int] = mapped_column(Integer)
+    shares: Mapped[int] = mapped_column(Integer)          # 当前剩余
+    stop_price: Mapped[float] = mapped_column(Numeric(12, 4))
+    tier1_done: Mapped[bool] = mapped_column(Boolean, default=False)
+    tier2_done: Mapped[bool] = mapped_column(Boolean, default=False)
+    realized_pnl: Mapped[float] = mapped_column(Numeric(16, 2), default=0)
+    status: Mapped[str] = mapped_column(String(10), default="open")   # open | closed
+    close_date: Mapped[date | None] = mapped_column(Date)
+    close_reason: Mapped[str | None] = mapped_column(String(20))
+
+
+class PaperTrade(Base):
+    """所有动作的流水 —— 买入/分批止盈/止损/清仓, 一条不落。"""
+    __tablename__ = "paper_trade"
+    __table_args__ = (Index("ix_paper_trade_acct", "account_id", "trade_date"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    account_id: Mapped[int] = mapped_column(Integer, index=True)
+    position_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    ts_code: Mapped[str] = mapped_column(String(12), index=True)
+    name: Mapped[str | None] = mapped_column(String(64))
+    trade_date: Mapped[date] = mapped_column(Date, index=True)
+    action: Mapped[str] = mapped_column(String(16))   # buy|tier1|tier2|stop|timeout|close
+    price: Mapped[float] = mapped_column(Numeric(12, 4))
+    shares: Mapped[int] = mapped_column(Integer)
+    amount: Mapped[float] = mapped_column(Numeric(16, 2))
+    fee: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
+    pnl: Mapped[float | None] = mapped_column(Numeric(16, 2))
+    pnl_pct: Mapped[float | None] = mapped_column(Numeric(10, 4))
+    note: Mapped[str | None] = mapped_column(Text)
+
+
+class PaperEquity(Base):
+    """每日净值快照 —— 画净值曲线用。"""
+    __tablename__ = "paper_equity"
+    __table_args__ = (Index("ix_paper_eq", "account_id", "trade_date", unique=True),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    account_id: Mapped[int] = mapped_column(Integer, index=True)
+    trade_date: Mapped[date] = mapped_column(Date)
+    cash: Mapped[float] = mapped_column(Numeric(16, 2))
+    market_value: Mapped[float] = mapped_column(Numeric(16, 2))
+    equity: Mapped[float] = mapped_column(Numeric(16, 2))
+    n_positions: Mapped[int] = mapped_column(Integer, default=0)
