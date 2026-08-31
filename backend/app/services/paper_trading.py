@@ -113,7 +113,8 @@ MIN_BARS = 130
 CONFIRM_LAG = 2
 
 
-def _universe_ok(ts_code: str, name: str | None) -> bool:
+def _universe_ok(ts_code: str, name: str | None,
+                 ignore_status: bool = False) -> bool:
     """只保留 A 股主板/中小板/创业板的正常股票.
 
     ⚠️ 必须用白名单, 不能只黑名单几个前缀。原来的写法只挡了 688/92/8/4,
@@ -130,6 +131,13 @@ def _universe_ok(ts_code: str, name: str | None) -> bool:
     code = ts_code.split(".")[0]
     if not (code.startswith("60") or code.startswith("00") or code.startswith("30")):
         return False
+    # ⚠️ [审计实验 2026-09] ignore_status=True 时跳过基于**当前快照**的
+    # ST/退市名称过滤。stock_basic.name 是最新名字: 2024 年才戴帽的票, 用今天
+    # 的名字去过滤 2016-2023 年的历史交易 == 预先知道"它以后会变烂", 是未来
+    # 函数(幸存者偏差)。审计账户用 config.universe_neutral=True 走这条分支,
+    # 只保留纯代码段白名单。正常账户(demo/live-2026)行为不变。
+    if ignore_status:
+        return True
     return not (name and ("ST" in name or "退" in name))
 
 
@@ -349,7 +357,11 @@ async def run_day(db: AsyncSession, acct: PaperAccount, day: date,
             scan_day = day
         cands = [] if scan_day is None else await scan_signals(
             db, scan_day, exclude=held, on_progress=on_progress,
-            require_next=_mode == "next_open", mode=_mode)
+            require_next=_mode == "next_open", mode=_mode,
+            # [审计实验 2026-09] universe_neutral: 见 _universe_ok 注释;
+            # signal_kind='2c' 可切到因果版(无重绘)信号表, 默认 '2' 不变
+            neutral=bool(cfg.get("universe_neutral")),
+            kind=str(cfg.get("signal_kind", "2")))
         # ⚠️ 每仓目标必须按"当前净值"算, 不是初始资金 —— 用初始资金就是固定
         # 金额下注, 赚到的钱永远躺在现金里不再投出去, 十年下来差好几倍。
         mv_now = 0.0
@@ -432,7 +444,9 @@ async def run_day(db: AsyncSession, acct: PaperAccount, day: date,
 
 async def scan_signals(db: AsyncSession, day: date, exclude: set[str] | None = None,
                        on_progress=None, require_next: bool = True,
-                       mode: str = "next_open") -> list[dict]:
+                       mode: str = "next_open",
+                       neutral: bool = False,
+                       kind: str = "2") -> list[dict]:
     """当日可操作的 chan-2buy 买点, 按低流动性优先排序.
 
     从 chan_signal 预计算表读 —— 现算 4400 只票要 75 秒, 回放时点一下走一天
@@ -445,7 +459,7 @@ async def scan_signals(db: AsyncSession, day: date, exclude: set[str] | None = N
         # (不能直接按日期加减 —— 停牌会让自然日和K线根数对不上。)
         codes = (await db.execute(
             select(ChanSignal.ts_code).where(
-                ChanSignal.kind == "2",
+                ChanSignal.kind == kind,
                 ChanSignal.trade_date > day,
                 ChanSignal.trade_date <= day + timedelta(days=20),
                 ~exists(select(DailyCandle.ts_code).where(
@@ -457,7 +471,7 @@ async def scan_signals(db: AsyncSession, day: date, exclude: set[str] | None = N
     else:
         codes = (await db.execute(
             select(ChanSignal.ts_code)
-            .where(ChanSignal.trade_date == day, ChanSignal.kind == "2")
+            .where(ChanSignal.trade_date == day, ChanSignal.kind == kind)
         )).scalars().all()
     codes = [c for c in codes if c not in exclude]
     if not codes:
@@ -483,7 +497,12 @@ async def scan_signals(db: AsyncSession, day: date, exclude: set[str] | None = N
 
     out: list[dict] = []
     for cd in codes:
-        if cd not in actives or not _universe_ok(cd, names.get(cd)):
+        # [审计实验 2026-09] neutral=True 时不用"当前快照"的 is_active 和
+        # ST/退市名称过滤 —— 两者都是最新状态, 对历史回测是未来函数。
+        # 只保留代码段白名单。正常账户 neutral=False, 行为不变。
+        if not neutral and cd not in actives:
+            continue
+        if not _universe_ok(cd, names.get(cd), ignore_status=neutral):
             continue
         # 20 日均额 + 涨停判定, 只取最后 25 根
         rows = (await db.execute(

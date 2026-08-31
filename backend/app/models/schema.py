@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, BigInteger, Date, DateTime, Index, Integer, JSON, Numeric, String, Text
+from sqlalchemy import Boolean, BigInteger, Date, DateTime, Index, Integer, JSON, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -217,6 +217,44 @@ class PaperEquity(Base):
     market_value: Mapped[float] = mapped_column(Numeric(16, 2))
     equity: Mapped[float] = mapped_column(Numeric(16, 2))
     n_positions: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class SignalSnapshot(Base):
+    """每日收盘后把"今天算出来的信号"原样封存, 之后不再改动.
+
+    为什么需要
+    ----------
+    缠论的笔用的是 ZigZag 式端点: 连续同类分型只保留更极端的那个。一个底分型
+    可能在若干根之后被更低的底分型顶掉, 原来的 2 类买点就消失。chan_signal 表
+    若用全历史重算, 表里只剩"事后仍然成立"的信号 —— 实测约一半信号被这样删掉,
+    而且删掉的正是输家 (被推翻组后续 12 日 -1.81%/胜率 34.6%, 幸存组 +3.60%/56.4%)。
+    回测读这张表就等于预知了哪些信号不会被推翻。
+
+    这张快照表是防线: 当天算出什么就存什么, 只增不改。日后拿它和重算结果比对,
+    就能用**真实的前进数据**量出漂移率, 不依赖任何截断复算的模拟 (那类脚本
+    自己也可能写错 —— 我就写错过一次, 把幸存者偏差写进了检验本身)。
+    """
+
+    __tablename__ = "signal_snapshot"
+    __table_args__ = (
+        UniqueConstraint("snapshot_date", "ts_code", "trade_date", "kind",
+                         name="uq_signal_snapshot"),
+        Index("ix_signal_snapshot_date", "snapshot_date"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # 封存这一批信号的日期 = 当天收盘, 用截至当天的数据算出来的
+    snapshot_date: Mapped[date] = mapped_column(Date, nullable=False)
+    ts_code: Mapped[str] = mapped_column(String(12), nullable=False)
+    trade_date: Mapped[date] = mapped_column(Date, nullable=False)
+    fractal_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    kind: Mapped[str] = mapped_column(String(2), nullable=False)
+    # 当时的价与流动性, 用来算漂移后的价格差
+    close_at_signal: Mapped[float | None] = mapped_column(Numeric(12, 4), nullable=True)
+    amount_20d_k: Mapped[float | None] = mapped_column(Numeric(16, 2), nullable=True)
+    # 后续核对结果: NULL=还没查, true=重算后仍在, false=被重绘掉了
+    still_valid: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    checked_on: Mapped[date | None] = mapped_column(Date, nullable=True)
 
 
 class ChanSignal(Base):

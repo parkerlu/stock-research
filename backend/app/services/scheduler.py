@@ -230,6 +230,63 @@ async def _refresh_chan_signals() -> None:
     log.info("chan_signal 刷新: 新票 %d 条, 增量 %d 条",
              r1.get("inserted", 0), r2.get("inserted", 0))
 
+    # 收盘后把"今天算出来的信号"原样封存, 只增不改。
+    # ⚠️ 纪律: 以后不要再跑 build_all(rebuild=True)。全历史重算会把日后被
+    # ZigZag 重绘掉的信号一并抹掉 (实测约一半, 且抹掉的正是输家), 回测读到
+    # 的就成了"预知哪些信号不会被推翻"。只做每日增量, 这张表才是因果的。
+    from app.services.signal_snapshot import check_drift, take_snapshot
+    snap = await take_snapshot()
+    # 顺手核对最早一批还没查过的快照 —— 用真实前进数据量漂移率
+    drift = await check_drift()
+    log.info("信号快照: 封存 %s 条; 漂移核对: %s", snap.get("inserted"), drift)
+    await _snapshot_to_pool()
+
+
+async def _snapshot_to_pool() -> None:
+    """把当天的 2 类买点写进股票池, 在网页上直接能看。只保留最近 30 天。"""
+    from sqlalchemy import delete, select as sel
+
+    from app.models.schema import ChanSignal, StockPool, StockPoolItem
+
+    async with async_session() as db:
+        day = (await db.execute(
+            sel(DailyCandle.trade_date)
+            .order_by(DailyCandle.trade_date.desc()).limit(1)
+        )).scalar_one_or_none()
+        if not day:
+            return
+        codes = (await db.execute(
+            sel(ChanSignal.ts_code)
+            .where(ChanSignal.trade_date == day, ChanSignal.kind == "2")
+        )).scalars().all()
+        if not codes:
+            return
+        name = f"信号 {day:%m-%d}"
+        pool = (await db.execute(sel(StockPool).where(StockPool.name == name))
+                ).scalar_one_or_none()
+        if pool is None:
+            pool = StockPool(name=name,
+                             description=f"{day} 收盘算出的缠论2类买点, 次日开盘可买")
+            db.add(pool)
+            await db.flush()
+        else:
+            await db.execute(delete(StockPoolItem)
+                             .where(StockPoolItem.pool_id == pool.id))
+        for c in sorted(set(codes)):
+            db.add(StockPoolItem(pool_id=pool.id, ts_code=c))
+
+        # 只留最近 30 个信号池, 免得列表越积越长
+        olds = (await db.execute(
+            sel(StockPool.id).where(StockPool.name.like("信号 %"))
+            .order_by(StockPool.created_at.desc()).offset(30)
+        )).scalars().all()
+        if olds:
+            await db.execute(delete(StockPoolItem)
+                             .where(StockPoolItem.pool_id.in_(olds)))
+            await db.execute(delete(StockPool).where(StockPool.id.in_(olds)))
+        await db.commit()
+        log.info("股票池 %s: %d 只", name, len(set(codes)))
+
 
 async def _settle_paper() -> None:
     """虚拟盘逐日结算 —— 必须排在行情同步之后, 否则用的是昨天的价格。"""
