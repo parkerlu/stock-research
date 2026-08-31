@@ -345,7 +345,7 @@ export function PaperPanel() {
               <span key={p.ts_code}
                     className={`pp-sig${p.held ? " held" : ""}`}
                     onClick={() => setCurrentStock(p.ts_code, p.name ?? p.ts_code)}
-                    title={`${p.amount_20d_wan} 万 · 次日开盘 ${p.next_open}`}>
+                    title={`20日均额 ${p.amount_20d_wan} 万 · ${p.next_open != null ? `次日开盘 ${p.next_open}` : "明日开盘买入"}`}>
                 {p.name ?? p.ts_code}{p.held && " ✓"}
               </span>
             ))}

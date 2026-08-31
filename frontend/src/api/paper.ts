@@ -112,7 +112,7 @@ export const resetPaper = (name: string, start: string, capital = 100000, slots 
 
 export interface SignalPick {
   ts_code: string; name: string | null; signal_date: string; buy_date: string;
-  next_open: number; amount_20d_wan: number; held: boolean;
+  next_open: number | null; amount_20d_wan: number; held: boolean;
 }
 export const getPaperSignals = (name: string, limit = 20) =>
   json<{ exists: boolean; as_of: string; picks: SignalPick[] }>(

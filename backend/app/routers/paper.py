@@ -306,12 +306,22 @@ async def signals(name: str = DEFAULT_ACCOUNT, limit: int = 20):
         if not acct:
             return {"exists": False, "picks": []}
         day = acct.last_run_date or acct.started_on
+        # ⚠️ 不能超过库里最新的交易日。实操盘 9/1 才开始, 但今晚要看的是
+        # "今天(8/31)出的信号、明早要买的票" —— 拿 9/1 去查一条都查不到。
+        latest = (await db.execute(
+            select(DailyCandle.trade_date)
+            .order_by(DailyCandle.trade_date.desc()).limit(1)
+        )).scalar_one_or_none()
+        if latest and day > latest:
+            day = latest
         held = set((await db.execute(
             select(PaperPosition.ts_code).where(PaperPosition.account_id == acct.id,
                                                 PaperPosition.status == "open")
         )).scalars().all())
-        picks = await pt.scan_signals(db, day, exclude=set())
+        # require_next=False: 最新信号日的"次日开盘价"当然还不存在,
+        # 这里是展示明日要买什么, 不是成交, 不该拿它过滤。
+        picks = await pt.scan_signals(db, day, exclude=set(), require_next=False)
         return {"exists": True, "as_of": str(day),
                 "picks": [{**p, "signal_date": str(p["signal_date"]),
-                           "buy_date": str(p["buy_date"]),
+                           "buy_date": str(p["buy_date"]) if p.get("buy_date") else None,
                            "held": p["ts_code"] in held} for p in picks[:limit]]}
