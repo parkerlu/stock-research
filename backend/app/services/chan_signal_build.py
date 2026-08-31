@@ -19,7 +19,7 @@ import time
 from datetime import date
 
 import pandas as pd
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.db import async_session
@@ -120,3 +120,100 @@ async def build_all(rebuild: bool = False, on_progress=None) -> dict:
     log.info("chan_signal: 完成, 新增 %d 条, 耗时 %.0fs", inserted, el)
     return {"universe": len(codes), "computed": len(todo),
             "inserted": inserted, "elapsed_sec": round(el, 1)}
+
+
+async def refresh_tail(lookback_bars: int = 500, since_days: int = 15) -> dict:
+    """每晚增量补新信号 —— 只算每只票最近 lookback_bars 根K, 只写最近的信号.
+
+    为什么不能只靠 build_all(rebuild=False)
+    ------------------------------------
+    那个只补"表里一条都没有"的票。老票每天出的新买点它一条都不会加, 实操盘
+    就永远等不到新信号。所以夜里必须跑这个。
+
+    为什么用尾部窗口而不是全历史
+    --------------------------
+    全历史一遍生产上要 400 秒; 尾部 500 根只读 ~1/20 的行, 十几秒就够, 适合
+    每晚跟在行情同步后面跑。
+
+    代价要说清楚: 缠论的合并/分型是从序列头部递推的, 截断起点会让窗口最左边
+    若干根的合并结果与全历史算出来的不完全一致。500 根的窗口相对 since_days
+    (15 天) 有极大余量, 受影响的只是窗口最左端, 落不到我们要写的日期上。
+    """
+    t0 = time.time()
+    async with async_session() as db:
+        basics = (await db.execute(
+            select(StockBasic.ts_code, StockBasic.name, StockBasic.is_active)
+        )).all()
+        codes = sorted(c for c, n, a in basics
+                       if a is not False and _universe_ok(c, n))
+        end = (await db.execute(
+            select(DailyCandle.trade_date)
+            .order_by(DailyCandle.trade_date.desc()).limit(1)
+        )).scalar_one_or_none()
+        if not end:
+            return {"inserted": 0, "reason": "库里没有行情"}
+        # 只写最近 since_days 个交易日的信号, 更早的由 build_all 全历史算过
+        recent = (await db.execute(
+            select(DailyCandle.trade_date).group_by(DailyCandle.trade_date)
+            .order_by(DailyCandle.trade_date.desc()).limit(since_days)
+        )).scalars().all()
+        floor_date = min(recent)
+
+    inserted = 0
+    CHUNK = 200
+    for i in range(0, len(codes), CHUNK):
+        batch = codes[i:i + CHUNK]
+        async with async_session() as db:
+            # 每只票各取最后 lookback_bars 根 —— 用窗口函数一次拿完, 不逐票查
+            sub = (
+                select(
+                    DailyCandle.ts_code, DailyCandle.trade_date, DailyCandle.open,
+                    DailyCandle.high, DailyCandle.low, DailyCandle.close,
+                    DailyCandle.adj_factor,
+                    func.row_number().over(
+                        partition_by=DailyCandle.ts_code,
+                        order_by=DailyCandle.trade_date.desc()).label("rn"),
+                )
+                .where(DailyCandle.ts_code.in_(batch))
+                .subquery()
+            )
+            rows = (await db.execute(
+                select(sub.c.ts_code, sub.c.trade_date, sub.c.open, sub.c.high,
+                       sub.c.low, sub.c.close, sub.c.adj_factor)
+                .where(sub.c.rn <= lookback_bars)
+                .order_by(sub.c.ts_code, sub.c.trade_date)
+            )).all()
+            if not rows:
+                continue
+            df = pd.DataFrame(rows, columns=["ts_code", "trade_date", "open", "high",
+                                             "low", "close", "adj_factor"])
+            for c in ("open", "high", "low", "close", "adj_factor"):
+                df[c] = pd.to_numeric(df[c], errors="coerce").astype("float64")
+            df = df.dropna(subset=["open", "high", "low", "close"])
+            df["trade_date"] = pd.to_datetime(df["trade_date"])
+
+            payload: list[dict] = []
+            for cd, g in df.groupby("ts_code", sort=False):
+                g = g.sort_values("trade_date").reset_index(drop=True)
+                latest = g.adj_factor.iloc[-1]
+                if latest and latest > 0:
+                    f = (g.adj_factor / latest).values
+                    for c in ("open", "high", "low", "close"):
+                        g[c] = (g[c].values * f).round(4)
+                for act, frac, kind in _signals_for(g):
+                    if act >= floor_date:
+                        payload.append({"ts_code": cd, "trade_date": act,
+                                        "fractal_date": frac, "kind": kind})
+            if payload:
+                stmt = pg_insert(ChanSignal).values(payload)
+                stmt = stmt.on_conflict_do_nothing(
+                    index_elements=["ts_code", "trade_date", "kind"])
+                res = await db.execute(stmt)
+                await db.commit()
+                inserted += res.rowcount or 0
+
+    el = time.time() - t0
+    log.info("chan_signal 增量: %s 起, 新增 %d 条, 耗时 %.0fs",
+             floor_date, inserted, el)
+    return {"since": str(floor_date), "inserted": inserted,
+            "elapsed_sec": round(el, 1)}

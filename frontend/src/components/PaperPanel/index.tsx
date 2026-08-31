@@ -289,7 +289,10 @@ export function PaperPanel() {
       {signals.length > 0 && (
         <div className="pp-signals">
           <div className="pp-signals-t">
-            当日候选 {signals.length} 只（低流动性优先，前 {Math.min(signals.length, 20)}）
+            当日买点 {signals.length} 只 · 空仓位 {Math.max(0, st.slots - st.n_open)} 个
+            {" → 下一日最多买入 "}
+            {Math.min(signals.length, Math.max(0, st.slots - st.n_open))} 只
+            <span className="pp-signals-hint">（仅候选，尚未买入；空仓位不足就按流动性从低到高挑，宁可空着也不加仓）</span>
           </div>
           <div className="pp-signals-list">
             {signals.map((p) => (

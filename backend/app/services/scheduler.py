@@ -205,6 +205,22 @@ async def _sync_etfs():
     log.info("=== ETF sync done: %d rows inserted ===", inserted)
 
 
+async def _refresh_chan_signals() -> None:
+    """补当日新增的缠论买点 —— 必须排在 _settle_paper 之前.
+
+    实操盘的信号是从 chan_signal 表读的; 不刷这张表, 今晚新出的买点一个都
+    看不到, 实操盘会一直空仓。
+    """
+    from app.services.chan_signal_build import build_all, refresh_tail
+
+    # 新上市的票表里一条没有, 由 build_all(rebuild=False) 补全历史;
+    # 老票的新买点由 refresh_tail 补尾巴。两个都要跑。
+    r1 = await build_all(rebuild=False)
+    r2 = await refresh_tail()
+    log.info("chan_signal 刷新: 新票 %d 条, 增量 %d 条",
+             r1.get("inserted", 0), r2.get("inserted", 0))
+
+
 async def _settle_paper() -> None:
     """虚拟盘逐日结算 —— 必须排在行情同步之后, 否则用的是昨天的价格。"""
     from sqlalchemy import select
@@ -247,6 +263,7 @@ async def daily_sync_job():
     await _sync_stocks()
     await _sync_etfs()
     try:
+        await _refresh_chan_signals()
         await _settle_paper()
     except Exception as exc:                      # noqa: BLE001
         # 虚拟盘出错不能影响行情同步的结果 —— 记日志, 下次调度会补上
