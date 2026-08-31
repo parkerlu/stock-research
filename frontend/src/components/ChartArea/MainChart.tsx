@@ -102,6 +102,9 @@ export interface MainChartHandle {
   pushBar: (bar: KLineData) => void;
   /** 丢弃缓存重新拉K线 (数据补齐后调用)。加载中则排队到本次加载结束再执行。 */
   reload: () => void;
+  /** 跳到某个历史日期 (YYYY-MM-DD)。初始只加载 1 年日线, 回放 2022 年时那天
+   *  根本不在图上, 所以要先按目标日期重新取数, 加载完再定位。 */
+  focusDate: (dateStr: string) => void;
 }
 
 export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
@@ -131,6 +134,9 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
   // 新数据。所以加载中时把 reload 挂起, 等本次加载结束再执行。
   const loadingRef = useRef(false);
   const pendingReloadRef = useRef(false);
+  // 要定位的历史日期: 影响 init 取数的起点, 数据落地后再滚过去
+  const focusFromRef = useRef<string | null>(null);
+  const focusTsRef = useRef<number | null>(null);
 
   const doReload = () => {
     const chart = chartRef.current;
@@ -157,6 +163,25 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
         return;
       }
       doReload();
+    },
+    focusDate: (dateStr: string) => {
+      const ts = new Date(`${dateStr}T00:00:00`).getTime();
+      if (Number.isNaN(ts)) return;
+      focusTsRef.current = ts;
+      const cached = candleCache.get(
+        `${chartRef.current?.getSymbol()?.ticker}|${periodToTf(
+          chartRef.current?.getPeriod() ?? TF_TO_PERIOD["1d"])}`);
+      // 已经加载到这一天就直接滚, 免得白重取一次
+      if (cached && cached.length > 0 && cached[0].timestamp <= ts) {
+        chartRef.current?.scrollToTimestamp(ts, 300);
+        return;
+      }
+      // 多留半年余量, 定位点落在屏幕中间而不是最左边
+      const from = new Date(ts);
+      from.setMonth(from.getMonth() - 6);
+      focusFromRef.current = fmtDate(from);
+      if (loadingRef.current) pendingReloadRef.current = true;
+      else doReload();
     },
   }));
 
@@ -257,13 +282,23 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
           const from = new Date(
             now.getFullYear() - INIT_YEARS[tfVal], now.getMonth(), now.getDate()
           );
+          // focusDate 指定了更早的起点就用它 —— 否则那一天不在数据里, 滚不过去
+          const fromStr = focusFromRef.current && focusFromRef.current < fmtDate(from)
+            ? focusFromRef.current : fmtDate(from);
+          focusFromRef.current = null;
 
           try {
-            const resp = await getCandles(symInfo.ticker, tfVal, fmtDate(from), fmtDate(now));
+            const resp = await getCandles(symInfo.ticker, tfVal, fromStr, fmtDate(now));
             const data = resp.candles.map(mapCandle);
             candleCache.set(cacheKey, data);
             setLoading(false);
             callback(data, { forward: true, backward: false });
+            const ft = focusTsRef.current;
+            if (ft != null) {
+              focusTsRef.current = null;
+              // 等 klinecharts 把数据画完再滚, 否则 scrollToTimestamp 找不到那根
+              setTimeout(() => chartRef.current?.scrollToTimestamp(ft, 300), 60);
+            }
           } catch (err) {
             console.error("Failed to load candles:", err);
             setLoading(false);
@@ -624,7 +659,7 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
             action.type === "buy"
               ? bar?.low ?? action.price
               : bar?.high ?? action.price;
-          const label = buildTradeLabel(
+          const label = action.label ?? buildTradeLabel(
             action.type,
             action.price,
             action.pnl_pct,

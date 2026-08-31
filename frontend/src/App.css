@@ -2101,3 +2101,23 @@ body {
 }
 .pp-sig.held { background: rgba(233,69,96,.14); color: #e94560; }
 .pp-sig:hover { filter: brightness(1.3); }
+
+/* 浮动盈亏: 用户更关注百分比 —— 百分比做主体加大加亮, 金额降为副信息。
+   原来两者同号且都用 muted 色, 在深色底上看不清。 */
+.pp-pnl b { font-size: 12.5px; font-weight: 700; display: inline-block; }
+.pp-pnl em { font-style: normal; font-size: 10px; opacity: .75; margin-left: 5px;
+             color: inherit; }
+.paper-panel .pp-pnl.up  { color: #ff5c7a; }
+.paper-panel .pp-pnl.down { color: #35d07f; }
+
+/* 持仓表下方那片空白拿来常驻显示流水 */
+.pp-recent { margin-top: 8px; display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.pp-recent-t { font-size: 10.5px; color: var(--text-muted); margin-bottom: 4px; }
+.pp-recent-list { max-height: 320px; }
+.pp-rd { color: var(--text-muted); white-space: nowrap; }
+.pp-act { padding: 1px 5px; border-radius: 3px; font-size: 10px; white-space: nowrap; }
+.pp-act-buy     { background: rgba(233,69,96,.18);  color: #ff5c7a; }
+.pp-act-tier1   { background: rgba(53,208,127,.15); color: #35d07f; }
+.pp-act-tier2   { background: rgba(53,208,127,.25); color: #35d07f; }
+.pp-act-stop    { background: rgba(120,144,180,.20); color: #9fb3d0; }
+.pp-act-timeout { background: rgba(120,144,180,.15); color: #8fa3bf; }

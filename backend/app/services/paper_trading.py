@@ -277,8 +277,26 @@ async def run_day(db: AsyncSession, acct: PaperAccount, day: date,
 
     if free > 0:
         _mode = cfg.get("entry_mode", "next_open")
-        cands = await scan_signals(
-            db, day, exclude=held, on_progress=on_progress,
+        # ⚠️ next_open 模式要扫的是**前一个交易日**的信号, 因为成交发生在信号日
+        # 的次日开盘 —— 也就是今天。
+        #
+        # 原来直接扫 day 的信号、按 day+1 的开盘价建仓, 却把这笔记进 day 的净值
+        # 快照, 于是 day 收盘时账户已经持有一个用"明天开盘价"买的仓位。持有天数
+        # 算出来是 -1 天, 浮动盈亏是拿"今天收盘"跟"明天开盘"比 —— 两头都不对,
+        # 而且 day 收盘时根本不可能知道明天开盘价。
+        #
+        # 改成扫 prev、按 day 的开盘价成交后, 三种模式的成交日都等于 day, 账目
+        # 和净值曲线才对得上。
+        if _mode == "next_open":
+            scan_day = (await db.execute(
+                select(DailyCandle.trade_date).where(DailyCandle.trade_date < day)
+                .group_by(DailyCandle.trade_date)
+                .order_by(DailyCandle.trade_date.desc()).limit(1)
+            )).scalar_one_or_none()
+        else:
+            scan_day = day
+        cands = [] if scan_day is None else await scan_signals(
+            db, scan_day, exclude=held, on_progress=on_progress,
             require_next=_mode == "next_open", mode=_mode)
         # ⚠️ 每仓目标必须按"当前净值"算, 不是初始资金 —— 用初始资金就是固定
         # 金额下注, 赚到的钱永远躺在现金里不再投出去, 十年下来差好几倍。
@@ -296,11 +314,13 @@ async def run_day(db: AsyncSession, acct: PaperAccount, day: date,
             if free <= 0:
                 break
             if _mode in ("signal_close", "fractal_close"):
-                price = cd["signal_close"]      # 当日尾盘成交 (day 的收盘价)
+                price = cd["signal_close"]      # 当日尾盘成交
                 buy_on = cd["signal_date"]
             else:
-                price = cd["next_open"]         # 次日开盘成交
+                price = cd["next_open"]         # 信号次日开盘成交
                 buy_on = cd["buy_date"]
+            if buy_on != day:
+                continue        # 成交日必须就是正在结算的这一天
             if price is None or price <= 0:
                 continue
             price = price * (1 + cfg.get("entry_slip_pct", 0.0))

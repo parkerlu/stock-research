@@ -63,6 +63,12 @@ export function ChartArea({ tradeActions }: Props = {}) {
   const linkedMode = useQuoteStore((s) => s.linkedMode);
   const currentSymbol = useQuoteStore((s) => s.currentSymbol);
   const timeframe = useQuoteStore((s) => s.timeframe);
+  const focusDate = useQuoteStore((s) => s.focusDate);
+  const focusSeq = useQuoteStore((s) => s.focusSeq);
+  const clearFocusDate = useQuoteStore((s) => s.clearFocusDate);
+  const paperMarks = useQuoteStore((s) => s.paperMarks);
+  // 策略回测的标记优先; 没有时才画虚拟盘的成交
+  const marks = tradeActions && tradeActions.length ? tradeActions : paperMarks;
   const [activeIndicators, setActiveIndicators] = useState<string[]>(() =>
     readLS(LS_STD_KEY, ["MA"])
   );
@@ -72,6 +78,17 @@ export function ChartArea({ tradeActions }: Props = {}) {
   const [measure, setMeasure] = useState<MeasureResult | null>(null);
 
   const indicatorPaneIds = useRef<Record<string, string>>({});
+
+  // 虚拟盘点持仓 -> 跳到该股该日的K线。换股后图表要重新初始化, 所以给一点
+  // 延时再定位; 依赖 focusSeq 而非 focusDate, 连点同一天也能再次触发。
+  useEffect(() => {
+    if (!focusDate) return;
+    const t = setTimeout(() => {
+      mainChartRef.current?.focusDate(focusDate);
+      clearFocusDate();
+    }, 260);
+    return () => clearTimeout(t);
+  }, [focusSeq, focusDate, clearFocusDate]);
 
   // TDX 指标的选择/挂载统一交给 hook —— 换股、换周期、重建 pane 都在里面。
   // 多周期联动模式下主图未挂载, hook 的 toggle 仍会更新选择, 联动视图据此
@@ -209,7 +226,7 @@ export function ChartArea({ tradeActions }: Props = {}) {
         ) : (
           <MainChart
             ref={mainChartRef}
-            tradeActions={tradeActions}
+            tradeActions={marks}
             measuring={measuring}
             onMeasure={setMeasure}
           />

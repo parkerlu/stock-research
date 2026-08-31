@@ -22,6 +22,7 @@ import type {
   SignalPick,
 } from "../../api/paper";
 import { useQuoteStore } from "../../stores/quoteStore";
+import type { TradeAction } from "../../types/strategy";
 
 const ACTION_LABEL: Record<string, string> = {
   buy: "买入",
@@ -59,6 +60,25 @@ function EquityChart({ points, initial }: { points: EquityPoint[]; initial: numb
   );
 }
 
+/** 虚拟盘成交 -> K线标记。tier1/tier2/stop/timeout 都是卖, 但标签要分清楚,
+ *  复用上面表格用的 ACTION_LABEL, 免得两处文案对不上。 */
+function toMarks(rows: PaperTrade[], code: string): TradeAction[] {
+  return rows
+    .filter((t) => t.ts_code === code)
+    .map((t) => ({
+      date: t.date,
+      type: (t.action === "buy" ? "buy" : "sell") as "buy" | "sell",
+      price: t.price,
+      shares: t.shares,
+      amount: t.amount,
+      position_level: 0,
+      pnl: t.pnl ?? undefined,
+      pnl_pct: t.pnl_pct ?? undefined,
+      label: `${ACTION_LABEL[t.action] ?? t.action} ${t.price.toFixed(2)}`
+             + (t.pnl_pct != null ? ` ${t.pnl_pct >= 0 ? "+" : ""}${t.pnl_pct.toFixed(1)}%` : ""),
+    }));
+}
+
 export function PaperPanel() {
   const [cfg, setCfg] = useState<PaperConfig | null>(null);
   const [st, setSt] = useState<PaperStatus | null>(null);
@@ -73,10 +93,14 @@ export function PaperPanel() {
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(600);
   const [startDate, setStartDate] = useState("2020-01-02");
+  // 起始日期框跟随账户实际起点 —— 否则重置后框里还留着上次手打的日期,
+  // 会出现"框里 2026/01/01, 当前 2022-06-09"这种自相矛盾的显示。
+  const syncedFor = useRef<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playRef = useRef(false);
   const isDemo = acct === DEMO_ACCOUNT;
   const setCurrentStock = useQuoteStore((s) => s.setCurrentStock);
+  const jumpToDate = useQuoteStore((s) => s.jumpToDate);
 
   const reload = useCallback(async (name = acct) => {
     try {
@@ -85,6 +109,11 @@ export function PaperPanel() {
         getPaperSignals(name, 20).catch(() => ({ picks: [] as SignalPick[] })),
       ]);
       setSt(s);
+      // 换账户时把日期框对齐到该账户的实际起点 (同一账户内不覆盖用户正在改的值)
+      if (s.started_on && syncedFor.current !== name) {
+        syncedFor.current = name;
+        setStartDate(s.started_on);
+      }
       setTrades(t.trades);
       setSignals(g.picks ?? []);
       if (e.exists) setEq({ initial: e.initial, points: e.points });
@@ -331,7 +360,8 @@ export function PaperPanel() {
             </thead>
             <tbody>
               {st.holdings.map((h) => (
-                <tr key={h.ts_code} onClick={() => setCurrentStock(h.ts_code, h.name ?? h.ts_code)}>
+                <tr key={h.ts_code} title="点击查看该股买入当日的K线"
+                    onClick={() => jumpToDate(h.ts_code, h.name ?? h.ts_code, h.open_date, toMarks(trades, h.ts_code))}>
                   <td className="pp-name">
                     <b>{h.name ?? ""}</b><em>{h.ts_code}</em>
                   </td>
@@ -339,9 +369,9 @@ export function PaperPanel() {
                   <td>{h.open_price.toFixed(2)}</td>
                   <td>{h.last_price.toFixed(2)}</td>
                   <td>{h.shares}{h.tier1_done && <em>已减半</em>}</td>
-                  <td className={h.float_pnl >= 0 ? "up" : "down"}>
-                    {h.float_pnl >= 0 ? "+" : ""}{money(h.float_pnl)}
-                    <em>{h.float_pnl_pct >= 0 ? "+" : ""}{h.float_pnl_pct.toFixed(2)}%</em>
+                  <td className={`pp-pnl ${h.float_pnl >= 0 ? "up" : "down"}`}>
+                    <b>{h.float_pnl_pct >= 0 ? "+" : ""}{h.float_pnl_pct.toFixed(2)}%</b>
+                    <em>{h.float_pnl >= 0 ? "+" : ""}{money(h.float_pnl)}</em>
                   </td>
                   <td className="down">{h.stop_price.toFixed(2)}</td>
                   <td className="up">
@@ -357,6 +387,39 @@ export function PaperPanel() {
         </div>
       )}
 
+      {/* 持仓表下面本来是一大片空白 —— 拿来常驻显示流水, 不用切标签页 */}
+      {tab === "holdings" && trades.length > 0 && (
+        <div className="pp-recent">
+          <div className="pp-recent-t">最近动作（点任意一行看当日K线）</div>
+          <div className="pp-table-wrap pp-scroll pp-recent-list">
+            <table className="pp-table">
+              <tbody>
+                {trades.slice(0, 60).map((t, i) => (
+                  <tr key={i} title="点击查看该笔成交当日的K线"
+                      onClick={() => jumpToDate(t.ts_code, t.name ?? t.ts_code, t.date,
+                                                toMarks(trades, t.ts_code))}>
+                    <td className="pp-rd">{t.date.slice(5)}</td>
+                    <td className="pp-name"><b>{t.name ?? t.ts_code}</b></td>
+                    <td><span className={`pp-act pp-act-${t.action}`}>
+                      {ACTION_LABEL[t.action] ?? t.action}</span></td>
+                    <td>{t.price.toFixed(2)}</td>
+                    <td>{t.shares}</td>
+                    <td className={`pp-pnl ${(t.pnl ?? 0) >= 0 ? "up" : "down"}`}>
+                      {t.pnl_pct != null && (
+                        <b>{t.pnl_pct >= 0 ? "+" : ""}{t.pnl_pct.toFixed(2)}%</b>
+                      )}
+                      {t.pnl != null && (
+                        <em>{t.pnl >= 0 ? "+" : ""}{money(t.pnl)}</em>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {tab === "trades" && (
         <div className="pp-table-wrap pp-scroll">
           <table className="pp-table">
@@ -365,7 +428,8 @@ export function PaperPanel() {
             </thead>
             <tbody>
               {trades.map((t, i) => (
-                <tr key={i} onClick={() => setCurrentStock(t.ts_code, t.name ?? t.ts_code)}>
+                <tr key={i} title="点击查看该笔成交当日的K线"
+                    onClick={() => jumpToDate(t.ts_code, t.name ?? t.ts_code, t.date, toMarks(trades, t.ts_code))}>
                   <td>{t.date.slice(5)}</td>
                   <td className="pp-name"><b>{t.name ?? ""}</b><em>{t.ts_code}</em></td>
                   <td><span className={`pp-act pp-act-${t.action}`}>{ACTION_LABEL[t.action] ?? t.action}</span></td>
@@ -393,7 +457,8 @@ export function PaperPanel() {
             </thead>
             <tbody>
               {st.closed.map((c, i) => (
-                <tr key={i} onClick={() => setCurrentStock(c.ts_code, c.name ?? c.ts_code)}>
+                <tr key={i} title="点击查看该股买入当日的K线"
+                    onClick={() => jumpToDate(c.ts_code, c.name ?? c.ts_code, c.open_date, toMarks(trades, c.ts_code))}>
                   <td className="pp-name"><b>{c.name ?? ""}</b><em>{c.ts_code}</em></td>
                   <td>{c.open_date.slice(5)}</td>
                   <td>{c.close_date.slice(5)}</td>
