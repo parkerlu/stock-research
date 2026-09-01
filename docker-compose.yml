@@ -6,7 +6,11 @@ services:
       POSTGRES_PASSWORD: __REDACTED_DB_PASSWORD__
       POSTGRES_DB: stock_db
     ports:
-      - "5432:5432"
+      # 只绑本机与 WireGuard 隧道地址 —— 原来是 0.0.0.0, 家里任何设备
+      # 连上 WiFi 都能直连数据库。10.8.0.2 是本机在隧道里的地址,
+      # 供阿里云那台经隧道访问。
+      - "127.0.0.1:5432:5432"
+      - "10.8.0.2:5432:5432"
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
     healthcheck:

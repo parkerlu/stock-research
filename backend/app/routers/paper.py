@@ -88,19 +88,30 @@ async def status(name: str = DEFAULT_ACCOUNT):
             .order_by(PaperPosition.open_date.desc())
         )).scalars().all()
 
+        # ⚠️ 必须按"回放当日"取价, 不能用最新价 —— 回放 2020 年时用 2026 年
+        # 的收盘价算浮盈就是未来函数, 演示会显得神准。
+        #
+        # 一次批量取所有持仓的当日价。原来是每个持仓查一次 —— 局域网内无感,
+        # 但数据库经 WireGuard 隧道搬到家里后, 每次往返 30ms, 几百个历史持仓
+        # 就是十几秒。DISTINCT ON 让 Postgres 一次给出每只票 <= as_of 的最新价。
+        codes = {p.ts_code for p in positions}
+        px_map: dict[str, tuple[float, str]] = {}
+        if codes:
+            rows = (await db.execute(
+                select(DailyCandle.ts_code, DailyCandle.close, DailyCandle.trade_date)
+                .distinct(DailyCandle.ts_code)
+                .where(DailyCandle.ts_code.in_(codes),
+                       DailyCandle.trade_date <= as_of_date)
+                .order_by(DailyCandle.ts_code, DailyCandle.trade_date.desc())
+            )).all()
+            px_map = {c: (float(v), str(d)) for c, v, d in rows}
+
         holdings, closed = [], []
         market_value = 0.0
         for p in positions:
-            # ⚠️ 必须按"回放当日"取价, 不能用最新价 —— 回放 2020 年时用 2026 年
-            # 的收盘价算浮盈就是未来函数, 演示会显得神准。
-            last = (await db.execute(
-                select(DailyCandle.close, DailyCandle.trade_date)
-                .where(DailyCandle.ts_code == p.ts_code,
-                       DailyCandle.trade_date <= as_of_date)
-                .order_by(DailyCandle.trade_date.desc()).limit(1)
-            )).first()
-            px = float(last[0]) if last else float(p.open_price)
-            as_of = str(last[1]) if last else None
+            hit = px_map.get(p.ts_code)
+            px = hit[0] if hit else float(p.open_price)
+            as_of = hit[1] if hit else None
             entry = float(p.open_price)
             if p.status == "open":
                 mv = p.shares * px
