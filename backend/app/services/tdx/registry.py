@@ -8,7 +8,6 @@ from __future__ import annotations
 from types import ModuleType
 
 from app.services.tdx.indicators import (
-    chan_2buy,
     chande_momentum,
     chao_di_tao_ding,
     didian_zuhe,
@@ -35,8 +34,6 @@ _INDICATORS: dict[str, ModuleType] = {
     relative_volatility_index.name: relative_volatility_index,
     pretty_good_oscillator.name: pretty_good_oscillator,
     chande_momentum.name: chande_momentum,
-    # 缠论买点 — 与 chan-1buy/chan-2buy 策略同源(复用 services/chanlun.py)
-    chan_2buy.name: chan_2buy,
 }
 
 

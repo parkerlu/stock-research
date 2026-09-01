@@ -338,13 +338,13 @@ async def daily_sync_job():
     log.info("====== daily sync triggered at 15:30 ======")
     await _sync_stocks()
     await _sync_etfs()
-    try:
-        await _refresh_chan_signals()
-        await _settle_paper()
-    except Exception as exc:                      # noqa: BLE001
-        # 虚拟盘出错不能影响行情同步的结果 —— 记日志, 下次调度会补上
-        # (run_day 对已结算日期是幂等的)
-        log.exception("paper settlement failed: %s", exc)
+    # ⚠️ 2026-09-01 起停用缠论全链路 (信号刷新 + 虚拟盘结算)。
+    # 原因: 审计证实 chan-2buy 的历史回测靠三条未来函数撑起来 ——
+    # ZigZag 重绘幸存者偏差(主犯)、用当前股票名快照过滤 ST/退市、
+    # 盘中止损资金穿越回开盘。修完后 10.7 年从 229.7 倍变成 0.72 倍、
+    # 年化 -3.0%, 相对随机入场的超额约 1.5σ, 统计上与零无异。
+    # 完整审计见 artifact 9cd4b91f。
+    # 要重新启用: 先在因果口径(chan_signal kind='2c')下重新证明有边际。
     log.info("====== daily sync complete ======")
 
 

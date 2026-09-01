@@ -25,7 +25,6 @@ from .maimai_filter import (
 from .maimai_zhun import MaimaiZhun
 from .reversal_filter import Reversal30, Reversal40, Reversal50, Reversal55, Reversal60
 from .tdx_classics import TDXTripleGold, TDXMACDGoldPit, TDXExpmaTrio, TDXDualKDJ
-from .chanlun_strategy import Chan1Buy, Chan2Buy, Chan12Buy, Chan1BuyWide, Chan1BuyStrict
 from .diao_di import DiaoDiPure, DiaoDi20, DiaoDi30, DiaoDiDiv
 
 TEMPLATE_REGISTRY: dict[str, type] = {
@@ -70,11 +69,6 @@ TEMPLATE_REGISTRY: dict[str, type] = {
     "dt-pure": DiaoDiPure,    # 深 V 反转无 ML (高频低准)
     "dt-div":  DiaoDiDiv,     # 底背驰 (实验性，样本少)
     # 🌀 缠论 (Chan Theory) — 含包关系 + 分型 + 笔 + MACD 背驰
-    "chan-1buy":        Chan1Buy,        # 1 类买点（底背驰）
-    "chan-2buy":        Chan2Buy,        # 2 类买点（1 类后回踩不破底）
-    "chan-12":          Chan12Buy,       # 1+2 合并
-    "chan-1buy-wide":   Chan1BuyWide,    # 1 类 + 宽 ATR 吃大波段
-    "chan-1buy-strict": Chan1BuyStrict,  # 1 类 + 5 bar 严格滞后（无偷看）
     # 🎯 优化版 trail (吃波段高点)
     "ml_direct_atr_swing": MLDirectATRSwing,            # ATR 自适应，单股 +36%，46% ≥10%
     "ml_direct_classic_greedy": MLDirectClassicGreedy,  # 经典 trail，78.6% 胜率
