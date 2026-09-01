@@ -18,7 +18,11 @@ from app.services.strategy_templates import TEMPLATE_REGISTRY as T
 PASSED = ["tdx-dual-kdj","rev-55","rev-60","rev-50","mm-55","mm-50","mm-30","mm-40",
           "tdx-macd-pit","rev-40","rev-30","mmhz","mm-broad-50","mm-pure-50",
           "mm-broad-40","mm-pure-40"]
-NCUT, NSTOCK = 6, 120
+# ⚠️ 切点必须密集且覆盖"周内每一天"。
+# 教训: 原来 6 个随机切点, 信号落进残缺周的概率太低 —— tdx-dual-kdj 的周线
+# 穿越(周一就用到周五收盘)只测出 0.05% 不一致, 我把低检验力误当成了干净。
+# 多周期策略请另跑 week_leak.py, 它专门在每周第 1~4 天切。
+NCUT, NSTOCK = 24, 120
 
 def buy_dates(tpl, df):
     try:

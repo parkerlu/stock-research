@@ -67,8 +67,17 @@ def _compute_pack(close, high, low, vol):
     j = 3 * k - 2 * d
 
     # Weekly KDJ (resample 5-bar weeks)
-    # Build weekly OHLC from daily, compute KDJ, then forward-fill back to daily index
-    # Approximation: aggregate every 5 bars
+    #
+    # ⚠️ 未来函数修复 (2026-09)
+    # 原来的写法: 按 5 根一组聚合成"周", close 取该组最后一根, 然后
+    #   wk_daily = w_k[week_idx] 把整周的值广播回该周每一天。
+    # 于是"周一"那天拿到的周线 KDJ 里含着"周五"的收盘价 —— 整整偷看 4 天。
+    # 实测证据 (scripts/screening/week_leak.py): 与全量数据相比, 当周第 1 天
+    # 的周线 KDJ 差异均值 4.16 (97% 的切点有差异), 第 2/3/4 天递减为
+    # 3.49 / 2.45 / 2.06, 到第 5 天(本周已完结)差异为 0。完美阶梯。
+    #
+    # 修法: 每一天只能看到**已完结的周**。当周还没走完时, 沿用上一完整周的值。
+    # 代价是周线信息滞后最多 4 天 —— 但这正是实盘的真实处境。
     week_idx = np.arange(n) // 5
     df_d = pd.DataFrame({"i": np.arange(n), "w": week_idx,
                          "open": close, "high": high, "low": low, "close": close})
@@ -84,9 +93,15 @@ def _compute_pack(close, high, low, vol):
         for i in range(1, len(weekly)):
             w_k[i] = (2 / 3) * w_k[i - 1] + (1 / 3) * w_rsv[i]
             w_d[i] = (2 / 3) * w_d[i - 1] + (1 / 3) * w_k[i]
-        # Map back to daily
-        wk_daily = w_k[week_idx]
-        wd_daily = w_d[week_idx]
+        # Map back to daily —— 只用**已完结**的周
+        # 第 i 天所属周为 week_idx[i]; 该周要到它的第 5 根K才完结, 所以第 i 天
+        # 能引用的最新完整周是 week_idx[i] - 1。
+        prev_week = week_idx - 1
+        valid = prev_week >= 0
+        wk_daily = np.full(n, 50.0)
+        wd_daily = np.full(n, 50.0)
+        wk_daily[valid] = w_k[prev_week[valid]]
+        wd_daily[valid] = w_d[prev_week[valid]]
     else:
         wk_daily = np.full(n, 50.0); wd_daily = np.full(n, 50.0)
 
