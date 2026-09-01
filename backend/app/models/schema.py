@@ -266,7 +266,7 @@ class StrategySignal(Base):
     ⚠️ 纪律(chan-2buy 的教训): 只做每日增量 append, 不要全历史重建。
     ZigZag 类指标会在重建时抹掉"当时成立、后来被更低的低点撤销"的信号,
     而抹掉的正是输家 —— 回测读表就等于预知哪些信号不会被推翻。
-    当前策略 tdx-dual-kdj 是纯公式(实测撤销率 0.05%), 不受此影响; 换策略前
+    换用任何新策略前
     必须用 scripts/screening/causal_check.py 重新验一遍。
     """
 

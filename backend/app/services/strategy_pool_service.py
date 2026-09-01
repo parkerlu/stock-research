@@ -76,8 +76,6 @@ _SEED_META: dict[str, dict] = {
               "metrics": {}},
     "tdx-expma-trio": {"concept": "TDX经典", "family": "ExpmaTrio", "description": "EXPMA + MACD + BOLL 三重共振",
               "metrics": {}},
-    "tdx-dual-kdj": {"concept": "TDX经典", "family": "DualKDJ", "description": "日 + 周 KDJ 共振",
-              "metrics": {}},
     "chan-1buy": {"concept": "缠论", "family": "Chan1Buy", "description": "1 类买点（底背驰反转）",
               "metrics": {}},
     "chan-2buy": {"concept": "缠论", "family": "Chan2Buy", "description": "2 类买点（1 类后回踩不破底）",

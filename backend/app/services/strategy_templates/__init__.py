@@ -24,7 +24,7 @@ from .maimai_filter import (
 )
 from .maimai_zhun import MaimaiZhun
 from .reversal_filter import Reversal30, Reversal40, Reversal50, Reversal55, Reversal60
-from .tdx_classics import TDXTripleGold, TDXMACDGoldPit, TDXExpmaTrio, TDXDualKDJ
+from .tdx_classics import TDXTripleGold, TDXMACDGoldPit, TDXExpmaTrio
 from .diao_di import DiaoDiPure, DiaoDi20, DiaoDi30, DiaoDiDiv
 
 TEMPLATE_REGISTRY: dict[str, type] = {
@@ -62,7 +62,6 @@ TEMPLATE_REGISTRY: dict[str, type] = {
     "tdx-triple-gold":  TDXTripleGold,    # 三金叉共振 (MA+MACD+KDJ)
     "tdx-macd-pit":     TDXMACDGoldPit,   # MACD 黄金坑抄底
     "tdx-expma-trio":   TDXExpmaTrio,     # EXPMA 三步擒牛
-    "tdx-dual-kdj":     TDXDualKDJ,       # 日周 KDJ 共振
     # 🎯 抄底逃顶 — Pine Momentum Line 移植
     "dt-30":   DiaoDi30,      # 🏆 深 V + ml_score ≥ 0.30 (rank 12/42, 80% win)
     "dt-20":   DiaoDi20,      # 深 V + ml_score ≥ 0.20 (中频版)

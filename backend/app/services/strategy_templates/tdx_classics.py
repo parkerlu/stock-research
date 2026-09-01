@@ -66,44 +66,11 @@ def _compute_pack(close, high, low, vol):
         d[i] = (2 / 3) * d[i - 1] + (1 / 3) * k[i]
     j = 3 * k - 2 * d
 
-    # Weekly KDJ (resample 5-bar weeks)
-    #
-    # ⚠️ 未来函数修复 (2026-09)
-    # 原来的写法: 按 5 根一组聚合成"周", close 取该组最后一根, 然后
-    #   wk_daily = w_k[week_idx] 把整周的值广播回该周每一天。
-    # 于是"周一"那天拿到的周线 KDJ 里含着"周五"的收盘价 —— 整整偷看 4 天。
-    # 实测证据 (scripts/screening/week_leak.py): 与全量数据相比, 当周第 1 天
-    # 的周线 KDJ 差异均值 4.16 (97% 的切点有差异), 第 2/3/4 天递减为
-    # 3.49 / 2.45 / 2.06, 到第 5 天(本周已完结)差异为 0。完美阶梯。
-    #
-    # 修法: 每一天只能看到**已完结的周**。当周还没走完时, 沿用上一完整周的值。
-    # 代价是周线信息滞后最多 4 天 —— 但这正是实盘的真实处境。
-    week_idx = np.arange(n) // 5
-    df_d = pd.DataFrame({"i": np.arange(n), "w": week_idx,
-                         "open": close, "high": high, "low": low, "close": close})
-    weekly = df_d.groupby("w").agg({"high": "max", "low": "min", "close": "last"})
-    if len(weekly) >= 9:
-        wh = weekly["high"].rolling(9, min_periods=1).max().values
-        wl = weekly["low"].rolling(9, min_periods=1).min().values
-        wc = weekly["close"].values
-        wrng = wh - wl
-        w_rsv = np.where(wrng > 0, (wc - wl) / np.where(wrng > 0, wrng, 1) * 100, 50.0)
-        w_k = np.zeros(len(weekly)); w_d = np.zeros(len(weekly))
-        w_k[0] = 50; w_d[0] = 50
-        for i in range(1, len(weekly)):
-            w_k[i] = (2 / 3) * w_k[i - 1] + (1 / 3) * w_rsv[i]
-            w_d[i] = (2 / 3) * w_d[i - 1] + (1 / 3) * w_k[i]
-        # Map back to daily —— 只用**已完结**的周
-        # 第 i 天所属周为 week_idx[i]; 该周要到它的第 5 根K才完结, 所以第 i 天
-        # 能引用的最新完整周是 week_idx[i] - 1。
-        prev_week = week_idx - 1
-        valid = prev_week >= 0
-        wk_daily = np.full(n, 50.0)
-        wd_daily = np.full(n, 50.0)
-        wk_daily[valid] = w_k[prev_week[valid]]
-        wd_daily[valid] = w_d[prev_week[valid]]
-    else:
-        wk_daily = np.full(n, 50.0); wd_daily = np.full(n, 50.0)
+    # ⚠️ 周线 KDJ 已整段移除 (2026-09)。
+    # 原实现把整周聚合值广播回该周每一天, 周一就用到周五收盘 —— 偷看 4 天。
+    # 修好之后仍决定弃用: 多周期这一类构造出错面太大, 而检验工具已两次给出
+    # 假阴性(幸存者偏差、切点密度不足)。在验证能力有盲区时, 对整类高风险构造
+    # 一刀切比逐个甄别更稳妥。详见 scripts/screening/README.md 的排除项。
 
     # Bollinger bands (20, 2)
     mid = sc.rolling(20, min_periods=1).mean().values
@@ -122,7 +89,6 @@ def _compute_pack(close, high, low, vol):
         "expma12": expma12, "expma50": expma50,
         "diff": diff, "dea": dea, "macd_hist": macd_hist,
         "k": k, "d": d, "j": j,
-        "wk": wk_daily, "wd": wd_daily,
         "boll_mid": mid,
         "atr14": atr14,
         "vma5": vma5,
@@ -161,13 +127,6 @@ def _entry_expma_trio(close, ind):
     prev = _shift1(bullish.astype(float))
     return bullish & (prev == 0)   # newly entered the regime
 
-
-def _entry_dual_kdj(close, ind):
-    """日 KDJ 金叉 + 周 KDJ 在低位上行 (wk > wd)."""
-    daily_cross = _cross_above_var(ind["k"], ind["d"])
-    weekly_bull = ind["wk"] > ind["wd"]
-    weekly_low = ind["wk"] < 50   # weekly still below midline → stronger reversal
-    return daily_cross & weekly_bull & weekly_low
 
 
 # =========================================================================
@@ -282,10 +241,3 @@ class TDXExpmaTrio(_TDXClassicBase):
         return _entry_expma_trio(close, ind)
 
 
-class TDXDualKDJ(_TDXClassicBase):
-    template_id = "tdx-dual-kdj"
-    _entry_name = "日周 KDJ 共振"
-    _params = {"atr_mult": 2.0, "trail_activation": 0.06, "time_stop": 60}
-
-    def _entry_mask(self, close, high, low, vol, ind):
-        return _entry_dual_kdj(close, ind)

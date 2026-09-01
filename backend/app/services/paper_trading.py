@@ -53,7 +53,9 @@ log = logging.getLogger(__name__)
 # 且回撤 32.8%, 明显是仓位太少导致个股运气主导。最终按"6 只票人能真正盯住,
 # 10 只流于形式"的可操作性理由定 6, 而不是靠回测数字挑最高的那个。
 DEFAULT_CONFIG = {
-    "strategy": "tdx-dual-kdj",
+    # ⚠️ 当前无可用策略: tdx-dual-kdj 因多周期穿越已下架, tdx-macd-pit
+    # 在组合层面跑输随机对照。填入策略名前虚拟盘不会开仓。
+    "strategy": None,
     "stop_pct": 0.06,        # 止损
     "tier1_pct": 0.04,       # 第一批止盈
     "tier1_frac": 0.5,       # 卖出比例
@@ -352,7 +354,7 @@ async def run_day(db: AsyncSession, acct: PaperAccount, day: date,
             # [审计实验 2026-09] universe_neutral: 见 _universe_ok 注释;
             # signal_kind='2c' 可切到因果版(无重绘)信号表, 默认 '2' 不变
             neutral=bool(cfg.get("universe_neutral")),
-            strategy=str(cfg.get("strategy_signal", "tdx-dual-kdj")))
+            strategy=str(cfg.get("strategy_signal") or ""))
         # ⚠️ 每仓目标必须按"当前净值"算, 不是初始资金 —— 用初始资金就是固定
         # 金额下注, 赚到的钱永远躺在现金里不再投出去, 十年下来差好几倍。
         mv_now = 0.0
@@ -437,7 +439,7 @@ async def scan_signals(db: AsyncSession, day: date, exclude: set[str] | None = N
                        on_progress=None, require_next: bool = True,
                        mode: str = "next_open",
                        neutral: bool = False,
-                       strategy: str = "tdx-dual-kdj") -> list[dict]:
+                       strategy: str = "") -> list[dict]:
     """当日可操作的买点, 按低流动性优先排序.
 
     从 strategy_signal 预计算表读 —— 现算全市场 4400 只要几十秒, 回放时

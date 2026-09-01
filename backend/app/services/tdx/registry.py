@@ -12,7 +12,6 @@ from app.services.tdx.indicators import (
     chao_di_tao_ding,
     didian_zuhe,
     dongli_xian,
-    dual_kdj,
     ma,
     maimai_henzhun,
     multi_kdj,
@@ -26,8 +25,6 @@ _INDICATORS: dict[str, ModuleType] = {
     ma.name: ma,
     multi_kdj.name: multi_kdj,
     dongli_xian.name: dongli_xian,
-    # 虚拟盘当前策略, 与 strategy_templates 同源
-    dual_kdj.name: dual_kdj,
     maimai_henzhun.name: maimai_henzhun,
     didian_zuhe.name: didian_zuhe,
     chao_di_tao_ding.name: chao_di_tao_ding,

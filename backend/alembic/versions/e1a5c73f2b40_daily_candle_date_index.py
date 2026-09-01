@@ -17,8 +17,11 @@ def upgrade() -> None:
     # 排序用不上, 于是全表排序 1145 万行 —— 实测扫 94 万个数据块、耗时 2.4 秒,
     # 占了"点一次下一日"总耗时的 70%。
     # 加单列索引后 2417ms -> 0.19ms, 端到端 2.25s -> 0.15s。
-    op.create_index("ix_daily_candle_trade_date", "daily_candle", ["trade_date"])
+    # 幂等: 生产上曾用 CREATE INDEX CONCURRENTLY 手工建过, 直接 create_index
+    # 会撞 DuplicateTable。
+    op.execute("CREATE INDEX IF NOT EXISTS ix_daily_candle_trade_date "
+               "ON daily_candle (trade_date)")
 
 
 def downgrade() -> None:
-    op.drop_index("ix_daily_candle_trade_date", table_name="daily_candle")
+    op.execute("DROP INDEX IF EXISTS ix_daily_candle_trade_date")

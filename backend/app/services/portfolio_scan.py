@@ -1,7 +1,7 @@
 """组合信号扫描 — 把回测验证过的三源组合落地成每日可执行的买入清单.
 
 配置来自全 universe / 2015-2026 / 复利 + 冲击成本的回测:
-    chan-1buy-wide + tdx-dual-kdj + chan-2buy, 20 仓位, 低流动性优先
+    (原为 chan-1buy-wide + chan-2buy + tdx-dual-kdj, 均已因未来函数下架)
     -> 14.52x / 年化 25.8% / 最大回撤 30.0% / 最长回撤 463 天
     (同期基准 等权买入持有 2.25x / 年化 7.2% / 回撤 59.5%)
 
@@ -35,11 +35,12 @@ from app.services.strategy_templates import TEMPLATE_REGISTRY
 log = logging.getLogger(__name__)
 
 # 回测验证过的三个信号源。顺序无关 —— 同一票多源触发时按 STRATEGIES 顺序取第一个。
-STRATEGIES = ["chan-1buy-wide", "chan-2buy", "tdx-dual-kdj"]
+# 原来的三个策略全部下架: chan-* 系 ZigZag 重绘未来函数,
+# tdx-dual-kdj 周内多周期穿越。等新策略选定后再填。
+STRATEGIES: list[str] = []
 STRATEGY_LABEL = {
     "chan-1buy-wide": "缠论1买(宽)",
     "chan-2buy": "缠论2买",
-    "tdx-dual-kdj": "日周KDJ共振",
 }
 
 MIN_AMOUNT_K = 5000      # 20 日均额下限, 千元 (= 500 万)
