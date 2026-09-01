@@ -215,32 +215,6 @@ async def _sync_etfs():
     log.info("=== ETF sync done: %d rows inserted ===", inserted)
 
 
-async def _refresh_chan_signals() -> None:
-    """补当日新增的缠论买点 —— 必须排在 _settle_paper 之前.
-
-    实操盘的信号是从 chan_signal 表读的; 不刷这张表, 今晚新出的买点一个都
-    看不到, 实操盘会一直空仓。
-    """
-    from app.services.chan_signal_build import build_all, refresh_tail
-
-    # 新上市的票表里一条没有, 由 build_all(rebuild=False) 补全历史;
-    # 老票的新买点由 refresh_tail 补尾巴。两个都要跑。
-    r1 = await build_all(rebuild=False)
-    r2 = await refresh_tail()
-    log.info("chan_signal 刷新: 新票 %d 条, 增量 %d 条",
-             r1.get("inserted", 0), r2.get("inserted", 0))
-
-    # 收盘后把"今天算出来的信号"原样封存, 只增不改。
-    # ⚠️ 纪律: 以后不要再跑 build_all(rebuild=True)。全历史重算会把日后被
-    # ZigZag 重绘掉的信号一并抹掉 (实测约一半, 且抹掉的正是输家), 回测读到
-    # 的就成了"预知哪些信号不会被推翻"。只做每日增量, 这张表才是因果的。
-    from app.services.signal_snapshot import check_drift, take_snapshot
-    snap = await take_snapshot()
-    # 顺手核对最早一批还没查过的快照 —— 用真实前进数据量漂移率
-    drift = await check_drift()
-    log.info("信号快照: 封存 %s 条; 漂移核对: %s", snap.get("inserted"), drift)
-    await _snapshot_to_pool()
-
 
 async def _snapshot_to_pool() -> None:
     """把当天的 2 类买点写进股票池, 在网页上直接能看。只保留最近 30 天。"""

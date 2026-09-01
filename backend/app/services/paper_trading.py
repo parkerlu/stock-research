@@ -43,7 +43,6 @@ from app.models.schema import (
     PaperTrade,
     StockBasic,
 )
-from app.services.chanlun import find_class1_buys, find_class2_buys
 
 log = logging.getLogger(__name__)
 
@@ -110,6 +109,8 @@ HISTORY_DAYS = 400
 MIN_BARS = 130
 # 与 _ChanlunBase._confirm_lag 一致 —— 改这里必须同步改策略, 否则虚拟盘和
 # 回测就不是同一套东西了。
+# 信号确认滞后。缠论已下架, 保留常量供后续策略复用 —— 任何
+# "分型/极值"类信号都需要右侧K线确认, 直接用极值那根当信号日就是偷看未来。
 CONFIRM_LAG = 2
 
 
@@ -175,22 +176,6 @@ async def _load_one(db: AsyncSession, ts_code: str, end: date) -> pd.DataFrame |
             df[c] = (df[c].values * f).round(4)
     return df.reset_index(drop=True)
 
-
-def _signal_today(df: pd.DataFrame, lag: int = CONFIRM_LAG) -> bool:
-    """最后一根 bar 是否是**可操作**的 chan-2buy 买点。
-
-    ⚠️ 必须加 lag。分型是"3 根合并K 的中间那根", 右邻那根出来之前根本不知道
-    它是分型 —— 直接用 find_class2_buys 返回的 bar_idx 当信号日就是偷看未来。
-    实测确认滞后: 中位 1 根 / 均值 1.47 / 95分位 3 根, lag=2 覆盖 89.5%。
-    与 _ChanlunBase._confirm_lag=2 保持一致, 这样虚拟盘和回测口径相同。
-    """
-    c = df.close.values
-    h = df.high.values
-    l = df.low.values
-    c1 = find_class1_buys(c, h, l)
-    c2 = find_class2_buys(c, h, l, {b.bar_idx for b in c1})
-    last = len(c) - 1
-    return any(b.bar_idx + lag == last for b in c2)
 
 
 async def get_account(db: AsyncSession, name: str = "chan2-10w") -> PaperAccount | None:
