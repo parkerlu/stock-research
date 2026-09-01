@@ -13,6 +13,9 @@ interface Props {
 }
 
 const LS_STD_KEY = "chart.activeIndicators.v1";
+
+// MA 周期。klinecharts 默认 5/10/30/60, 这里按需要补上 20。
+const MA_PERIODS = [5, 10, 20, 30, 60];
 const LS_TDX_KEY = "chart.activeTdxIndicators.v1";
 
 function readLS(key: string, fallback: string[]): string[] {
@@ -122,7 +125,9 @@ export function ChartArea({ tradeActions }: Props = {}) {
       for (const name of activeIndicators) {
         const isMain = MAIN_PANE_INDICATORS.has(name);
         if (isMain) {
-          chart.createIndicator(name, true, { id: "candle_pane" });
+          chart.createIndicator(
+            name === "MA" ? { name, calcParams: MA_PERIODS } : name,
+            true, { id: "candle_pane" });
         } else {
           const paneId = `kc_${name}_pane`;
           chart.createIndicator(name, false, { id: paneId });
@@ -162,7 +167,9 @@ export function ChartArea({ tradeActions }: Props = {}) {
           if (chart) {
             if (isMainPane) {
               // isStack=true → overlay onto candle pane without wiping it
-              chart.createIndicator(name, true, { id: "candle_pane" });
+              chart.createIndicator(
+            name === "MA" ? { name, calcParams: MA_PERIODS } : name,
+            true, { id: "candle_pane" });
             } else {
               const paneId = `kc_${name}_pane`;
               chart.createIndicator(name, false, { id: paneId });

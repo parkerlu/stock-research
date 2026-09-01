@@ -34,7 +34,7 @@ DEFAULT_ACCOUNT = LIVE_ACCOUNT
 class CreateRequest(BaseModel):
     name: str = DEFAULT_ACCOUNT
     capital: float = 100_000.0
-    slots: int = 10
+    slots: int = 6
     start: date | None = None
 
 
@@ -257,7 +257,7 @@ class StepRequest(BaseModel):
 class ResetRequest(BaseModel):
     name: str = DEFAULT_ACCOUNT
     capital: float = 100_000.0
-    slots: int = 10
+    slots: int = 6
     start: date                 # 回放起点, 必填 —— 演示盘的意义就在这里
 
 

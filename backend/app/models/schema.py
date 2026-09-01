@@ -257,21 +257,27 @@ class SignalSnapshot(Base):
     checked_on: Mapped[date | None] = mapped_column(Date, nullable=True)
 
 
-class ChanSignal(Base):
-    """缠论买点的预计算缓存.
+class StrategySignal(Base):
+    """策略买点的预计算缓存 —— 任何策略共用一张表, 用 strategy 列区分.
 
-    虚拟盘回放需要"点一下走一天", 而每天现算 4400 只票的缠论要 75 秒 ——
-    根本没法交互。但整段历史一次性算完只要几十秒(信号本身不依赖回放进度),
-    所以把结果落表, 回放时变成一次索引查询。
+    为什么要缓存: 虚拟盘要"点一下走一天", 每天现算全市场 4400 只要几十秒,
+    交互完全不可用。买点只依赖该票自身历史、与回放进度无关, 整段一次算完即可。
 
-    trade_date 存的是**可操作日**(分型 + CONFIRM_LAG), 不是分型日 ——
-    直接对应下单日的前一天, 消费方不用再关心 lag。
+    ⚠️ 纪律(chan-2buy 的教训): 只做每日增量 append, 不要全历史重建。
+    ZigZag 类指标会在重建时抹掉"当时成立、后来被更低的低点撤销"的信号,
+    而抹掉的正是输家 —— 回测读表就等于预知哪些信号不会被推翻。
+    当前策略 tdx-dual-kdj 是纯公式(实测撤销率 0.05%), 不受此影响; 换策略前
+    必须用 scripts/screening/causal_check.py 重新验一遍。
     """
-    __tablename__ = "chan_signal"
-    __table_args__ = (Index("ix_chan_signal_date", "trade_date", "kind"),)
+
+    __tablename__ = "strategy_signal"
+    __table_args__ = (
+        UniqueConstraint("strategy", "ts_code", "trade_date", name="uq_strategy_signal"),
+        Index("ix_strategy_signal_lookup", "strategy", "trade_date"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    ts_code: Mapped[str] = mapped_column(String(12), index=True)
-    trade_date: Mapped[date] = mapped_column(Date, index=True)
-    kind: Mapped[str] = mapped_column(String(4))          # "1" | "2"
-    fractal_date: Mapped[date] = mapped_column(Date)      # 分型日(事后位置), 供核对
+    strategy: Mapped[str] = mapped_column(String(32), nullable=False)
+    ts_code: Mapped[str] = mapped_column(String(12), nullable=False)
+    # 可操作日: 信号成立的交易日, 次日开盘成交
+    trade_date: Mapped[date] = mapped_column(Date, nullable=False)

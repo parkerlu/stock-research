@@ -103,6 +103,8 @@ export function PaperPanel() {
   const [acct, setAcct] = useState<string>(LIVE_ACCOUNT);
   const [signals, setSignals] = useState<SignalPick[]>([]);
   const [playing, setPlaying] = useState(false);
+  // 推进一天要等后端撮合, 慢的时候几秒 —— 不给反馈会让人以为点没生效
+  const [stepping, setStepping] = useState(false);
   const [speed, setSpeed] = useState(600);
   const [startDate, setStartDate] = useState("2020-01-02");
   // 起始日期框跟随账户实际起点 —— 否则重置后框里还留着上次手打的日期,
@@ -166,6 +168,7 @@ export function PaperPanel() {
 
   /** 演示盘: 走一个交易日 */
   const stepOnce = useCallback(async () => {
+    setStepping(true);
     try {
       const r = await stepPaper(acct, 1);
       await reload(acct);
@@ -175,6 +178,8 @@ export function PaperPanel() {
       playRef.current = false; setPlaying(false);
       setErr(x instanceof Error ? x.message : "推进失败");
       return false;
+    } finally {
+      setStepping(false);
     }
   }, [acct, reload]);
 
@@ -279,11 +284,14 @@ export function PaperPanel() {
           )}
           {isDemo ? (
             <>
-              <button className="pp-run" onClick={() => void stepOnce()} disabled={playing}>
-                下一日 ▸
+              <button className="pp-run" onClick={() => void stepOnce()}
+                      disabled={playing || stepping}>
+                {stepping ? <span className="pp-spin" /> : null}
+                {stepping ? "计算中" : "下一日 ▸"}
               </button>
               <button className={`pp-run pp-play${playing ? " on" : ""}`}
                       onClick={() => setPlaying((v) => !v)}>
+                {playing && stepping ? <span className="pp-spin" /> : null}
                 {playing ? "⏸ 暂停" : "▶ 自动"}
               </button>
               <select className="pp-speed" value={speed}

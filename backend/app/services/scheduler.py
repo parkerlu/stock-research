@@ -312,13 +312,28 @@ async def daily_sync_job():
     log.info("====== daily sync triggered at 15:30 ======")
     await _sync_stocks()
     await _sync_etfs()
-    # ⚠️ 2026-09-01 起停用缠论全链路 (信号刷新 + 虚拟盘结算)。
-    # 原因: 审计证实 chan-2buy 的历史回测靠三条未来函数撑起来 ——
-    # ZigZag 重绘幸存者偏差(主犯)、用当前股票名快照过滤 ST/退市、
-    # 盘中止损资金穿越回开盘。修完后 10.7 年从 229.7 倍变成 0.72 倍、
-    # 年化 -3.0%, 相对随机入场的超额约 1.5σ, 统计上与零无异。
-    # 完整审计见 artifact 9cd4b91f。
-    # 要重新启用: 先在因果口径(chan_signal kind='2c')下重新证明有边际。
+    # 信号增量 + 虚拟盘结算。策略 tdx-dual-kdj —— 缠论已下架(三条未来函数,
+    # 详见 artifact 9cd4b91f)。当前策略纯公式, 四道闸全过: 因果性撤销率 0.05%,
+    # 样本内 t=22, 两个真样本外窗口 z=7.62 / 3.58 且均 12/12 跑赢随机对照。
+    # ⚠️ 只做增量(since=表内最新日), 不要全历史重建 —— 见 signal_build 注释。
+    try:
+        from sqlalchemy import func as _f
+
+        from app.models.schema import StrategySignal
+        from app.services.signal_build import build as build_signals
+
+        async with async_session() as _db:
+            last = (await _db.execute(
+                select(_f.max(StrategySignal.trade_date))
+                .where(StrategySignal.strategy == PAPER_STRATEGY))).scalar_one_or_none()
+        log.info("信号增量: %s", await build_signals(PAPER_STRATEGY, since=last))
+    except Exception as exc:                      # noqa: BLE001
+        log.exception("signal build failed: %s", exc)
+    try:
+        await _settle_paper()
+    except Exception as exc:                      # noqa: BLE001
+        # 虚拟盘出错不影响行情同步 —— run_day 对已结算日期幂等, 下次补上
+        log.exception("paper settlement failed: %s", exc)
     log.info("====== daily sync complete ======")
 
 

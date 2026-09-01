@@ -2122,3 +2122,15 @@ body {
 .pp-act-tier2   { background: rgba(53,208,127,.25); color: #35d07f; }
 .pp-act-stop    { background: rgba(120,144,180,.20); color: #9fb3d0; }
 .pp-act-timeout { background: rgba(120,144,180,.15); color: #8fa3bf; }
+
+/* 回放推进时的加载指示 —— 后端撮合要几秒, 没反馈会让人重复点击 */
+.pp-spin {
+  display: inline-block; width: 10px; height: 10px; margin-right: 5px;
+  border: 2px solid currentColor; border-right-color: transparent;
+  border-radius: 50%; vertical-align: -1px;
+  animation: pp-spin .7s linear infinite;
+}
+@keyframes pp-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .pp-spin { animation-duration: 2.4s; }
+}

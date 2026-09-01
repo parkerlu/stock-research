@@ -11,12 +11,14 @@ const TIMEFRAMES: { label: string; value: Timeframe }[] = [
   { label: "月", value: "1m" },
 ];
 
+// 只保留 MA —— 其余指标平时不看, 留着反而挤占工具栏和视线。
+// MA 周期见 MainChart 的 MA_PERIODS。
 const INDICATORS = [
-  { group: "均线", items: ["MA", "EMA", "BOLL"] },
-  { group: "趋势", items: ["MACD", "DMI", "SAR"] },
-  { group: "摆动", items: ["KDJ", "RSI", "WR"] },
-  { group: "量能", items: ["OBV"] },
+  { group: "均线", items: ["MA"] },
 ];
+
+// 画线工具暂时隐藏 —— 日常用不到。改成 true 即可恢复, 代码原样保留。
+const SHOW_DRAWING = false;
 
 const OVERLAYS = [
   { label: "趋势线", type: "segment" },
@@ -141,6 +143,7 @@ export function Toolbar({
         </>
       )}
 
+      {SHOW_DRAWING && <>
       <div className="toolbar-divider" />
 
       <div className="toolbar-group dropdown-container">
@@ -157,6 +160,7 @@ export function Toolbar({
           ))}
         </div>
       </div>
+      </>}
 
       <div className="toolbar-group">
         <button

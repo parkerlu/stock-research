@@ -35,7 +35,7 @@ from sqlalchemy import exists, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.schema import (
-    ChanSignal,
+    StrategySignal,
     DailyCandle,
     PaperAccount,
     PaperEquity,
@@ -46,8 +46,14 @@ from app.models.schema import (
 
 log = logging.getLogger(__name__)
 
+# 仓位数选 6 的依据(2026-09 实测):
+#   熊市窗口 2022-01~2024-08: 6 仓位年化 45.10%/回撤 16.5%/z=25.78, 全场最优
+#   反弹窗口 2024-09~2026-08: 6 仓位年化 64.03% 但 z=1.48, 跑不赢随机噪声
+# 即统计上两窗口结论不一致 —— 3 仓位在反弹窗口能到 101% 但熊市只有 38.9%
+# 且回撤 32.8%, 明显是仓位太少导致个股运气主导。最终按"6 只票人能真正盯住,
+# 10 只流于形式"的可操作性理由定 6, 而不是靠回测数字挑最高的那个。
 DEFAULT_CONFIG = {
-    "strategy": "chan-2buy",
+    "strategy": "tdx-dual-kdj",
     "stop_pct": 0.06,        # 止损
     "tier1_pct": 0.04,       # 第一批止盈
     "tier1_frac": 0.5,       # 卖出比例
@@ -185,7 +191,7 @@ async def get_account(db: AsyncSession, name: str = "chan2-10w") -> PaperAccount
 
 
 async def create_account(db: AsyncSession, name: str = "chan2-10w",
-                         capital: float = 100_000.0, slots: int = 10,
+                         capital: float = 100_000.0, slots: int = 6,
                          start: date | None = None) -> PaperAccount:
     acct = PaperAccount(
         name=name, initial_capital=capital, cash=capital, slots=slots,
@@ -346,7 +352,7 @@ async def run_day(db: AsyncSession, acct: PaperAccount, day: date,
             # [审计实验 2026-09] universe_neutral: 见 _universe_ok 注释;
             # signal_kind='2c' 可切到因果版(无重绘)信号表, 默认 '2' 不变
             neutral=bool(cfg.get("universe_neutral")),
-            kind=str(cfg.get("signal_kind", "2")))
+            strategy=str(cfg.get("strategy_signal", "tdx-dual-kdj")))
         # ⚠️ 每仓目标必须按"当前净值"算, 不是初始资金 —— 用初始资金就是固定
         # 金额下注, 赚到的钱永远躺在现金里不再投出去, 十年下来差好几倍。
         mv_now = 0.0
@@ -431,33 +437,18 @@ async def scan_signals(db: AsyncSession, day: date, exclude: set[str] | None = N
                        on_progress=None, require_next: bool = True,
                        mode: str = "next_open",
                        neutral: bool = False,
-                       kind: str = "2") -> list[dict]:
-    """当日可操作的 chan-2buy 买点, 按低流动性优先排序.
+                       strategy: str = "tdx-dual-kdj") -> list[dict]:
+    """当日可操作的买点, 按低流动性优先排序.
 
-    从 chan_signal 预计算表读 —— 现算 4400 只票要 75 秒, 回放时点一下走一天
-    根本没法用。表里的 trade_date 已含 CONFIRM_LAG, 这里不用再处理 lag。
+    从 strategy_signal 预计算表读 —— 现算全市场 4400 只要几十秒, 回放时
+    点一下走一天根本没法用。表里的 trade_date 就是可操作日, 次日开盘成交。
     """
     exclude = exclude or set()
-    if mode == "fractal_close":
-        # 要的是"分型的下一根K正好是 day"的信号。表里 trade_date = 分型 + 2 根,
-        # 所以条件等价于: day 与 trade_date 之间, 该票再没有别的K线。
-        # (不能直接按日期加减 —— 停牌会让自然日和K线根数对不上。)
-        codes = (await db.execute(
-            select(ChanSignal.ts_code).where(
-                ChanSignal.kind == kind,
-                ChanSignal.trade_date > day,
-                ChanSignal.trade_date <= day + timedelta(days=20),
-                ~exists(select(DailyCandle.ts_code).where(
-                    DailyCandle.ts_code == ChanSignal.ts_code,
-                    DailyCandle.trade_date > day,
-                    DailyCandle.trade_date < ChanSignal.trade_date)),
-            )
-        )).scalars().all()
-    else:
-        codes = (await db.execute(
-            select(ChanSignal.ts_code)
-            .where(ChanSignal.trade_date == day, ChanSignal.kind == kind)
-        )).scalars().all()
+    codes = (await db.execute(
+        select(StrategySignal.ts_code)
+        .where(StrategySignal.strategy == strategy,
+               StrategySignal.trade_date == day)
+    )).scalars().all()
     codes = [c for c in codes if c not in exclude]
     if not codes:
         return []

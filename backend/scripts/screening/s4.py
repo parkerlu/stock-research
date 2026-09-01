@@ -18,7 +18,7 @@ import screen as S
 
 STOP, T1, T2 = CFG["stop_pct"], CFG["tier1_pct"], CFG["tier2_pct"]
 MAXH, LOT = int(CFG["max_hold_days"] * 1.6), CFG["lot"]
-SLOTS, CAP = 10, 100_000.0
+SLOTS, CAP = 10, 100_000.0        # SLOTS 在 main 里按扫描覆盖
 MIN_AMT_K = CFG["min_amount_k"]          # 20日均额下限(千元)
 
 
@@ -63,9 +63,11 @@ async def build(codes, d0, d1, tmpl):
     return data
 
 
-def simulate(data, days, rng=None):
+def simulate(data, days, rng=None, slots=None):
     """逐日撮合。rng 非空 = 随机入场对照(忽略真实信号, 每天随机挑候选)。"""
+    slots = slots or SLOTS
     cash, pos = CAP, {}                  # code -> dict
+    occ = []                             # 每日占用仓位数, 用来量闲置
     peak = eq = CAP
     mdd = 0.0
     trades = 0
@@ -95,7 +97,7 @@ def simulate(data, days, rng=None):
                 cash += p["sh"]*px - trade_fee(p["sh"]*px, True, day)
                 del pos[code]; trades += 1
         # --- 入场: 用**前一日**的信号, 按今日开盘价成交 ---
-        free = SLOTS - len(pos)
+        free = slots - len(pos)
         if free > 0 and di > 0:
             prev = days[di-1]
             cands = []
@@ -114,7 +116,7 @@ def simulate(data, days, rng=None):
             # 知道今天怎么收 —— 这正是我在缠论审计里挑出来的那类盘中穿越。
             mv = sum(p["sh"]*data[c]["c"][data[c]["idx"][prev]]
                      for c,p in pos.items() if prev in data[c]["idx"])
-            target = (cash + mv) / SLOTS
+            target = (cash + mv) / slots
             for a20, code, i in cands:
                 if free <= 0: break
                 px = data[code]["o"][i]
@@ -133,7 +135,8 @@ def simulate(data, days, rng=None):
             if i is not None: mv += p["sh"]*s["c"][i]
         eq = cash + mv
         peak = max(peak, eq); mdd = max(mdd, (peak-eq)/peak)
-    return eq, mdd, trades
+        occ.append(len(pos))
+    return eq, mdd, trades, occ
 
 
 async def main():
@@ -154,26 +157,30 @@ async def main():
     print(f"  {len(data)} 只有效 · {len(days)} 个交易日", flush=True)
     yrs = len(days)/252
 
-    eq, mdd, tr = simulate(data, days)
-    print(f"\n{tmpl:<18} 期末 {eq:>12,.0f}  {eq/CAP:>6.2f}x  年化 {100*((eq/CAP)**(1/yrs)-1):>7.2f}%"
-          f"  回撤 {100*mdd:>5.1f}%  {tr} 笔")
-    # 3 个种子的极差就有 37.7pp —— 噪声比策略差异还大, 必须多跑几个把分布量准
-    cagrs, mdds = [], []
-    for sd in range(12):
-        e2, m2, t2 = simulate(data, days, rng=np.random.default_rng(sd+1))
-        cg = 100*((e2/CAP)**(1/yrs)-1)
-        cagrs.append(cg); mdds.append(100*m2)
-        print(f"  随机对照 seed{sd:<2}  {e2:>12,.0f}  {e2/CAP:>6.2f}x  年化 {cg:>7.2f}%"
-              f"  回撤 {100*m2:>5.1f}%  {t2} 笔", flush=True)
-    a = np.array(cagrs)
-    strat = 100*((eq/CAP)**(1/yrs)-1)
-    z = (strat - a.mean()) / a.std(ddof=1)
-    beat = int((a < strat).sum())
-    print(f"\n随机对照 {len(a)} 个种子: 均值 {a.mean():.2f}%  标准差 {a.std(ddof=1):.2f}pp"
-          f"  区间 [{a.min():.2f}%, {a.max():.2f}%]  平均回撤 {np.mean(mdds):.1f}%")
-    print(f"策略 {strat:.2f}%  =>  超出随机均值 {strat-a.mean():+.2f}pp  z = {z:.2f}"
-          f"  ({beat}/{len(a)} 个种子被跑赢)")
-    print(f"判定: {'显著跑赢' if z > 2.5 and beat == len(a) else '与随机不可区分' if z < 2.0 else '边缘'}")
+    # --- 仓位数扫描: 集中度 vs 分散 ---
+    print(f"\n{'仓位数':>6}{'期末':>13}{'倍数':>7}{'年化%':>9}{'回撤%':>8}"
+          f"{'笔数':>7}{'占用':>7}{'利用率':>8}", flush=True)
+    res = {}
+    for sl in (10, 8, 6, 5, 4, 3):
+        e, m, t, oc = simulate(data, days, slots=sl)
+        oc = np.array(oc)
+        cg = 100*((e/CAP)**(1/yrs)-1)
+        res[sl] = (cg, 100*m)
+        print(f"{sl:>6}{e:>13,.0f}{e/CAP:>7.2f}{cg:>9.2f}{100*m:>8.1f}"
+              f"{t:>7}{oc.mean():>7.2f}{100*oc.mean()/sl:>7.1f}%", flush=True)
+
+    # 随机对照按同样仓位数各跑 6 个种子, 确认不是噪声
+    print(f"\n{'仓位数':>6}{'策略年化%':>11}{'随机均值%':>11}{'随机std':>9}{'z值':>7}  判定", flush=True)
+    for sl in (10, 6, 5, 3):
+        cg = res[sl][0]
+        rs = []
+        for sd in range(6):
+            e2, _, _, _ = simulate(data, days, rng=np.random.default_rng(sd+1), slots=sl)
+            rs.append(100*((e2/CAP)**(1/yrs)-1))
+        a = np.array(rs); z = (cg - a.mean())/a.std(ddof=1)
+        print(f"{sl:>6}{cg:>11.2f}{a.mean():>11.2f}{a.std(ddof=1):>9.2f}{z:>7.2f}"
+              f"  {'显著' if z > 2.5 else '不显著'}", flush=True)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
