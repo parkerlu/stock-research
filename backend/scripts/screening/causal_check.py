@@ -15,9 +15,9 @@ from screen import load_bars, load_codes
 from app.services.strategy_templates import TEMPLATE_REGISTRY as T
 
 # 快批里通过 |t|>3.2 的 16 个
-PASSED = ["tdx-dual-kdj","rev-55","rev-60","rev-50","mm-55","mm-50","mm-30","mm-40",
-          "tdx-macd-pit","rev-40","rev-30","mmhz","mm-broad-50","mm-pure-50",
-          "mm-broad-40","mm-pure-40"]
+# 只测纯公式候选。rev-*/mm-*/ml_direct_* 加载训练好的模型, 已在真样本外
+# (训练截止 2024-09 之后)集体崩塌, 不再浪费算力。
+PASSED = ["tdx-macd-pit", "tdx-dual-kdj", "mmhz", "tdx-expma-trio", "tdx-triple-gold"]
 # ⚠️ 切点必须密集且覆盖"周内每一天"。
 # 教训: 原来 6 个随机切点, 信号落进残缺周的概率太低 —— tdx-dual-kdj 的周线
 # 穿越(周一就用到周五收盘)只测出 0.05% 不一致, 我把低检验力误当成了干净。
