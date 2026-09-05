@@ -16,5 +16,6 @@ python-dotenv==1.1.*
 aiosqlite==0.21.*
 apscheduler==3.11.*
 xgboost>=2.0
+baostock>=0.8   # 仅 scripts/train_t0.py 用: 5min 历史数据(免费渠道里唯一还能用的)
 pyarrow>=15.0
 scikit-learn>=1.3
