@@ -281,3 +281,175 @@ class StrategySignal(Base):
     ts_code: Mapped[str] = mapped_column(String(12), nullable=False)
     # 可操作日: 信号成立的交易日, 次日开盘成交
     trade_date: Mapped[date] = mapped_column(Date, nullable=False)
+
+
+class ConceptSector(Base):
+    """概念板块 —— 同花顺口径。list_date 是板块被创建的日期,
+    本身就是"市场正式承认这个主题"的时间戳。"""
+
+    __tablename__ = "concept_sector"
+
+    ts_code: Mapped[str] = mapped_column(String(12), primary_key=True)  # 885728.TI
+    name: Mapped[str] = mapped_column(String(64), index=True)
+    count: Mapped[int | None] = mapped_column(Integer)          # 成分股数
+    exchange: Mapped[str | None] = mapped_column(String(10))
+    list_date: Mapped[date | None] = mapped_column(Date, index=True)
+    type: Mapped[str | None] = mapped_column(String(4))          # N=概念 I=行业 R=地域
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+
+class ConceptMember(Base):
+    """板块成分股 —— 多对多。⚠️ 上游只给当前快照, 没有历史进出记录,
+    因此这张表能回答"现在谁属于哪个板块", 但不能用来做历史回测。"""
+
+    __tablename__ = "concept_member"
+    __table_args__ = (
+        Index("ix_concept_member_stock", "ts_code"),
+        Index("ix_concept_member_sector", "sector_code"),
+        UniqueConstraint("sector_code", "ts_code", name="uq_concept_member"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    sector_code: Mapped[str] = mapped_column(String(12))
+    ts_code: Mapped[str] = mapped_column(String(12))
+    name: Mapped[str | None] = mapped_column(String(64))
+
+
+class MaimaiSignal(Base):
+    """买卖很准 v3 —— 原始信号 + 模型评分。
+
+    原指标的买点(超卖结束→反转确认)本身与随机无异(32万信号实测胜率48.7%,
+    中位-0.132%)。这里用 XGBoost 在【同日×同波动层】中性化标签上训练过滤器,
+    样本外把胜率提到 51.3%、中位数翻正到 +0.264%, 三个波动档超出全为正。
+
+    score: 模型原始打分(同波动层内超额的预测值)
+    rank_pct: 当日所有信号中的分位 (1.0 = 最好)。前端据此分强/中/弱三档。
+    """
+
+    __tablename__ = "maimai_signal"
+    __table_args__ = (
+        Index("ix_maimai_lookup", "ts_code", "trade_date"),
+        Index("ix_maimai_date", "trade_date"),
+    )
+
+    ts_code: Mapped[str] = mapped_column(String(12), primary_key=True)
+    trade_date: Mapped[date] = mapped_column(Date, primary_key=True)
+    side: Mapped[str] = mapped_column(String(4), primary_key=True, default="buy")  # buy/sell
+    score: Mapped[float] = mapped_column(Numeric(12, 6))
+    rank_pct: Mapped[float] = mapped_column(Numeric(6, 4))
+    grade: Mapped[str] = mapped_column(String(4))       # 强 / 中 / 弱
+
+
+class PumpSignal(Base):
+    """主力吸筹 —— 预测未来10日内出现拉升(单日涨幅>7% 且量>20日均量2倍)的概率。
+
+    核心信息来自筹码分布(cyq_perf)的【获利盘族】特征, 占模型重要性 60%:
+      - 获利盘变化: 低位筹码换手的痕迹
+      - 获利盘背离: 价格没动但获利盘上升 = 主力在低位接货, 价格图上看不出来
+    「筹码集中度」反而无效(Q10/Q1=1.10) —— 吸筹不一定让筹码变集中,
+    但一定会改变获利盘结构。
+
+    样本外(2020-2026 walk-forward, 160万+样本):
+      Q10/Q1 = 4.81, 按天 t = 77.4, 逐年 1.70~2.02 倍无失效。
+      Top10% 拉升概率 17.5% (基础 9.8%), Top1% 达 29.7%。
+    """
+
+    __tablename__ = "pump_signal"
+    __table_args__ = (
+        Index("ix_pump_lookup", "ts_code", "trade_date"),
+        Index("ix_pump_date_rank", "trade_date", "rank_pct"),
+    )
+
+    ts_code: Mapped[str] = mapped_column(String(12), primary_key=True)
+    trade_date: Mapped[date] = mapped_column(Date, primary_key=True)
+    prob: Mapped[float] = mapped_column(Numeric(8, 5))
+    rank_pct: Mapped[float] = mapped_column(Numeric(6, 4))
+    grade: Mapped[str] = mapped_column(String(4))
+
+
+class DidianSignal(Base):
+    """低点组合 v2 —— 原指标「阶段底部」(动力线上穿0.2) + 模型过滤。
+
+    三个训练指标里最强的一个:
+      原信号本身 +2.924%(H=20), 胜率 53.8%, 按天 t=2.87 —— 起点就优于买卖很准 2.7 倍
+      过滤后 Top10%: +4.983%, 中位 +2.563%, 胜率 57.7%, **按天 t=3.88**
+      波动层内三档超出全为正且 t 全部 >2.5 (2.55 / 2.80 / 3.74)
+
+    特征里 `筹码宽度` 排第一(0.130) —— 而同一特征在主力吸筹里完全无效(Q10/Q1=1.10)。
+    筹码数据源通用, 但具体哪个筹码特征有效, 要按目标重新筛。
+
+    ⚠️ 持有期 H=20(baseline 在此窗口最强), 与买卖很准的 H=10 不同。
+    """
+
+    __tablename__ = "didian_signal"
+    __table_args__ = (
+        Index("ix_didian_lookup", "ts_code", "trade_date"),
+        Index("ix_didian_date_rank", "trade_date", "rank_pct"),
+    )
+
+    ts_code: Mapped[str] = mapped_column(String(12), primary_key=True)
+    trade_date: Mapped[date] = mapped_column(Date, primary_key=True)
+    score: Mapped[float] = mapped_column(Numeric(12, 6))
+    rank_pct: Mapped[float] = mapped_column(Numeric(6, 4))
+    grade: Mapped[str] = mapped_column(String(4))
+
+
+class Maimai35Signal(Base):
+    """买卖很准 v3.5 —— 原指标【参数重扫】后的版本。
+
+    移植过来的参数(MA5/LLV10/连续5)是照抄 TDX 公式的, 从没针对 A 股验证过。
+    36 组网格扫描后它只排 9/33。改用 MA8/LLV20/连续10:
+
+        全市场对比 (H=20, vs 同期随机对照)
+        原参数  28.1万信号  胜率 50.9%  超出 +0.190pp
+        v3.5     9.5万信号  胜率 56.2%  超出 +0.602pp   ← +5.3pp
+
+    ⚠️ 代价: 它是"放大器"。好年份 +1.0pp, 坏年份 -1.0pp(原参数只有 ±0.5pp),
+    信号量少三分之二。2020/2023/2025 三年跑输随机 —— 超卖反转在普涨行情里
+    天然吃亏, 那时候随便买什么都涨, 严格筛选反而错过。
+    """
+
+    __tablename__ = "maimai35_signal"
+    __table_args__ = (
+        Index("ix_mm35_lookup", "ts_code", "trade_date"),
+        Index("ix_mm35_date_rank", "trade_date", "rank_pct"),
+    )
+
+    ts_code: Mapped[str] = mapped_column(String(12), primary_key=True)
+    trade_date: Mapped[date] = mapped_column(Date, primary_key=True)
+    score: Mapped[float] = mapped_column(Numeric(12, 6))
+    rank_pct: Mapped[float] = mapped_column(Numeric(6, 4))
+    grade: Mapped[str] = mapped_column(String(4))
+
+
+class TopList(Base):
+    """龙虎榜每日明细 —— 交易所公布的实名席位成交, 是"谁在买"的硬记录。
+
+    覆盖率仅 1.2% 的股票日(只有异动才上榜), 所以不能当主要特征,
+    但作为共振的第三个条件很有效:
+      v4 (v3强×吸筹强)          胜率 63.7%  3.0个/天
+      + 近5日机构净买入          胜率 76.2%  0.3个/天
+
+    同等涨幅下对比(排除"异动本身")最有价值的是【−2~2%】那一档: +4.95pp。
+    价格几乎没动却上了龙虎榜 = 大资金在换手但价格没反应, 与「获利盘背离」同一逻辑,
+    只是这里是实名席位的硬记录, 不是从价格反推的。
+
+    net_amount 分五档: Q1净卖 14.93% → Q4 28.63% → Q5净买 25.20%,
+    **不是越多越好** —— 极端净买入(Q5)反而回落, 可能是游资对倒或已拉过高。
+    """
+
+    __tablename__ = "top_list"
+    __table_args__ = (
+        Index("ix_toplist_lookup", "ts_code", "trade_date"),
+        Index("ix_toplist_date", "trade_date"),
+    )
+
+    ts_code: Mapped[str] = mapped_column(String(12), primary_key=True)
+    trade_date: Mapped[date] = mapped_column(Date, primary_key=True)
+    close: Mapped[float | None] = mapped_column(Numeric(12, 4))
+    pct_change: Mapped[float | None] = mapped_column(Numeric(10, 4))
+    turnover_rate: Mapped[float | None] = mapped_column(Numeric(10, 4))
+    l_buy: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    l_sell: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    net_amount: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    reason: Mapped[str | None] = mapped_column(String(128))

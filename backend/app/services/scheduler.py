@@ -334,6 +334,23 @@ async def daily_sync_job():
     except Exception as exc:                      # noqa: BLE001
         # 虚拟盘出错不影响行情同步 —— run_day 对已结算日期幂等, 下次补上
         log.exception("paper settlement failed: %s", exc)
+
+    # 训练指标(买卖很准v3 / 主力吸筹 / 低点组合v2) —— 拉当日筹码后重算评分。
+    # 放在最后: 依赖当日 K 线已入库, 且失败不该影响前面任何一步。
+    # 模型不在这里重训(见 update_indicators 注释), 只用已有模型打分。
+    try:
+        from app.commands.update_indicators import main as update_indicators
+        import sys
+
+        argv = sys.argv
+        sys.argv = ["update_indicators", "--days", "10"]
+        try:
+            await update_indicators()
+        finally:
+            sys.argv = argv
+    except Exception as exc:                      # noqa: BLE001
+        log.exception("训练指标更新失败: %s", exc)
+
     log.info("====== daily sync complete ======")
 
 
