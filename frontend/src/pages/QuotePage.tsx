@@ -4,11 +4,12 @@ import type { AppMode } from "../components/NavBar";
 import { SearchPanel } from "../components/SearchPanel";
 import { PoolPanel } from "../components/PoolPanel";
 import { StrategyPanel } from "../components/StrategyPanel";
-import { ScreeningPanel } from "../components/ScreeningPanel";
 import { StrategyPoolPanel } from "../components/StrategyPoolPanel";
 import { SystemPanel } from "../components/SystemPanel";
 import { ChartArea } from "../components/ChartArea";
 import { LiveView } from "../components/ChartArea/LiveView";
+import { SectorView } from "../components/SectorView";
+import { TrainedScreen } from "../components/ScreeningPanel/TrainedScreen";
 import { PaperPanel } from "../components/PaperPanel";
 import { useStrategyStore } from "../stores/strategyStore";
 
@@ -42,7 +43,7 @@ export function QuotePage() {
           </>
         ) : mode === "screening" ? (
           <>
-            <ScreeningPanel />
+            <TrainedScreen />
             <ChartArea tradeActions={actions} />
           </>
         ) : mode === "live" ? (
@@ -50,6 +51,8 @@ export function QuotePage() {
             <SearchPanel />
             <LiveView />
           </>
+        ) : mode === "sector" ? (
+          <SectorView />
         ) : mode === "paper" ? (
           <>
             <PaperPanel />

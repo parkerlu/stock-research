@@ -3,6 +3,7 @@ export type AppMode =
   | "screening"
   | "strategy-pool"
   | "live"
+  | "sector"
   | "paper"
   | "quote"
   | "pool"
@@ -49,6 +50,13 @@ export function NavBar({ mode, onModeChange }: Props) {
           title="虚拟盘 — chan-2buy 最优配置的实盘跟踪"
         >
           虚拟盘
+        </button>
+        <button
+          className={mode === "sector" ? "active" : ""}
+          onClick={() => onModeChange("sector")}
+          title="概念板块热度 — 上涨占比 / 平均涨幅 / 成分股"
+        >
+          板块
         </button>
         <button
           className={mode === "quote" ? "active" : ""}
