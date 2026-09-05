@@ -56,10 +56,10 @@ interface Props {
   measuring?: boolean;
   onMeasure?: (r: MeasureResult | null) => void;
 
-  /** 训练指标信号。主图标记类: 颜色即等级(白 v5 > 金 v4 > 紫 v3.5 > 红 v3)。 */
+  /** 训练指标信号。主图标记类: 颜色即等级(金 v4 > 紫 v3.5 > 红 v3)。
+   *  v5 不在这里 —— 因果口径下一年仅约 7.5 个, 放 K 线上常年空白, 只在选股页出现。 */
   maimaiSignals?: { date: string; side?: string; score: number; rank_pct: number; grade: string }[];
   comboSignals?: { date: string; score: number; rank_pct: number; grade: string }[];
-  v5Signals?: { date: string; score: number; rank_pct: number; grade: string }[];
   maimai35Signals?: { date: string; score: number; rank_pct: number; grade: string }[];
   /** 副图类: 信号密集时主图会糊成一片, 画成副图能看出评分随时间的变化。 */
   pumpSignals?: { date: string; prob: number; rank_pct: number; grade: string }[];
@@ -139,7 +139,7 @@ function anchorTs(list: { timestamp: number }[], ts: number): number {
 export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
   { timeframe: tfOverride, className, tradeActions, replayDate, forecast, onBarSelected,
     measuring = false, onMeasure,
-    maimaiSignals, comboSignals, v5Signals, maimai35Signals, pumpSignals, didianSignals },
+    maimaiSignals, comboSignals, maimai35Signals, pumpSignals, didianSignals },
   ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -155,7 +155,6 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
   // signals 不会因 K 线到位重跑 —— 标记就静默消失了(实测 603997.SH 09-03)。
   useEffect(() => paintTrainedMarkers(chartRef.current, "maimai", maimaiSignals), [maimaiSignals]);
   useEffect(() => paintTrainedMarkers(chartRef.current, "combo", comboSignals, "#f0a020"), [comboSignals]);
-  useEffect(() => paintTrainedMarkers(chartRef.current, "v5", v5Signals, "#ffffff"), [v5Signals]);
   useEffect(() => paintTrainedMarkers(chartRef.current, "maimai35", maimai35Signals, "#a78bfa"), [maimai35Signals]);
 
   // 副图: 主力吸筹 / 低点组合。

@@ -12,6 +12,8 @@ export interface TrainedMeta {
   desc: string;
   grades: string[];
   default_grade: string;
+  /** 该指标建议的回看天数。信号极稀疏的(如 v5)需要长窗口, 否则常年空列表。 */
+  default_days?: number;
 }
 
 export interface ScreenItem {

@@ -8,7 +8,7 @@ import type { ScreenItem, TrainedMeta } from "../../api/trained";
 import { useQuoteStore } from "../../stores/quoteStore";
 import { AddToPool } from "./AddToPool";
 
-const DAY_OPTIONS = [1, 3, 5, 10, 20];
+const DAY_OPTIONS = [1, 3, 5, 10, 20, 60, 90];
 
 export function TrainedScreen() {
   const setCurrentStock = useQuoteStore((s) => s.setCurrentStock);
@@ -29,6 +29,7 @@ export function TrainedScreen() {
         if (r.indicators.length && !r.indicators.some((m) => m.key === indicator)) {
           setIndicator(r.indicators[0].key);
           setGrade(r.indicators[0].default_grade);
+          if (r.indicators[0].default_days) setDays(r.indicators[0].default_days);
         }
       })
       .catch(() => setMetas([]));
@@ -66,6 +67,8 @@ export function TrainedScreen() {
             onClick={() => {
               setIndicator(m.key);
               setGrade(m.default_grade);
+              // 稀疏指标(v5)自带建议窗口 —— 不套用的话切过去就是一片空白
+              setDays(m.default_days ?? 5);
             }}
           >
             <span className="ts-ind-label">{m.label}</span>

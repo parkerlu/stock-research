@@ -201,16 +201,16 @@ TRAINED_META = [
      "desc": "动能参考 · 超卖反转买点。过滤后胜率 48.9%→50.9%, 是改进不是答案",
      "grades": ["强", "中", "弱"], "default_grade": "强"},
     {"key": "v5", "label": "★★ v5 (三重共振)",
-     "desc": "v3强 × 吸筹强 × 近7日龙虎榜机构净买入。胜率 62.1%, 平均收益 +6.86%(持有20日), "
-             "按天t=11.76。每天仅 0.3 个 —— 不是选股工具, 是「出现时必须认真看」的提醒",
-     "grades": ["强"], "default_grade": "强"},
+     "desc": "v3强 × 吸筹强 × 近7日龙虎榜机构净买入。胜率 62.1%, 平均收益 +6.86%(持有20日)。"
+             "全市场一年仅约 7.5 个 —— 建议看 90 日窗口, 出现时值得认真看一眼",
+     "grades": ["强"], "default_grade": "强", "default_days": 90},
     {"key": "maimai35", "label": "买卖很准 v3.5 (参数重扫)",
      "desc": "动能参考 · 参数从 MA5/LLV10/5 改为 MA8/LLV20/10(36组扫描最优)。"
              "胜率 56.2%(原 50.9%), 信号少三分之二, 普涨行情会跑输",
      "grades": ["强", "中"], "default_grade": "强"},
     {"key": "combo", "label": "★ 买卖很准 v4 (共振)",
-     "desc": "v3 + 主力吸筹共振(近5日内先后触发)。胜率 58.3%, 超同日全市场 +1.93pp, "
-             "八年全部>54%, 波动×市值九格超出全为正(最小+11.1pp)。每天约 3~4 个",
+     "desc": "v3 + 主力吸筹共振(近5日内先后触发)。胜率 58.3%, 超同日全市场 +1.93pp。"
+             "每天约 1.2 个",
      "grades": ["强"], "default_grade": "强"},
     {"key": "didian", "label": "低点组合 v2",
      "desc": "动能参考 · 阶段底部 + 模型过滤。Top10% 胜率 57.7%(原 53.8%), 持有20日",
@@ -231,7 +231,7 @@ async def trained_list():
 async def screen_by_trained(
     indicator: str = Query("pump", description="maimai_buy / maimai_sell / pump"),
     grade: str = Query("强"),
-    days: int = Query(5, ge=1, le=60, description="最近几个交易日内出现过信号"),
+    days: int = Query(5, ge=1, le=180, description="最近几个交易日内出现过信号"),
     limit: int = Query(200, ge=1, le=500),
     db: AsyncSession = Depends(get_db),
 ):
@@ -525,7 +525,7 @@ async def v5_signals(
       v5 (+龙虎榜净买入)     胜率 62.1%  收益 +6.86%  超全市场 +2.49pp
     ⚠️ v5 因果口径下 7.7 年只有 58 个信号(约 7.5 个/年), 样本量小, 别当策略用。
 
-    ⚠️ 每天仅 0.3 个 ≈ 三天一次。不是选股工具, 是"出现时必须认真看"的提醒。
+    ⚠️ 因果口径下全市场一年仅约 7.5 个。K线菜单里已撤掉(常年空白), 只在选股页出现。
     """
     from sqlalchemy import text
 

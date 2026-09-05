@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { useQuoteStore } from "../../stores/quoteStore";
-import { getMinute, getT0Signals, getMaimaiSignals, getPumpSignals, getDidianSignals, getComboSignals, getV5Signals, getMaimai35Signals } from "../../api/quotes";
+import { getMinute, getT0Signals, getMaimaiSignals, getPumpSignals, getDidianSignals, getComboSignals, getMaimai35Signals } from "../../api/quotes";
 import { syncSymbol } from "../../api/system";
 import type { MinuteData, T0Trade, Timeframe } from "../../types/quote";
 import { MinuteChart } from "./MinuteChart";
@@ -48,10 +48,6 @@ export function LiveView() {
     { date: string; score: number; rank_pct: number; grade: string }[]
   >([]);
   const [mm35On, setMm35On] = useState(false);
-  const [v5Sig, setV5Sig] = useState<
-    { date: string; score: number; rank_pct: number; grade: string }[]
-  >([]);
-  const [v5On, setV5On] = useState(false);
   const [comboSig, setComboSig] = useState<
     { date: string; score: number; rank_pct: number; grade: string }[]
   >([]);
@@ -232,19 +228,6 @@ export function LiveView() {
     };
   }, [currentSymbol, comboOn]);
 
-  useEffect(() => {
-    if (!currentSymbol || !v5On) {
-      setV5Sig([]);
-      return;
-    }
-    let live = true;
-    getV5Signals(currentSymbol)
-      .then((r) => live && setV5Sig(r.signals ?? []))
-      .catch(() => live && setV5Sig([]));
-    return () => {
-      live = false;
-    };
-  }, [currentSymbol, v5On]);
 
   useEffect(() => {
     if (!currentSymbol || !mm35On) {
@@ -477,18 +460,17 @@ export function LiveView() {
               onToggleTdx={tdx.toggle}
               tdxBusy={tdx.busy}
               trainedActive={[...(mmOn ? ["maimai_v3"] : []), ...(pumpOn ? ["pump"] : []),
-                              ...(didianOn ? ["didian"] : []), ...(comboOn ? ["combo"] : []), ...(v5On ? ["v5"] : []), ...(mm35On ? ["maimai35"] : [])]}
+                              ...(didianOn ? ["didian"] : []), ...(comboOn ? ["combo"] : []), ...(mm35On ? ["maimai35"] : [])]}
               onToggleTrained={(n) =>
                 n === "pump" ? setPumpOn((v) => !v)
                 : n === "didian" ? setDidianOn((v) => !v)
                 : n === "maimai35" ? setMm35On((v) => !v)
-                : n === "v5" ? setV5On((v) => !v)
                 : n === "combo" ? setComboOn((v) => !v)
                 : setMmOn((v) => !v)
               }
               trainedCounts={{ maimai_v3: mmSignals.length, pump: pumpSig.length,
                                didian: didianSig.length,
-                               combo: comboSig.length, v5: v5Sig.length, maimai35: mm35Sig.length }}
+                               combo: comboSig.length, maimai35: mm35Sig.length }}
             />
           </div>
           <div className="live-pane-body">
@@ -497,7 +479,6 @@ export function LiveView() {
               pumpSignals={pumpOn ? pumpSig : undefined}
               didianSignals={didianOn ? didianSig : undefined}
               comboSignals={comboOn ? comboSig : undefined}
-              v5Signals={v5On ? v5Sig : undefined}
               maimai35Signals={mm35On ? mm35Sig : undefined} ref={dailyRef} timeframe={tf} className="live-daily" />
           </div>
         </div>

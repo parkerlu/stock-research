@@ -22,7 +22,6 @@ const INDICATORS = [
  *  买卖很准v3: 原指标买点与随机无异(胜率48.7%), 模型在同日×同波动层中性化后
  *  把 Top20% 胜率提到 51.3%、中位翻正到 +0.264%, 三个波动档超出全为正。 */
 export const TRAINED_INDICATORS = [
-  { name: "v5", label: "★★ v5 三重共振", desc: "胜率 76.2% · 收益+15.89% · 每天仅 0.3 个" },
   { name: "maimai_v3", label: "买卖很准 v3", desc: "动能参考 · 超卖反转买点, 胜率 48.9%→50.9%" },
   { name: "maimai35", label: "买卖很准 v3.5", desc: "参数重扫 · 胜率 56.2%(原 50.9%)" },
   { name: "combo", label: "买卖很准 v4", desc: "v3+吸筹共振 · 胜率 62.5%(随机 53.2%)" },

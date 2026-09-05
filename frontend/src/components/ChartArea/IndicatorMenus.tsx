@@ -8,11 +8,6 @@ import type { IndicatorMeta } from "../../types/indicator";
 /** 已训练好、可挂到 K 线上的指标。新增训练指标往这里加。 */
 export const TRAINED = [
   {
-    name: "v5",
-    label: "★★ v5 三重共振",
-    desc: "胜率 76.2% · 收益+15.89% · 每天仅 0.3 个",
-  },
-  {
     name: "maimai_v3",
     label: "买卖很准 v3",
     desc: "动能参考 · 超卖反转买点, 胜率 48.9%→50.9%",

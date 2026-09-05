@@ -7,7 +7,7 @@ import { Toolbar } from "./Toolbar";
 import { LinkedView } from "./LinkedView";
 import { MAIN_PANE_INDICATORS } from "./indicatorPanes";
 import { StockSectors } from "./StockSectors";
-import { getMaimaiSignals, getPumpSignals, getDidianSignals, getComboSignals, getV5Signals, getMaimai35Signals } from "../../api/quotes";
+import { getMaimaiSignals, getPumpSignals, getDidianSignals, getComboSignals, getMaimai35Signals } from "../../api/quotes";
 import { useTdxIndicators } from "../../hooks/useTdxIndicators";
 
 interface Props {
@@ -92,9 +92,6 @@ export function ChartArea({ tradeActions }: Props = {}) {
   const [mm35Sig, setMm35Sig] = useState<
     { date: string; score: number; rank_pct: number; grade: string }[]
   >([]);
-  const [v5Sig, setV5Sig] = useState<
-    { date: string; score: number; rank_pct: number; grade: string }[]
-  >([]);
   const [comboSig, setComboSig] = useState<
     { date: string; score: number; rank_pct: number; grade: string }[]
   >([]);
@@ -166,19 +163,6 @@ export function ChartArea({ tradeActions }: Props = {}) {
     };
   }, [currentSymbol, activeTrained]);
 
-  useEffect(() => {
-    if (!currentSymbol || !activeTrained.includes("v5")) {
-      setV5Sig([]);
-      return;
-    }
-    let live = true;
-    getV5Signals(currentSymbol)
-      .then((r) => live && setV5Sig(r.signals ?? []))
-      .catch(() => live && setV5Sig([]));
-    return () => {
-      live = false;
-    };
-  }, [currentSymbol, activeTrained]);
 
   useEffect(() => {
     if (!currentSymbol || !activeTrained.includes("maimai35")) {
@@ -358,7 +342,6 @@ export function ChartArea({ tradeActions }: Props = {}) {
           />
         ) : (
           <MainChart
-        v5Signals={activeTrained.includes("v5") ? v5Sig : undefined}
         maimai35Signals={activeTrained.includes("maimai35") ? mm35Sig : undefined}
         comboSignals={activeTrained.includes("combo") ? comboSig : undefined}
         didianSignals={activeTrained.includes("didian") ? didianSig : undefined}
