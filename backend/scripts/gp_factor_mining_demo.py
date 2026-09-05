@@ -201,8 +201,13 @@ def evaluate(node: Node, df: pd.DataFrame) -> np.ndarray:
 # ============== Fitness ==============
 
 def label_future_return(df: pd.DataFrame, horizon: int = LABEL_HORIZON) -> np.ndarray:
-    """Future N-day max return (signed)."""
-    fut = df["close"].shift(-horizon) / df["close"] - 1
+    """Future N-day return, T+1 开盘建仓 → T+1+H 开盘平仓.
+
+    ⚠️ 不能用 close.shift(-h)/close: 因子在 t 日读的就是 close[t], 拿同一根收盘价
+    当成交价是一天的执行前视, T+1 制度下也做不到。
+    """
+    entry = df["open"].shift(-1)
+    fut = df["open"].shift(-(horizon + 1)) / entry - 1
     return fut.fillna(0).values
 
 

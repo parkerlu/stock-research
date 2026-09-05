@@ -22,3 +22,4 @@ backend/models/cross_sectional_ranks.parquet
 backend/app/services/cross_sectional_ranks.parquet
 backend/models/lstm_dataset.npz
 .claude/scheduled_tasks.lock
+backend/models/t0_*.json

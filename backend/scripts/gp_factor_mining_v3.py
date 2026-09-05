@@ -116,10 +116,11 @@ async def load_panel(codes: list[str]) -> tuple[dict, np.ndarray, list[str]]:
     panel["vwap"] = panel["amount"] / np.where(panel["vol"] > 0, panel["vol"], 1)
     panel["ret"] = np.zeros((T, N))
     panel["ret"][1:] = panel["close"][1:] / panel["close"][:-1] - 1
+    # ⚠️ 标签跳过一天, 否则是"用算信号的那根收盘价成交" —— 一天的执行前视。
+    # T 日收盘算信号 → T+1 开盘建仓 → T+1+H 开盘平仓, 与模拟盘口径一致。
     future = np.zeros((T, N))
-    future[:-LABEL_HORIZON] = (
-        panel["close"][LABEL_HORIZON:] / panel["close"][:-LABEL_HORIZON] - 1
-    )
+    H = LABEL_HORIZON
+    future[:-(H + 1)] = panel["open"][H + 1:] / panel["open"][1:-H] - 1
     return panel, future, codes_used
 
 

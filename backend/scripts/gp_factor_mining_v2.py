@@ -318,9 +318,13 @@ async def load_panel(codes: list[str]) -> tuple[dict, np.ndarray, list[str]]:
     panel["ret"] = np.zeros((T, N))
     panel["ret"][1:] = panel["close"][1:] / panel["close"][:-1] - 1
 
-    # Future N-day return per stock
+    # Future N-day return per stock.
+    # ⚠️ 标签必须跳过一天: 因子在 t 日用的是 close[t], 若标签也从 close[t] 起算,
+    # 等于"用算信号的那根收盘价去成交" —— 一天的执行前视。T+1 制度下也做不到。
+    # 正确口径: T 日收盘算信号 → T+1 开盘建仓 → T+1+H 开盘平仓, 与模拟盘一致。
     future = np.zeros((T, N))
-    future[:-LABEL_HORIZON] = panel["close"][LABEL_HORIZON:] / panel["close"][:-LABEL_HORIZON] - 1
+    H = LABEL_HORIZON
+    future[:-(H + 1)] = panel["open"][H + 1:] / panel["open"][1:-H] - 1
     return panel, future, codes_used
 
 
