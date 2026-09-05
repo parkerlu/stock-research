@@ -201,7 +201,7 @@ TRAINED_META = [
      "desc": "动能参考 · 超卖反转买点。过滤后胜率 48.9%→50.9%, 是改进不是答案",
      "grades": ["强", "中", "弱"], "default_grade": "强"},
     {"key": "v5", "label": "★★ v5 (三重共振)",
-     "desc": "v3强 × 吸筹强 × 近5日龙虎榜机构净买入。胜率 76.2%, 平均收益 +15.89%(持有20日), "
+     "desc": "v3强 × 吸筹强 × 近7日龙虎榜机构净买入。胜率 62.1%, 平均收益 +6.86%(持有20日), "
              "按天t=11.76。每天仅 0.3 个 —— 不是选股工具, 是「出现时必须认真看」的提醒",
      "grades": ["强"], "default_grade": "强"},
     {"key": "maimai35", "label": "买卖很准 v3.5 (参数重扫)",
@@ -209,7 +209,7 @@ TRAINED_META = [
              "胜率 56.2%(原 50.9%), 信号少三分之二, 普涨行情会跑输",
      "grades": ["强", "中"], "default_grade": "强"},
     {"key": "combo", "label": "★ 买卖很准 v4 (共振)",
-     "desc": "v3 + 主力吸筹共振(±3日内同时触发)。胜率 62.5%, 同日随机 53.2%(z=22.1), "
+     "desc": "v3 + 主力吸筹共振(近5日内先后触发)。胜率 58.3%, 超同日全市场 +1.93pp, "
              "八年全部>54%, 波动×市值九格超出全为正(最小+11.1pp)。每天约 3~4 个",
      "grades": ["强"], "default_grade": "强"},
     {"key": "didian", "label": "低点组合 v2",
@@ -240,7 +240,9 @@ async def screen_by_trained(
 
     if indicator == "v5":
         # 三重共振: v3强档 × 吸筹强档 × 近5日龙虎榜机构净买入。
-        # 龙虎榜覆盖率仅 1.2%, 单独用没意义, 但作为第三层过滤把胜率从 63.7% 抬到 76.2%。
+        # ⚠️ 时间窗只能向后看。原来写成 mm.trade_date ± 7 是前视: T 日的信号要求
+        # 知道未来 7 天会不会上龙虎榜, 而龙虎榜是事后才公布的。改成因果口径后
+        # 信号从 609 个掉到 58 个(九成靠未来才成立), 胜率 78.0% → 62.1%。
         rows = (await db.execute(text("""
             with mm as (
               select ts_code, trade_date, rank_pct from maimai_signal
@@ -255,9 +257,9 @@ async def screen_by_trained(
                      max(lb.net_amount) as net_amt
               from mm
               join pp on pp.ts_code = mm.ts_code
-                     and pp.trade_date between mm.trade_date - 5 and mm.trade_date + 5
+                     and pp.trade_date between mm.trade_date - 5 and mm.trade_date
               join lb on lb.ts_code = mm.ts_code
-                     and lb.trade_date between mm.trade_date - 7 and mm.trade_date + 7
+                     and lb.trade_date between mm.trade_date - 7 and mm.trade_date
               group by mm.ts_code, mm.trade_date, mm.rank_pct
             ),
             px as (
@@ -306,7 +308,7 @@ async def screen_by_trained(
             hit as (
               select mm.ts_code, mm.trade_date, mm.rank_pct
               from mm join pp on pp.ts_code = mm.ts_code
-                   and pp.trade_date between mm.trade_date - 5 and mm.trade_date + 5
+                   and pp.trade_date between mm.trade_date - 5 and mm.trade_date
               group by mm.ts_code, mm.trade_date, mm.rank_pct
             ),
             px as (
@@ -351,11 +353,15 @@ async def screen_by_trained(
         sig_sql = ("select ts_code, trade_date, score, rank_pct, grade "
                    "from didian_signal where grade = :g")
         anchor = "select max(trade_date) from didian_signal"
-    else:
+    elif indicator in ("maimai_buy", "maimai_sell"):
         side = "sell" if indicator == "maimai_sell" else "buy"
         sig_sql = ("select ts_code, trade_date, score, rank_pct, grade "
                    f"from maimai_signal where grade = :g and side = '{side}'")
         anchor = "select max(trade_date) from maimai_signal"
+    else:
+        # ⚠️ 不要用 else 兜底: 写错指标名会静默返回买卖很准的结果, 看起来"能用"
+        # 但选的根本不是那个指标。加指标时忘了加分支也是同样的静默错误。
+        raise HTTPException(status_code=400, detail=f"未知指标: {indicator}")
 
     rows = (await db.execute(text(f"""
         with sig as ({sig_sql}
@@ -437,7 +443,7 @@ async def combo_signals(
 
     单独看时 主力吸筹是负面的(H=20 胜率 43.5%, 中位 −2.06%) —— 它预测的是
     "会不会拉升", 拉升前的票往往还在跌。但叠加到一个已有 alpha 的信号上,
-    它是最大的增益来源: v3 强档单独 50.9% → 共振后 62.5%。
+    它是最大的增益来源: v3 强档单独 50.9% → 共振后 58.3%(因果口径)。
     它抓的信息真实存在, 只是不能单独当买入信号。
 
     三关验证: 逐年八年全部>54% / 同日随机对照 z=22.1 / 波动×市值九格超出全为正。
@@ -452,7 +458,7 @@ async def combo_signals(
         pp as (select ts_code, trade_date from pump_signal
                where rank_pct >= 0.95 and ts_code = :c)
         select mm.trade_date, mm.rank_pct
-        from mm join pp on pp.trade_date between mm.trade_date - 5 and mm.trade_date + 5
+        from mm join pp on pp.trade_date between mm.trade_date - 5 and mm.trade_date
         group by mm.trade_date, mm.rank_pct
     """
     params: dict = {"c": ts_code}
@@ -515,8 +521,9 @@ async def v5_signals(
     """v5 三重共振 —— v3强 × 主力吸筹强 × 近5日龙虎榜机构净买入。
 
     龙虎榜覆盖率仅 1.2%(只有异动才上榜), 单独用没意义, 但作为第三层过滤:
-      v4 (v3强×吸筹强)      胜率 63.7%  收益 +7.45%   3.0个/天
-      v5 (+龙虎榜净买入)     胜率 76.2%  收益+15.89%   0.3个/天
+      v4 (v3强×吸筹强)      胜率 58.3%  收益 +5.57%  超全市场 +1.93pp
+      v5 (+龙虎榜净买入)     胜率 62.1%  收益 +6.86%  超全市场 +2.49pp
+    ⚠️ v5 因果口径下 7.7 年只有 58 个信号(约 7.5 个/年), 样本量小, 别当策略用。
 
     ⚠️ 每天仅 0.3 个 ≈ 三天一次。不是选股工具, 是"出现时必须认真看"的提醒。
     """
@@ -530,8 +537,8 @@ async def v5_signals(
                where net_amount > 0 and ts_code = :c)
         select mm.trade_date, mm.rank_pct, max(lb.net_amount) as net_amt
         from mm
-        join pp on pp.trade_date between mm.trade_date - 5 and mm.trade_date + 5
-        join lb on lb.trade_date between mm.trade_date - 7 and mm.trade_date + 7
+        join pp on pp.trade_date between mm.trade_date - 5 and mm.trade_date
+        join lb on lb.trade_date between mm.trade_date - 7 and mm.trade_date
         group by mm.trade_date, mm.rank_pct
         order by mm.trade_date
     """
