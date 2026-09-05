@@ -6,6 +6,8 @@ import type { MainChartHandle, MeasureResult } from "./MainChart";
 import { Toolbar } from "./Toolbar";
 import { LinkedView } from "./LinkedView";
 import { MAIN_PANE_INDICATORS } from "./indicatorPanes";
+import { StockSectors } from "./StockSectors";
+import { getMaimaiSignals, getPumpSignals, getDidianSignals, getComboSignals, getV5Signals, getMaimai35Signals } from "../../api/quotes";
 import { useTdxIndicators } from "../../hooks/useTdxIndicators";
 
 interface Props {
@@ -76,6 +78,121 @@ export function ChartArea({ tradeActions }: Props = {}) {
   const [activeIndicators, setActiveIndicators] = useState<string[]>(() =>
     readLS(LS_STD_KEY, ["MA"])
   );
+
+  // 自训练指标 —— 目前只有买卖很准v3, 后续新增的训练指标都挂这里
+  const [activeTrained, setActiveTrained] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem("chart.trained.v1");
+      const p = raw ? JSON.parse(raw) : [];
+      return Array.isArray(p) ? p : [];
+    } catch {
+      return [];
+    }
+  });
+  const [mm35Sig, setMm35Sig] = useState<
+    { date: string; score: number; rank_pct: number; grade: string }[]
+  >([]);
+  const [v5Sig, setV5Sig] = useState<
+    { date: string; score: number; rank_pct: number; grade: string }[]
+  >([]);
+  const [comboSig, setComboSig] = useState<
+    { date: string; score: number; rank_pct: number; grade: string }[]
+  >([]);
+  const [didianSig, setDidianSig] = useState<
+    { date: string; score: number; rank_pct: number; grade: string }[]
+  >([]);
+  const [pumpSignals, setPumpSignals] = useState<
+    { date: string; prob: number; rank_pct: number; grade: string }[]
+  >([]);
+  const [maimaiSignals, setMaimaiSignals] = useState<
+    { date: string; score: number; rank_pct: number; grade: string }[]
+  >([]);
+  useEffect(() => {
+    localStorage.setItem("chart.trained.v1", JSON.stringify(activeTrained));
+  }, [activeTrained]);
+  useEffect(() => {
+    if (!currentSymbol || !activeTrained.includes("maimai_v3")) {
+      setMaimaiSignals([]);
+      return;
+    }
+    let live = true;
+    getMaimaiSignals(currentSymbol, "弱")
+      .then((r) => live && setMaimaiSignals(r.signals ?? []))
+      .catch(() => live && setMaimaiSignals([]));
+    return () => {
+      live = false;
+    };
+  }, [currentSymbol, activeTrained]);
+
+  useEffect(() => {
+    if (!currentSymbol || !activeTrained.includes("pump")) {
+      setPumpSignals([]);
+      return;
+    }
+    let live = true;
+    getPumpSignals(currentSymbol, "中")
+      .then((r) => live && setPumpSignals(r.signals ?? []))
+      .catch(() => live && setPumpSignals([]));
+    return () => {
+      live = false;
+    };
+  }, [currentSymbol, activeTrained]);
+
+  useEffect(() => {
+    if (!currentSymbol || !activeTrained.includes("didian")) {
+      setDidianSig([]);
+      return;
+    }
+    let live = true;
+    getDidianSignals(currentSymbol, "中")
+      .then((r) => live && setDidianSig(r.signals ?? []))
+      .catch(() => live && setDidianSig([]));
+    return () => {
+      live = false;
+    };
+  }, [currentSymbol, activeTrained]);
+
+  useEffect(() => {
+    if (!currentSymbol || !activeTrained.includes("combo")) {
+      setComboSig([]);
+      return;
+    }
+    let live = true;
+    getComboSignals(currentSymbol)
+      .then((r) => live && setComboSig(r.signals ?? []))
+      .catch(() => live && setComboSig([]));
+    return () => {
+      live = false;
+    };
+  }, [currentSymbol, activeTrained]);
+
+  useEffect(() => {
+    if (!currentSymbol || !activeTrained.includes("v5")) {
+      setV5Sig([]);
+      return;
+    }
+    let live = true;
+    getV5Signals(currentSymbol)
+      .then((r) => live && setV5Sig(r.signals ?? []))
+      .catch(() => live && setV5Sig([]));
+    return () => {
+      live = false;
+    };
+  }, [currentSymbol, activeTrained]);
+
+  useEffect(() => {
+    if (!currentSymbol || !activeTrained.includes("maimai35")) {
+      setMm35Sig([]);
+      return;
+    }
+    let live = true;
+    getMaimai35Signals(currentSymbol)
+      .then((r) => live && setMm35Sig(r.signals ?? []))
+      .catch(() => live && setMm35Sig([]));
+    return () => {
+      live = false;
+    };
+  }, [currentSymbol, activeTrained]);
   const mainChartRef = useRef<MainChartHandle>(null);
   const [tradeIdx, setTradeIdx] = useState(-1);
   const [measuring, setMeasuring] = useState(false);
@@ -143,7 +260,8 @@ export function ChartArea({ tradeActions }: Props = {}) {
     (idx: number) => {
       if (!tradeActions || idx < 0 || idx >= tradeActions.length) return;
       setTradeIdx(idx);
-      const ts = new Date(tradeActions[idx].date + "T00:00:00").getTime();
+      // UTC 基准, 与后端 timestamp 一致(见 MainChart 的时区注释)
+      const ts = Date.parse(`${tradeActions[idx].date}T00:00:00Z`);
       mainChartRef.current?.scrollToTimestamp(ts);
     },
     [tradeActions]
@@ -193,6 +311,12 @@ export function ChartArea({ tradeActions }: Props = {}) {
   return (
     <div className="chart-area">
       <Toolbar
+        activeTrained={activeTrained}
+        onToggleTrained={(n) =>
+          setActiveTrained((prev) =>
+            prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n]
+          )
+        }
         activeIndicators={activeIndicators}
         activeTdxIndicators={tdx.active}
         onToggleIndicator={handleToggleIndicator}
@@ -201,6 +325,7 @@ export function ChartArea({ tradeActions }: Props = {}) {
         measuring={measuring}
         onToggleMeasure={() => setMeasuring((v) => !v)}
       />
+      <StockSectors symbol={currentSymbol} />
       {measuring && <MeasureBar result={measure} />}
       {hasActions && (
         <div className="trade-nav">
@@ -233,6 +358,12 @@ export function ChartArea({ tradeActions }: Props = {}) {
           />
         ) : (
           <MainChart
+        v5Signals={activeTrained.includes("v5") ? v5Sig : undefined}
+        maimai35Signals={activeTrained.includes("maimai35") ? mm35Sig : undefined}
+        comboSignals={activeTrained.includes("combo") ? comboSig : undefined}
+        didianSignals={activeTrained.includes("didian") ? didianSig : undefined}
+        pumpSignals={activeTrained.includes("pump") ? pumpSignals : undefined}
+        maimaiSignals={activeTrained.includes("maimai_v3") ? maimaiSignals : undefined}
             ref={mainChartRef}
             tradeActions={marks}
             replayDate={replayDate}

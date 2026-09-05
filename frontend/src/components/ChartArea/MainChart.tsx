@@ -7,9 +7,12 @@ import { useQuoteStore } from "../../stores/quoteStore";
 import type { Candle, Timeframe } from "../../types/quote";
 import type { TradeAction } from "../../types/strategy";
 import { buildTradeLabel, registerReplayDivider, registerTradeMarker } from "./tradeOverlays";
+import { registerTrainedMarker, paintTrainedMarkers } from "./trainedOverlays";
+import { createTrainedPane, removeTrainedPane, setTrainedData } from "./TrainedPaneManager";
 
 registerTradeMarker();
 registerReplayDivider();
+registerTrainedMarker();
 
 export interface ForecastDay {
   day: number;
@@ -52,6 +55,15 @@ interface Props {
   /** 测量模式: 依次点两根K线出结果, 再点一次开始新一轮 */
   measuring?: boolean;
   onMeasure?: (r: MeasureResult | null) => void;
+
+  /** 训练指标信号。主图标记类: 颜色即等级(白 v5 > 金 v4 > 紫 v3.5 > 红 v3)。 */
+  maimaiSignals?: { date: string; side?: string; score: number; rank_pct: number; grade: string }[];
+  comboSignals?: { date: string; score: number; rank_pct: number; grade: string }[];
+  v5Signals?: { date: string; score: number; rank_pct: number; grade: string }[];
+  maimai35Signals?: { date: string; score: number; rank_pct: number; grade: string }[];
+  /** 副图类: 信号密集时主图会糊成一片, 画成副图能看出评分随时间的变化。 */
+  pumpSignals?: { date: string; prob: number; rank_pct: number; grade: string }[];
+  didianSignals?: { date: string; score: number; rank_pct: number; grade: string }[];
 }
 
 // 图表字体。klinecharts 默认 12px, 在高分屏上读起来费劲。
@@ -72,6 +84,12 @@ function periodToTf(period: Period): Timeframe {
   if (period.type === "week") return "1w";
   if (period.type === "month") return "1m";
   return "1d";
+}
+
+/** K线时间戳 → 日期串。时间戳是 UTC 零点, 必须用 UTC getter 取。
+ *  ⚠️ 别跟 fmtDate 混用: fmtDate 是给本地构造的 Date(如"今天往前9个月")算日历用的。 */
+function fmtBarDate(ts: number): string {
+  return new Date(ts).toISOString().slice(0, 10);
 }
 
 function fmtDate(d: Date): string {
@@ -120,14 +138,52 @@ function anchorTs(list: { timestamp: number }[], ts: number): number {
 
 export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
   { timeframe: tfOverride, className, tradeActions, replayDate, forecast, onBarSelected,
-    measuring = false, onMeasure },
+    measuring = false, onMeasure,
+    maimaiSignals, comboSignals, v5Signals, maimai35Signals, pumpSignals, didianSignals },
   ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<Chart | null>(null);
   const currentSymbol = useQuoteStore((s) => s.currentSymbol);
   const storeTimeframe = useQuoteStore((s) => s.timeframe);
+
   const tf = tfOverride ?? storeTimeframe;
+  // ===== 训练指标 =====
+  // 主图标记: 一律走 paintTrainedMarkers(内含重试)。
+  // ⚠️ 不要改回"固定 setTimeout 后读 getDataList": 从选股列表点进来时信号接口
+  // 比 K 线快, 定时到点时 K 线还是空的, overlay 一个都建不出来, 而 effect 只依赖
+  // signals 不会因 K 线到位重跑 —— 标记就静默消失了(实测 603997.SH 09-03)。
+  useEffect(() => paintTrainedMarkers(chartRef.current, "maimai", maimaiSignals), [maimaiSignals]);
+  useEffect(() => paintTrainedMarkers(chartRef.current, "combo", comboSignals, "#f0a020"), [comboSignals]);
+  useEffect(() => paintTrainedMarkers(chartRef.current, "v5", v5Signals, "#ffffff"), [v5Signals]);
+  useEffect(() => paintTrainedMarkers(chartRef.current, "maimai35", maimai35Signals, "#a78bfa"), [maimai35Signals]);
+
+  // 副图: 主力吸筹 / 低点组合。
+  // ⚠️ createTrainedPane 内部必须 isStack=true, 传 false 时 klinecharts 静默不建面板。
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    if (!pumpSignals || pumpSignals.length === 0) {
+      removeTrainedPane(chart, "pump", tf);
+      return;
+    }
+    setTrainedData("pump", tf, pumpSignals.map((p) => ({ date: p.date, value: p.prob, grade: p.grade })));
+    createTrainedPane(chart, "pump", tf);
+    return () => removeTrainedPane(chart, "pump", tf);
+  }, [pumpSignals, tf]);
+
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    if (!didianSignals || didianSignals.length === 0) {
+      removeTrainedPane(chart, "didian", tf);
+      return;
+    }
+    setTrainedData("didian", tf, didianSignals.map((p) => ({ date: p.date, value: p.rank_pct, grade: p.grade })));
+    createTrainedPane(chart, "didian", tf);
+    return () => removeTrainedPane(chart, "didian", tf);
+  }, [didianSignals, tf]);
+
   const [loading, setLoading] = useState(false);
 
   // klinecharts 通过 subscribeBar 交给我们一个推送回调, 存起来供 pushBar 使用
@@ -177,7 +233,9 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
       doReload();
     },
     focusDate: (dateStr: string) => {
-      const ts = new Date(`${dateStr}T00:00:00`).getTime();
+      // ⚠️ 必须按 UTC 解析: 后端 timestamp 由 calendar.timegm() 生成, K线落在 UTC 零点。
+      // 用本地解析(UTC+8)会得到前一天 16:00Z, 定位就偏一根。
+      const ts = Date.parse(`${dateStr}T00:00:00Z`);
       if (Number.isNaN(ts)) return;
       focusTsRef.current = ts;
       const cached = candleCache.get(
@@ -260,6 +318,9 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
           tooltip: {
             legend: { size: TOOLTIP_FONT_SIZE, weight: "bold" },
           },
+          // ⚠️ 成交量柱必须跟 K 线同色板(A股: 涨红 #e94560 / 跌绿 #4caf50)。
+          // klinecharts 默认是欧美色板(涨绿跌红), 不改的话量和K线颜色相反。
+          bars: [{ style: "fill", upColor: "#e94560", downColor: "#4caf50", noChangeColor: "#888888" }],
         },
         xAxis: { tickText: { size: AXIS_FONT_SIZE } },
         yAxis: { tickText: { size: AXIS_FONT_SIZE } },
@@ -493,11 +554,6 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
       });
     };
 
-    const fmtDate = (ts: number) => {
-      const d = new Date(ts);
-      return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
-    };
-
     /** 第一次点定 A, 第二次点定 B 并算结果, 第三次点重新开始。 */
     const handleMeasureClick = (idx: number) => {
       const bars = chart.getDataList() as Array<{
@@ -542,8 +598,8 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
       });
 
       onMeasureRef.current?.({
-        fromDate: fmtDate(seg[0].timestamp),
-        toDate: fmtDate(seg[seg.length - 1].timestamp),
+        fromDate: fmtBarDate(seg[0].timestamp),
+        toDate: fmtBarDate(seg[seg.length - 1].timestamp),
         bars: seg.length,
         calendarDays: Math.round(ms / 86400000),
         fromClose, toClose,
@@ -551,7 +607,7 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
         extremeLabel: up ? "最高" : "最低",
         extremeValue: extVal,
         extremePct: (extVal / fromClose - 1) * 100,
-        extremeDate: fmtDate(ext.timestamp),
+        extremeDate: fmtBarDate(ext.timestamp),
       });
       measureAnchor.current = null;
     };

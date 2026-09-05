@@ -72,6 +72,42 @@ export interface MinuteData {
   bars: MinuteBar[];
 }
 
+/** 一次完整的日内做 T —— 入场 + 接回配对。
+ *  side='sell': 用底仓高抛, 跌到 target 或收盘前接回。
+ *  side='buy' : 低吸买入, 涨到 target 或收盘前卖出等量底仓。 */
+export interface MaimaiSignal {
+  date: string;
+  score: number;
+  rank_pct: number;
+  grade: string;
+  /** buy = 超卖反转买点(画在下方红三角); sell = 强势段被打破(上方绿三角) */
+  side?: "buy" | "sell";
+}
+
+export interface T0Trade {
+  side: "sell" | "buy";
+  prob: number;
+  entry_time: string;
+  entry_bar: number;
+  entry_price: number;
+  target: number;
+  exit_time: string;
+  exit_bar: number;
+  exit_price: number;
+  exit_reason: string; // 达标 / 收盘平 / 持有中
+  ret: number;
+  /** 持仓期最大浮亏 (≤0) —— 只看 ret 会低估这次 T 的煎熬程度 */
+  mae: number;
+  worst_price: number | null;
+}
+
+export interface T0Response {
+  symbol: string;
+  trade_date?: string;
+  threshold: number;
+  signals: T0Trade[];
+}
+
 export interface SearchHistoryItem {
   ts_code: string;
   name: string;

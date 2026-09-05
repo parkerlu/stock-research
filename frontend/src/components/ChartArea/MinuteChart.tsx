@@ -1,11 +1,13 @@
 // 分时图 — 自绘 SVG。klinecharts 是 K 线导向的, 分时的"以昨收为基准、
 // 上下等幅、固定 242 分钟横轴"用 SVG 更直接也更可控。
 import { useMemo, useRef, useState } from "react";
-import type { MinuteBar, MinuteData } from "../../types/quote";
+import type { MinuteBar, MinuteData, T0Trade } from "../../types/quote";
 
 interface Props {
   data: MinuteData | null;
   loading?: boolean;
+  /** 做 T 信号 — 模型判断该时点到收盘还有 3% 空间 */
+  signals?: T0Trade[];
 }
 
 // A 股交易时段: 9:30–11:30 + 13:00–15:00 = 242 个点 (含 9:30 与收盘点)
@@ -29,7 +31,7 @@ function slotOf(hhmm: string): number {
 const PAD = { left: 52, right: 52, top: 10, bottom: 18 };
 const VOL_RATIO = 0.24; // 量柱占高度比例
 
-export function MinuteChart({ data, loading }: Props) {
+export function MinuteChart({ data, loading, signals = [] }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 600, h: 380 });
   const [hover, setHover] = useState<number | null>(null);
@@ -127,6 +129,20 @@ export function MinuteChart({ data, loading }: Props) {
   const hoverBar = hover !== null ? model.slots[hover] : null;
   const volTop = PAD.top + priceH + 6;
 
+  // 做 T 配对 → 画布坐标。一次 T = 入场点 + 接回点, 中间连虚线。
+  const marks = signals
+    .map((sg) => {
+      const s1 = slotOf(sg.entry_time);
+      const s2 = slotOf(sg.exit_time);
+      if (s1 < 0 || s2 < 0) return null;
+      return {
+        sg,
+        x1: xOf(s1), y1: yOf(sg.entry_price),
+        x2: xOf(s2), y2: yOf(sg.exit_price),
+      };
+    })
+    .filter((m): m is NonNullable<typeof m> => m !== null);
+
   return (
     <div className="minute-chart" ref={setRef}>
       <svg
@@ -201,6 +217,60 @@ export function MinuteChart({ data, loading }: Props) {
             <circle cx={xOf(hover)} cy={yOf(hoverBar.price)} r={3} fill={lineColor} />
           </g>
         )}
+
+        {/* 做 T —— 入场(实心)→ 接回(空心), 虚线相连, 中点标收益 */}
+        {marks.map((m, i) => {
+          const sell = m.sg.side === "sell";
+          const color = sell ? "#eb5454" : "#26a69a";
+          const win = m.sg.ret > 0;
+          const mx = (m.x1 + m.x2) / 2;
+          const my = Math.min(m.y1, m.y2) - 10;
+          const tri = (x: number, y: number, down: boolean) =>
+            down
+              ? `${x},${y - 3} ${x - 5},${y - 11} ${x + 5},${y - 11}`
+              : `${x},${y + 3} ${x - 5},${y + 11} ${x + 5},${y + 11}`;
+          return (
+            <g key={`t0-${i}`} className="t0-mark">
+              <line
+                x1={m.x1} y1={m.y1} x2={m.x2} y2={m.y2}
+                stroke={color} strokeWidth={1} strokeDasharray="3 3" opacity={0.6}
+              />
+              {/* 入场 */}
+              <polygon points={tri(m.x1, m.y1, sell)} fill={color} />
+              <circle cx={m.x1} cy={m.y1} r={2.8} fill={color} />
+              <text x={m.x1} y={sell ? m.y1 - 14 : m.y1 + 20} textAnchor="middle"
+                    fontSize={9} fill={color}>
+                {sell ? "抛" : "吸"}{(m.sg.prob * 100).toFixed(0)}
+              </text>
+              {/* 接回 */}
+              <polygon points={tri(m.x2, m.y2, !sell)} fill="none"
+                       stroke={color} strokeWidth={1.2} />
+              <circle cx={m.x2} cy={m.y2} r={2.8} fill="none"
+                      stroke={color} strokeWidth={1.2} />
+              <text x={m.x2} y={sell ? m.y2 + 20 : m.y2 - 14} textAnchor="middle"
+                    fontSize={9} fill={color}>
+                {sell ? "接" : "平"}
+              </text>
+              {/* 收益 */}
+              <text x={mx} y={my} textAnchor="middle" fontSize={10}
+                    fill={win ? "#eb5454" : "#8b909a"} fontWeight={600}>
+                {(m.sg.ret * 100).toFixed(2)}%
+              </text>
+              {m.sg.mae < -0.005 && (
+                <text x={mx} y={my + 11} textAnchor="middle" fontSize={9}
+                      fill="#8b909a">
+                  最大浮亏{(m.sg.mae * 100).toFixed(1)}%
+                </text>
+              )}
+              <title>
+                {`${m.sg.entry_time} ${sell ? "高抛" : "低吸"} ${m.sg.entry_price} (概率${(m.sg.prob * 100).toFixed(1)}%)\n`}
+                {`目标 ${m.sg.target}\n`}
+                {`${m.sg.exit_time} ${sell ? "接回" : "卖出"} ${m.sg.exit_price} — ${m.sg.exit_reason}\n`}
+                {`本次 ${(m.sg.ret * 100).toFixed(2)}%  中途最大浮亏 ${(m.sg.mae * 100).toFixed(2)}%${m.sg.worst_price ? ` (最不利 ${m.sg.worst_price})` : ""}`}
+              </title>
+            </g>
+          );
+        })}
       </svg>
 
       {/* 图例 / 悬停读数 */}

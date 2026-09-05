@@ -7,13 +7,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { useQuoteStore } from "../../stores/quoteStore";
-import { getMinute } from "../../api/quotes";
+import { getMinute, getT0Signals, getMaimaiSignals, getPumpSignals, getDidianSignals, getComboSignals, getV5Signals, getMaimai35Signals } from "../../api/quotes";
 import { syncSymbol } from "../../api/system";
-import type { MinuteData, Timeframe } from "../../types/quote";
+import type { MinuteData, T0Trade, Timeframe } from "../../types/quote";
 import { MinuteChart } from "./MinuteChart";
 import { OrderBook } from "./OrderBook";
 import { useTdxIndicators } from "../../hooks/useTdxIndicators";
 import { MainChart } from "./MainChart";
+import { IndicatorMenus } from "./IndicatorMenus";
+import { StockSectors } from "./StockSectors";
+import { FavButton } from "./FavButton";
 import type { MainChartHandle } from "./MainChart";
 
 const POLL_MS = 5000;        // 开市中
@@ -31,6 +34,47 @@ export function LiveView() {
   const currentName = useQuoteStore((s) => s.currentName);
 
   const [minute, setMinute] = useState<MinuteData | null>(null);
+  // 做 T 信号 — 5min bar 才变一次, 单独低频轮询, 不跟着 5s 的分时刷
+  const [signals, setSignals] = useState<T0Trade[]>([]);
+  const [t0On, setT0On] = useState<boolean>(
+    () => localStorage.getItem("live.t0") === "1"
+  );
+  // 阈值: 高 = 信号少但准 (0.7 精确率约 68%), 低 = 信号多 (0.5 约 52%)
+  // 买卖很准 v3 —— K线上的买点标记
+  const [mmSignals, setMmSignals] = useState<
+    { date: string; score: number; rank_pct: number; grade: string; side?: "buy" | "sell" }[]
+  >([]);
+  const [mm35Sig, setMm35Sig] = useState<
+    { date: string; score: number; rank_pct: number; grade: string }[]
+  >([]);
+  const [mm35On, setMm35On] = useState(false);
+  const [v5Sig, setV5Sig] = useState<
+    { date: string; score: number; rank_pct: number; grade: string }[]
+  >([]);
+  const [v5On, setV5On] = useState(false);
+  const [comboSig, setComboSig] = useState<
+    { date: string; score: number; rank_pct: number; grade: string }[]
+  >([]);
+  const [comboOn, setComboOn] = useState(false);
+  const [didianSig, setDidianSig] = useState<
+    { date: string; score: number; rank_pct: number; grade: string }[]
+  >([]);
+  const [didianOn, setDidianOn] = useState<boolean>(
+    () => localStorage.getItem("live.didian") === "1"
+  );
+  const [pumpSig, setPumpSig] = useState<
+    { date: string; prob: number; rank_pct: number; grade: string }[]
+  >([]);
+  const [pumpOn, setPumpOn] = useState<boolean>(
+    () => localStorage.getItem("live.pump") === "1"
+  );
+  const [mmOn, setMmOn] = useState<boolean>(
+    () => localStorage.getItem("live.mm") === "1"
+  );
+  const [t0Th, setT0Th] = useState<number>(() => {
+    const v = parseFloat(localStorage.getItem("live.t0th") ?? "");
+    return [0.5, 0.6, 0.7].includes(v) ? v : 0.6;
+  });
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
@@ -96,6 +140,125 @@ export function LiveView() {
     timeframe: tf,
     storageKey: "live.tdxIndicators.v1",
   });
+
+  // 做 T 信号轮询 (60s)。收市后也拉一次 — 复盘时能看到当天全部信号点。
+  useEffect(() => {
+    if (!currentSymbol || !t0On) {
+      setSignals([]);
+      return;
+    }
+    let live = true;
+    const pull = async () => {
+      try {
+        const r = await getT0Signals(currentSymbol, t0Th);
+        if (live) setSignals(r.signals ?? []);
+      } catch {
+        if (live) setSignals([]);
+      }
+    };
+    pull();
+    const id = setInterval(pull, 60000);
+    return () => {
+      live = false;
+      clearInterval(id);
+    };
+  }, [currentSymbol, t0On, t0Th]);
+
+  useEffect(() => {
+    localStorage.setItem("live.t0", t0On ? "1" : "0");
+  }, [t0On]);
+
+  useEffect(() => {
+    localStorage.setItem("live.t0th", String(t0Th));
+  }, [t0Th]);
+
+  // 买卖很准信号 —— 盘后数据, 切股票时拉一次即可
+  useEffect(() => {
+    localStorage.setItem("live.mm", mmOn ? "1" : "0");
+    if (!currentSymbol || !mmOn) {
+      setMmSignals([]);
+      return;
+    }
+    let live = true;
+    getMaimaiSignals(currentSymbol, "弱")
+      .then((r) => live && setMmSignals(r.signals ?? []))
+      .catch(() => live && setMmSignals([]));
+    return () => {
+      live = false;
+    };
+  }, [currentSymbol, mmOn]);
+
+  useEffect(() => {
+    localStorage.setItem("live.pump", pumpOn ? "1" : "0");
+    if (!currentSymbol || !pumpOn) {
+      setPumpSig([]);
+      return;
+    }
+    let live = true;
+    getPumpSignals(currentSymbol, "中")
+      .then((r) => live && setPumpSig(r.signals ?? []))
+      .catch(() => live && setPumpSig([]));
+    return () => {
+      live = false;
+    };
+  }, [currentSymbol, pumpOn]);
+
+  useEffect(() => {
+    localStorage.setItem("live.didian", didianOn ? "1" : "0");
+    if (!currentSymbol || !didianOn) {
+      setDidianSig([]);
+      return;
+    }
+    let live = true;
+    getDidianSignals(currentSymbol, "中")
+      .then((r) => live && setDidianSig(r.signals ?? []))
+      .catch(() => live && setDidianSig([]));
+    return () => {
+      live = false;
+    };
+  }, [currentSymbol, didianOn]);
+
+  useEffect(() => {
+    if (!currentSymbol || !comboOn) {
+      setComboSig([]);
+      return;
+    }
+    let live = true;
+    getComboSignals(currentSymbol)
+      .then((r) => live && setComboSig(r.signals ?? []))
+      .catch(() => live && setComboSig([]));
+    return () => {
+      live = false;
+    };
+  }, [currentSymbol, comboOn]);
+
+  useEffect(() => {
+    if (!currentSymbol || !v5On) {
+      setV5Sig([]);
+      return;
+    }
+    let live = true;
+    getV5Signals(currentSymbol)
+      .then((r) => live && setV5Sig(r.signals ?? []))
+      .catch(() => live && setV5Sig([]));
+    return () => {
+      live = false;
+    };
+  }, [currentSymbol, v5On]);
+
+  useEffect(() => {
+    if (!currentSymbol || !mm35On) {
+      setMm35Sig([]);
+      return;
+    }
+    let live = true;
+    getMaimai35Signals(currentSymbol)
+      .then((r) => live && setMm35Sig(r.signals ?? []))
+      .catch(() => live && setMm35Sig([]));
+    return () => {
+      live = false;
+    };
+  }, [currentSymbol, mm35On]);
 
   const tick = useCallback(async () => {
     if (!currentSymbol) return;
@@ -200,6 +363,7 @@ export function LiveView() {
         <div className="live-title">
           <span className="live-name">{snap?.name || currentName}</span>
           <span className="live-code">{currentSymbol}</span>
+          <FavButton symbol={currentSymbol} />
         </div>
         {snap && (
           <div className="live-quote">
@@ -234,6 +398,8 @@ export function LiveView() {
         </div>
       </div>
 
+      <StockSectors symbol={currentSymbol} />
+
       {/* 左分时 / 右日K, 中间可拖动的分割线 */}
       <div
         ref={panesRef}
@@ -241,10 +407,41 @@ export function LiveView() {
         style={{ "--live-split": `${(split * 100).toFixed(2)}%` } as CSSProperties}
       >
         <div className="live-pane live-pane-first">
-          <div className="live-pane-title">分时</div>
+          <div className="live-pane-title">
+            <span>分时</span>
+            <span className="t0-bar">
+              {t0On && (
+                <span className="t0-th">
+                  {[0.5, 0.6, 0.7].map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      className={t0Th === v ? "on" : ""}
+                      onClick={() => setT0Th(v)}
+                      title={
+                        v === 0.7 ? "少而准 — 样本外精确率约 68%"
+                        : v === 0.6 ? "均衡 — 约 60%"
+                        : "多而糙 — 约 52%"
+                      }
+                    >
+                      {v.toFixed(1)}
+                    </button>
+                  ))}
+                </span>
+              )}
+              <button
+                type="button"
+                className={`t0-toggle${t0On ? " on" : ""}`}
+                onClick={() => setT0On((v) => !v)}
+                title="做T指标 — 标出到收盘还有 3% 空间的买卖点"
+              >
+                做T{t0On && signals.length > 0 ? ` ${signals.length}` : ""}
+              </button>
+            </span>
+          </div>
           <div className="live-pane-split">
             <div className="live-pane-body">
-              <MinuteChart data={minute} loading={loading} />
+              <MinuteChart data={minute} loading={loading} signals={t0On ? signals : []} />
             </div>
             <div className="live-orderbook">
               <div className="live-pane-title">五档盘口</div>
@@ -274,31 +471,34 @@ export function LiveView() {
                 )
               )}
             </div>
-            <div className="live-tdx">
-              <span className="live-tdx-btn">
-                TDX 指标 {tdx.active.length > 0 && `(${tdx.active.length})`} ▾
-              </span>
-              <div className="live-tdx-menu">
-                {tdx.available.length === 0 && (
-                  <div className="live-tdx-empty">加载中…</div>
-                )}
-                {tdx.available.map((m) => (
-                  <label key={m.name} className="live-tdx-item">
-                    <input
-                      type="checkbox"
-                      checked={tdx.active.includes(m.name)}
-                      disabled={tdx.busy === m.name}
-                      onChange={() => tdx.toggle(m.name)}
-                    />
-                    <span>{m.label}</span>
-                    {tdx.busy === m.name && <span className="live-dim">…</span>}
-                  </label>
-                ))}
-              </div>
-            </div>
+            <IndicatorMenus
+              tdxAvailable={tdx.available}
+              tdxActive={tdx.active}
+              onToggleTdx={tdx.toggle}
+              tdxBusy={tdx.busy}
+              trainedActive={[...(mmOn ? ["maimai_v3"] : []), ...(pumpOn ? ["pump"] : []),
+                              ...(didianOn ? ["didian"] : []), ...(comboOn ? ["combo"] : []), ...(v5On ? ["v5"] : []), ...(mm35On ? ["maimai35"] : [])]}
+              onToggleTrained={(n) =>
+                n === "pump" ? setPumpOn((v) => !v)
+                : n === "didian" ? setDidianOn((v) => !v)
+                : n === "maimai35" ? setMm35On((v) => !v)
+                : n === "v5" ? setV5On((v) => !v)
+                : n === "combo" ? setComboOn((v) => !v)
+                : setMmOn((v) => !v)
+              }
+              trainedCounts={{ maimai_v3: mmSignals.length, pump: pumpSig.length,
+                               didian: didianSig.length,
+                               combo: comboSig.length, v5: v5Sig.length, maimai35: mm35Sig.length }}
+            />
           </div>
           <div className="live-pane-body">
-            <MainChart ref={dailyRef} timeframe={tf} className="live-daily" />
+            <MainChart
+              maimaiSignals={mmOn ? mmSignals : undefined}
+              pumpSignals={pumpOn ? pumpSig : undefined}
+              didianSignals={didianOn ? didianSig : undefined}
+              comboSignals={comboOn ? comboSig : undefined}
+              v5Signals={v5On ? v5Sig : undefined}
+              maimai35Signals={mm35On ? mm35Sig : undefined} ref={dailyRef} timeframe={tf} className="live-daily" />
           </div>
         </div>
       </div>
