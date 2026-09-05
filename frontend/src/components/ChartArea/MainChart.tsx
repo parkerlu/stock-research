@@ -71,7 +71,9 @@ const AXIS_FONT_SIZE = 13;      // 坐标轴刻度 + 十字光标标签
 
 // 首屏加载多长的历史 —— 按周期给, 不能一律 1 年: 1 年只有 52 根周线 / 12 根
 // 月线, MA60 之类的长周期指标直接算不出来 (图例显示 n/a)。
-const INIT_YEARS: Record<Timeframe, number> = { "1d": 1, "1w": 5, "1m": 15 };
+// 日线首屏加载年数。训练指标的标记只能画在已加载的K线上, 给 1 年的话
+// v4 这种每票 1.6 个信号的指标基本看不到东西 —— 3 年才够看出规律。
+const INIT_YEARS: Record<Timeframe, number> = { "1d": 3, "1w": 5, "1m": 15 };
 
 const TF_TO_PERIOD: Record<Timeframe, Period> = {
   "1d": { type: "day", span: 1 },
@@ -146,14 +148,41 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
   const currentSymbol = useQuoteStore((s) => s.currentSymbol);
   const storeTimeframe = useQuoteStore((s) => s.timeframe);
 
+  // ⚠️ 往回滚动补历史后必须重画标记: paintTrainedMarkers 画完就停, 新加载的
+  // 旧K线上不会自己补出标记 —— 表现就是"滚回去标记没了", 和指标坏掉分不清。
+  // 这里记住当前各组信号, 由 DataLoader 在补完数据后调用 repaintTrained()。
+  const trainedRef = useRef<Record<string, { sig: any; color?: string }>>({});
+  /** 首屏把已加载的 K 线全部铺进可视区。
+   *  klinecharts 默认只显示最近 200 多根 —— 日线加载了 3 年(726根)也只看到 1 年,
+   *  训练指标的标记大半在窗口外。标记画在图表下沿, 密一点也看得清, 所以直接铺满。 */
+  const fitAll = useRef(() => {
+    const c = chartRef.current;
+    const n = (c?.getDataList() ?? []).length;
+    if (!c || n === 0) return;
+    const w = containerRef.current?.clientWidth ?? 0;
+    if (w > 0) c.setBarSpace(Math.max(w / (n + 8), 0.8));
+  });
+
+  const repaintTrained = useRef(() => {
+    for (const [gid, v] of Object.entries(trainedRef.current)) {
+      paintTrainedMarkers(chartRef.current, gid, v.sig, v.color);
+    }
+  });
+
   const tf = tfOverride ?? storeTimeframe;
   // ===== 训练指标 =====
   // 主图标记: 一律走 paintTrainedMarkers(内含重试)。
   // ⚠️ 不要改回"固定 setTimeout 后读 getDataList": 从选股列表点进来时信号接口
   // 比 K 线快, 定时到点时 K 线还是空的, overlay 一个都建不出来, 而 effect 只依赖
   // signals 不会因 K 线到位重跑 —— 标记就静默消失了(实测 603997.SH 09-03)。
-  useEffect(() => paintTrainedMarkers(chartRef.current, "maimai", maimaiSignals), [maimaiSignals]);
-  useEffect(() => paintTrainedMarkers(chartRef.current, "combo", comboSignals, "#f0a020"), [comboSignals]);
+  useEffect(() => {
+    trainedRef.current["maimai"] = { sig: maimaiSignals };
+    return paintTrainedMarkers(chartRef.current, "maimai", maimaiSignals);
+  }, [maimaiSignals]);
+  useEffect(() => {
+    trainedRef.current["combo"] = { sig: comboSignals, color: "#f0a020" };
+    return paintTrainedMarkers(chartRef.current, "combo", comboSignals, "#f0a020");
+  }, [comboSignals]);
 
   // 副图: 主力吸筹 / 低点组合。
   // ⚠️ createTrainedPane 内部必须 isStack=true, 传 false 时 klinecharts 静默不建面板。
@@ -350,6 +379,7 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
           if (cached && cached.length > 0) {
             const hasMore = !noMoreHistory.has(cacheKey);
             callback(cached, { forward: hasMore, backward: false });
+            setTimeout(() => { fitAll.current(); repaintTrained.current(); }, 120);
             return;
           }
 
@@ -372,6 +402,7 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
             candleCache.set(cacheKey, data);
             setLoading(false);
             callback(data, { forward: true, backward: false });
+            setTimeout(() => { fitAll.current(); repaintTrained.current(); }, 120);
             // ⚠️ 图表可能是在面板刚打开、还没有 symbol 时初始化的, 那时纵轴定在
             // 默认的 0~10 且**不会**因为后来数据到位而重算 —— 结果价格 5.5~7.2
             // 的股票被压成贴着 6.00 的一条线。数据首次落地后强制重算一次。
@@ -459,6 +490,7 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
               candleCache.set(cacheKey, [...newData, ...cached]);
               // klinecharts prepends forward data correctly
               callback(newData, { forward: true });
+              setTimeout(() => repaintTrained.current(), 120);   // 补历史后补画标记
             } else {
               noMoreHistory.add(cacheKey);
               callback([], { forward: false });
