@@ -23,7 +23,6 @@ const INDICATORS = [
  *  把 Top20% 胜率提到 51.3%、中位翻正到 +0.264%, 三个波动档超出全为正。 */
 export const TRAINED_INDICATORS = [
   { name: "maimai_v3", label: "买卖很准 v3", desc: "动能参考 · 超卖反转买点, 胜率 48.9%→50.9%" },
-  { name: "maimai35", label: "买卖很准 v3.5", desc: "参数重扫 · 胜率 56.2%(原 50.9%)" },
   { name: "combo", label: "买卖很准 v4", desc: "v3+吸筹共振 · 胜率 62.5%(随机 53.2%)" },
   { name: "didian", label: "低点组合 v2", desc: "动能参考 · 胜率 57.7%(原 53.8%), 持有20日" },
   { name: "pump", label: "主力吸筹", desc: "动能参考 · 强档拉升率 19.6%(基础 8.6%), 八成不发生" },

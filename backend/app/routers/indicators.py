@@ -204,10 +204,6 @@ TRAINED_META = [
      "desc": "v3强 × 吸筹强 × 近7日龙虎榜机构净买入。胜率 62.1%, 平均收益 +6.86%(持有20日)。"
              "全市场一年仅约 7.5 个 —— 建议看 90 日窗口, 出现时值得认真看一眼",
      "grades": ["强"], "default_grade": "强", "default_days": 90},
-    {"key": "maimai35", "label": "买卖很准 v3.5 (参数重扫)",
-     "desc": "动能参考 · 参数从 MA5/LLV10/5 改为 MA8/LLV20/10(36组扫描最优)。"
-             "胜率 56.2%(原 50.9%), 信号少三分之二, 普涨行情会跑输",
-     "grades": ["强", "中"], "default_grade": "强"},
     {"key": "combo", "label": "★ 买卖很准 v4 (共振)",
      "desc": "v3 + 主力吸筹共振(近5日内先后触发)。胜率 58.3%, 超同日全市场 +1.93pp。"
              "每天约 1.2 个",
@@ -345,10 +341,6 @@ async def screen_by_trained(
         sig_sql = ("select ts_code, trade_date, prob as score, rank_pct, grade "
                    "from pump_signal where grade = :g")
         anchor = "select max(trade_date) from pump_signal"
-    elif indicator == "maimai35":
-        sig_sql = ("select ts_code, trade_date, score, rank_pct, grade "
-                   "from maimai35_signal where grade = :g")
-        anchor = "select max(trade_date) from maimai35_signal"
     elif indicator == "didian":
         sig_sql = ("select ts_code, trade_date, score, rank_pct, grade "
                    "from didian_signal where grade = :g")
@@ -475,41 +467,6 @@ async def combo_signals(
     if start:
         items = [x for x in items if x["date"] >= start]
     return {"ts_code": ts_code, "count": len(items), "signals": items}
-
-
-@router.get("/maimai35/{ts_code}")
-async def maimai35_signals(
-    ts_code: str,
-    start: str | None = Query(None, description="YYYY-MM-DD"),
-    min_grade: str = Query("中", description="中 / 强"),
-    db: AsyncSession = Depends(get_db),
-):
-    """买卖很准 v3.5 —— 原指标参数重扫版(MA8/LLV20/连续10)。
-
-    移植的参数是照抄 TDX 的, 36 组网格扫描后只排 9/33。换参数后:
-      原参数 28.1万信号 胜率 50.9% 超出随机 +0.190pp
-      v3.5    9.5万信号 胜率 56.2% 超出随机 +0.602pp
-
-    ⚠️ 它是"放大器": 好年份 +1.0pp、坏年份 −1.0pp(原参数只有 ±0.5pp)。
-    2020/2023/2025 跑输随机 —— 普涨行情里严格筛选反而错过。
-    """
-    from sqlalchemy import text
-
-    floor = 0.8 if min_grade == "强" else 0.5
-    sql = ("select trade_date, score, rank_pct, grade from maimai35_signal "
-           "where ts_code = :c and rank_pct >= :f")
-    params: dict = {"c": ts_code, "f": floor}
-    if start:
-        try:
-            params["s"] = date.fromisoformat(start)
-            sql += " and trade_date >= :s"
-        except ValueError:
-            raise HTTPException(status_code=400, detail="start 需为 YYYY-MM-DD")
-    sql += " order by trade_date"
-    rows = (await db.execute(text(sql), params)).fetchall()
-    return {"ts_code": ts_code, "count": len(rows), "signals": [
-        {"date": str(r[0]), "score": round(float(r[1]), 5),
-         "rank_pct": round(float(r[2]), 4), "grade": r[3]} for r in rows]}
 
 
 @router.get("/v5/{ts_code}")

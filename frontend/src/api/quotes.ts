@@ -145,22 +145,6 @@ export async function getComboSignals(
   return json(`${BASE}/indicators/combo/${tsCode}${q}`);
 }
 
-/** 买卖很准 v3.5 —— 原指标参数重扫版(MA8/LLV20/连续10)。
- *  胜率 56.2%(原参数 50.9%), 信号少三分之二。 */
-export async function getMaimai35Signals(
-  tsCode: string,
-  minGrade: "中" | "强" = "中",
-  start?: string
-): Promise<{
-  ts_code: string;
-  count: number;
-  signals: { date: string; score: number; rank_pct: number; grade: string }[];
-}> {
-  const q = new URLSearchParams({ min_grade: minGrade });
-  if (start) q.set("start", start);
-  return json(`${BASE}/indicators/maimai35/${tsCode}?${q}`);
-}
-
 /** v5 三重共振 —— v3强 × 吸筹强 × 近5日龙虎榜机构净买入。
  *  胜率 76.2%, 平均收益 +15.89%(持有20日), 但每天仅 0.3 个。 */
 export async function getV5Signals(

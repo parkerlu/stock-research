@@ -12,7 +12,7 @@ import { FavButton } from "./ChartArea/FavButton";
 import type { MainChartHandle } from "./ChartArea/MainChart";
 import { useTdxIndicators } from "../hooks/useTdxIndicators";
 import { IndicatorMenus } from "./ChartArea/IndicatorMenus";
-import { getMaimaiSignals, getPumpSignals, getDidianSignals, getComboSignals, getMaimai35Signals } from "../api/quotes";
+import { getMaimaiSignals, getPumpSignals, getDidianSignals, getComboSignals } from "../api/quotes";
 
 type SortKey = "avg_pct" | "up_ratio" | "count" | "max_pct";
 // 盘后口径 —— 数据来自当日收盘, 不做轮询
@@ -42,10 +42,6 @@ export function SectorView() {
   const [mmOn, setMmOn] = useState(false);
   const [pumpOn, setPumpOn] = useState(false);
   const [didianOn, setDidianOn] = useState(false);
-  const [mm35Sig, setMm35Sig] = useState<
-    { date: string; score: number; rank_pct: number; grade: string }[]
-  >([]);
-  const [mm35On, setMm35On] = useState(false);
   const [comboSig, setComboSig] = useState<
     { date: string; score: number; rank_pct: number; grade: string }[]
   >([]);
@@ -116,19 +112,6 @@ export function SectorView() {
   }, [pick, comboOn]);
 
 
-  useEffect(() => {
-    if (!pick || !mm35On) {
-      setMm35Sig([]);
-      return;
-    }
-    let live = true;
-    getMaimai35Signals(pick.code)
-      .then((r) => live && setMm35Sig(r.signals ?? []))
-      .catch(() => live && setMm35Sig([]));
-    return () => {
-      live = false;
-    };
-  }, [pick, mm35On]);
   const tdx = useTdxIndicators({
     getChart: () => chartRef.current?.getChart() ?? null,
     symbol: pick?.code ?? "",
@@ -330,17 +313,16 @@ export function SectorView() {
                   onToggleTdx={tdx.toggle}
                   tdxBusy={tdx.busy}
                   trainedActive={[...(mmOn ? ["maimai_v3"] : []), ...(pumpOn ? ["pump"] : []),
-                                  ...(didianOn ? ["didian"] : []), ...(comboOn ? ["combo"] : []), ...(mm35On ? ["maimai35"] : [])]}
+                                  ...(didianOn ? ["didian"] : []), ...(comboOn ? ["combo"] : [])]}
                   onToggleTrained={(n) =>
                     n === "pump" ? setPumpOn((v) => !v)
                     : n === "didian" ? setDidianOn((v) => !v)
-                    : n === "maimai35" ? setMm35On((v) => !v)
-                : n === "combo" ? setComboOn((v) => !v)
+                    : n === "combo" ? setComboOn((v) => !v)
                     : setMmOn((v) => !v)
                   }
                   trainedCounts={{ maimai_v3: mmSig.length, pump: pumpSig.length,
                                    didian: didianSig.length,
-                               combo: comboSig.length, maimai35: mm35Sig.length }}
+                               combo: comboSig.length }}
                 />
               </div>
               <button className="sd-close" onClick={() => setPick(null)}>×</button>
@@ -350,8 +332,7 @@ export function SectorView() {
                          maimaiSignals={mmOn ? mmSig : undefined}
                          pumpSignals={pumpOn ? pumpSig : undefined}
                          didianSignals={didianOn ? didianSig : undefined}
-              comboSignals={comboOn ? comboSig : undefined}
-              maimai35Signals={mm35On ? mm35Sig : undefined} />
+              comboSignals={comboOn ? comboSig : undefined} />
             </div>
           </div>
         )}

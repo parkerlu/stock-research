@@ -7,7 +7,7 @@ import { Toolbar } from "./Toolbar";
 import { LinkedView } from "./LinkedView";
 import { MAIN_PANE_INDICATORS } from "./indicatorPanes";
 import { StockSectors } from "./StockSectors";
-import { getMaimaiSignals, getPumpSignals, getDidianSignals, getComboSignals, getMaimai35Signals } from "../../api/quotes";
+import { getMaimaiSignals, getPumpSignals, getDidianSignals, getComboSignals } from "../../api/quotes";
 import { useTdxIndicators } from "../../hooks/useTdxIndicators";
 
 interface Props {
@@ -89,9 +89,6 @@ export function ChartArea({ tradeActions }: Props = {}) {
       return [];
     }
   });
-  const [mm35Sig, setMm35Sig] = useState<
-    { date: string; score: number; rank_pct: number; grade: string }[]
-  >([]);
   const [comboSig, setComboSig] = useState<
     { date: string; score: number; rank_pct: number; grade: string }[]
   >([]);
@@ -164,19 +161,6 @@ export function ChartArea({ tradeActions }: Props = {}) {
   }, [currentSymbol, activeTrained]);
 
 
-  useEffect(() => {
-    if (!currentSymbol || !activeTrained.includes("maimai35")) {
-      setMm35Sig([]);
-      return;
-    }
-    let live = true;
-    getMaimai35Signals(currentSymbol)
-      .then((r) => live && setMm35Sig(r.signals ?? []))
-      .catch(() => live && setMm35Sig([]));
-    return () => {
-      live = false;
-    };
-  }, [currentSymbol, activeTrained]);
   const mainChartRef = useRef<MainChartHandle>(null);
   const [tradeIdx, setTradeIdx] = useState(-1);
   const [measuring, setMeasuring] = useState(false);
@@ -342,7 +326,6 @@ export function ChartArea({ tradeActions }: Props = {}) {
           />
         ) : (
           <MainChart
-        maimai35Signals={activeTrained.includes("maimai35") ? mm35Sig : undefined}
         comboSignals={activeTrained.includes("combo") ? comboSig : undefined}
         didianSignals={activeTrained.includes("didian") ? didianSig : undefined}
         pumpSignals={activeTrained.includes("pump") ? pumpSignals : undefined}
