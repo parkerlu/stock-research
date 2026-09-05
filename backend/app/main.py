@@ -15,6 +15,7 @@ from app.routers.strategy_pool import router as strategy_pool_router
 from app.routers.system import router as system_router
 from app.routers.forecast import router as forecast_router
 from app.routers.paper import router as paper_router
+from app.routers.sectors import router as sectors_router
 from app.services.scheduler import start_scheduler, stop_scheduler
 
 logging.basicConfig(level=logging.INFO)
@@ -46,6 +47,7 @@ def create_app() -> FastAPI:
     app.include_router(system_router)
     app.include_router(forecast_router)
     app.include_router(paper_router)
+    app.include_router(sectors_router)
 
     @app.get("/api/health")
     async def health():

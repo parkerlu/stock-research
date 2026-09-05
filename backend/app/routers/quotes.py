@@ -10,6 +10,7 @@ from app.datasources.tencent_provider import TencentProvider
 from app.datasources.tushare_provider import TuShareProvider
 from app.db import get_db
 from app.services.quote_service import get_candles
+from app.services.t0_indicator import compute_signals
 from app.services.search_service import (
     add_favorite,
     add_search_history,
@@ -106,6 +107,47 @@ async def minute(
     if data is None:
         raise HTTPException(status_code=404, detail="分时数据不可用")
     return data
+
+
+@router.get("/quotes/{symbol}/t0")
+async def t0_signals(
+    symbol: str,
+    threshold: float = Query(0.7, ge=0.5, le=0.95, description="信号阈值, 越高越少越准"),
+    tencent: TencentProvider = Depends(get_tencent),
+    db: AsyncSession = Depends(get_db),
+):
+    """日内做 T 信号 — 在分时图上标出"到收盘还有 3% 空间"的买卖点。
+
+    卖点(高抛): 用底仓卖出, 跌 3% 或收盘前接回。
+    买点(低吸): 买入, 涨 3% 或收盘前卖出等量底仓。
+    样本外(2024-2026, 阈值0.7): 卖点精确率 64.7%, 买点 54.4%, 中位收益约 +3%。
+    """
+    from sqlalchemy import text
+
+    data = await tencent.fetch_minute(symbol)
+    if data is None:
+        raise HTTPException(status_code=404, detail="分时数据不可用")
+
+    # 昨日日线特征 — 与训练口径一致(振幅用 (high-low)/open, 收益用复权价)
+    rows = (await db.execute(text(
+        "select open, high, low, close, vol, adj_factor from daily_candle "
+        "where ts_code = :c order by trade_date desc limit 2"
+    ), {"c": symbol})).fetchall()
+    if len(rows) < 2:
+        return {"symbol": symbol, "signals": [], "reason": "日线历史不足"}
+    y, y2 = rows[0], rows[1]
+    o, h, l, c_, v, adj = (float(y[0]), float(y[1]), float(y[2]),
+                           float(y[3]), float(y[4] or 0), float(y[5] or 1))
+    c2, adj2 = float(y2[3]), float(y2[5] or 1)
+    prev_amp = (h - l) / o if o else 0.0
+    prev_ret = (c_ * adj) / (c2 * adj2) - 1 if c2 and adj2 else 0.0
+
+    signals = compute_signals(
+        symbol, data.get("bars") or [], float(data.get("prev_close") or 0),
+        prev_amp, prev_ret, v, threshold=threshold,
+    )
+    return {"symbol": symbol, "trade_date": data.get("trade_date"),
+            "threshold": threshold, "signals": signals}
 
 
 @router.get("/quotes/snapshots")
