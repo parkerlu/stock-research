@@ -78,6 +78,81 @@ def fetch_cyq_recent(days: int) -> int:
     return len(new)
 
 
+def fetch_top_list_recent(days: int) -> int:
+    """拉最近几个交易日的龙虎榜, 直接写进 top_list 表。
+
+    ⚠️ 这一步不能省: v5 要求信号前 7 日内有龙虎榜净买入, 龙虎榜停更超过一周,
+    v5 就再也出不了新信号 —— 而且是静默的, 界面上只表现为"最近没信号"。
+    (v3.5 就是因为没接进每日更新, 悄悄过期了才被发现。)
+    """
+    import time
+
+    import tushare as ts
+    from sqlalchemy import create_engine, text as _text
+
+    pro = ts.pro_api(settings.tushare_token)
+    sync_url = settings.database_url.replace("+asyncpg", "").replace("+psycopg", "")
+    eng = create_engine(sync_url)
+    with eng.begin() as conn:
+        have = {r[0].strftime("%Y%m%d") for r in conn.execute(_text(
+            "select distinct trade_date from top_list "
+            "where trade_date >= current_date - :d"), {"d": days * 2})}
+
+    end = date.today()
+    cal = pro.trade_cal(exchange="SSE",
+                        start_date=(end - timedelta(days=days * 2)).strftime("%Y%m%d"),
+                        end_date=end.strftime("%Y%m%d"), is_open="1")
+    want = [d for d in sorted(cal.cal_date.tolist())[-days:] if d not in have]
+    if not want:
+        log.info("龙虎榜已是最新")
+        return 0
+
+    rows = []
+    for d in want:
+        for _ in range(4):
+            try:
+                x = pro.top_list(trade_date=d)
+                if x is not None and len(x):
+                    rows.append(x)
+                break
+            except Exception as e:  # noqa: BLE001
+                if "超限" in str(e) or "频率" in str(e):
+                    time.sleep(12)
+                    continue
+                log.warning("龙虎榜 %s 拉取失败: %s", d, e)
+                break
+    if not rows:
+        return 0
+
+    new = pd.concat(rows, ignore_index=True)
+    keep = ["ts_code", "trade_date", "close", "pct_change", "turnover_rate",
+            "l_buy", "l_sell", "net_amount", "reason"]
+    new = new[[c for c in keep if c in new.columns]].copy()
+    for c in ["close", "pct_change", "turnover_rate", "l_buy", "l_sell", "net_amount"]:
+        if c in new:
+            new[c] = pd.to_numeric(new[c], errors="coerce")
+    new["trade_date"] = pd.to_datetime(new["trade_date"]).dt.date
+    # 同一票同一天可能有多条(不同上榜原因), 合并成一条: 金额相加, 原因拼接
+    new = (new.groupby(["ts_code", "trade_date"], as_index=False)
+              .agg({"close": "first", "pct_change": "first", "turnover_rate": "first",
+                    "l_buy": "sum", "l_sell": "sum", "net_amount": "sum",
+                    "reason": lambda x: "; ".join(sorted(set(map(str, x))))[:200]}))
+
+    with eng.begin() as conn:
+        for r in new.to_dict("records"):
+            conn.execute(_text("""
+                insert into top_list (ts_code, trade_date, close, pct_change,
+                                      turnover_rate, l_buy, l_sell, net_amount, reason)
+                values (:ts_code, :trade_date, :close, :pct_change, :turnover_rate,
+                        :l_buy, :l_sell, :net_amount, :reason)
+                on conflict (ts_code, trade_date) do update set
+                  net_amount = excluded.net_amount, l_buy = excluded.l_buy,
+                  l_sell = excluded.l_sell, reason = excluded.reason
+            """), r)
+    log.info("龙虎榜新增 %d 行 (%s)", len(new), ",".join(want))
+    return len(new)
+
+
 async def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--days", type=int, default=10, help="回溯几个交易日")
@@ -89,6 +164,10 @@ async def main() -> None:
             fetch_cyq_recent(args.days)
         except Exception as exc:  # noqa: BLE001
             log.warning("筹码拉取失败(继续): %s", exc)
+        try:
+            fetch_top_list_recent(args.days)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("龙虎榜拉取失败(继续): %s", exc)
 
     # 面板重建 → 三个指标重算。
     # 目前直接调 build_*(全量), 因为单次几分钟可接受, 且能保证

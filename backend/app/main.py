@@ -16,6 +16,7 @@ from app.routers.system import router as system_router
 from app.routers.forecast import router as forecast_router
 from app.routers.paper import router as paper_router
 from app.routers.sectors import router as sectors_router
+from app.routers.toplist import router as toplist_router
 from app.services.scheduler import start_scheduler, stop_scheduler
 
 logging.basicConfig(level=logging.INFO)
@@ -45,6 +46,7 @@ def create_app() -> FastAPI:
     app.include_router(screening_router)
     app.include_router(strategy_pool_router)
     app.include_router(system_router)
+    app.include_router(toplist_router)
     app.include_router(forecast_router)
     app.include_router(paper_router)
     app.include_router(sectors_router)

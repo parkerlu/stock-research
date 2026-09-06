@@ -9,6 +9,7 @@ import { SystemPanel } from "../components/SystemPanel";
 import { ChartArea } from "../components/ChartArea";
 import { LiveView } from "../components/ChartArea/LiveView";
 import { SectorView } from "../components/SectorView";
+import { TopListView } from "../components/TopListView";
 import { TrainedScreen } from "../components/ScreeningPanel/TrainedScreen";
 import { PaperPanel } from "../components/PaperPanel";
 import { useStrategyStore } from "../stores/strategyStore";
@@ -24,7 +25,9 @@ export function QuotePage() {
     <div className="app-layout">
       <NavBar mode={mode} onModeChange={setMode} />
       <div className="app-body">
-        {mode === "pool" ? (
+        {mode === "toplist" ? (
+          <TopListView />
+        ) : mode === "pool" ? (
           <>
             <PoolPanel />
             <ChartArea />

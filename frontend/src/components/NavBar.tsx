@@ -4,6 +4,7 @@ export type AppMode =
   | "strategy-pool"
   | "live"
   | "sector"
+  | "toplist"
   | "paper"
   | "quote"
   | "pool"
@@ -50,6 +51,12 @@ export function NavBar({ mode, onModeChange }: Props) {
           title="虚拟盘 — chan-2buy 最优配置的实盘跟踪"
         >
           虚拟盘
+        </button>
+        <button
+          className={mode === "toplist" ? "active" : ""}
+          onClick={() => onModeChange("toplist")}
+        >
+          龙虎榜
         </button>
         <button
           className={mode === "sector" ? "active" : ""}
