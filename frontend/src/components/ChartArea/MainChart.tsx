@@ -7,6 +7,8 @@ import { useQuoteStore } from "../../stores/quoteStore";
 import type { Candle, Timeframe } from "../../types/quote";
 import type { TradeAction } from "../../types/strategy";
 import { buildTradeLabel, registerReplayDivider, registerTradeMarker } from "./tradeOverlays";
+import { PaneCloseButtons } from "./PaneCloseButtons";
+import type { PaneBtn } from "./PaneCloseButtons";
 import { registerTrainedMarker, paintTrainedMarkers,
          registerSelectedSignal, paintSelectedSignal } from "./trainedOverlays";
 import { createTrainedPane, removeTrainedPane, setTrainedData } from "./TrainedPaneManager";
@@ -67,6 +69,8 @@ interface Props {
   didianSignals?: { date: string; score: number; rank_pct: number; grade: string }[];
   /** 选股页点中的信号日期 —— 在那根K线上打青色高亮带 */
   signalMark?: string | null;
+  /** 副图关闭按钮: 每个副图右上角一个 ×, 点了从对应的开关状态里移除 */
+  panes?: PaneBtn[];
 }
 
 // 图表字体。klinecharts 默认 12px, 在高分屏上读起来费劲。
@@ -144,7 +148,7 @@ function anchorTs(list: { timestamp: number }[], ts: number): number {
 export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
   { timeframe: tfOverride, className, tradeActions, replayDate, forecast, onBarSelected,
     measuring = false, onMeasure,
-    maimaiSignals, comboSignals, pumpSignals, didianSignals, signalMark },
+    maimaiSignals, comboSignals, pumpSignals, didianSignals, signalMark, panes },
   ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -901,6 +905,7 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
         className={`main-chart ${className ?? ""}`}
         style={{ width: "100%", height: "100%" }}
       />
+      <PaneCloseButtons getChart={() => chartRef.current} panes={panes ?? []} />
       {loading && (
         <div className="chart-loading">
           <div className="chart-loading-spinner" />

@@ -2500,3 +2500,11 @@ body {
 /* 板块周期切换 —— 与排序按钮同一行, 用竖线隔开 */
 .sector-period { margin-right: 4px; padding-right: 8px;
   border-right: 1px solid var(--border, #2a2e38); }
+
+/* 副图右上角的关闭按钮 —— klinecharts 画在 canvas 里, 只能绝对定位叠上去 */
+.pane-close { position: absolute; z-index: 6; width: 18px; height: 18px;
+  line-height: 16px; text-align: center; padding: 0;
+  background: rgba(30,34,44,.75); color: var(--text-dim, #8b909a);
+  border: 1px solid var(--border, #3a3f4b); border-radius: 3px;
+  font-size: 14px; cursor: pointer; opacity: .55; transition: opacity .15s; }
+.pane-close:hover { opacity: 1; color: #eb5454; border-color: #eb5454; }

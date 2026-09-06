@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuoteStore } from "../../stores/quoteStore";
 import type { TradeAction } from "../../types/strategy";
 import { MainChart } from "./MainChart";
@@ -71,6 +71,7 @@ export function ChartArea({ tradeActions }: Props = {}) {
   const focusDate = useQuoteStore((s) => s.focusDate);
   const focusSeq = useQuoteStore((s) => s.focusSeq);
   const signalMark = useQuoteStore((s) => s.signalMark);
+
   const clearFocusDate = useQuoteStore((s) => s.clearFocusDate);
   const paperMarks = useQuoteStore((s) => s.paperMarks);
   const replayDate = useQuoteStore((s) => s.replayDate);
@@ -193,6 +194,28 @@ export function ChartArea({ tradeActions }: Props = {}) {
     timeframe,
     storageKey: LS_TDX_KEY,
   });
+
+  // 副图关闭按钮。三类副图各自的开关状态不同, 这里统一映射成 paneId → 关闭动作。
+  // ⚠️ 主图(candle_pane)和成交量不给按钮 —— 关掉没意义。
+  const panes = useMemo(() => {
+    const out: { paneId: string; label: string; onClose: () => void }[] = [];
+    for (const n of activeIndicators) {
+      if (MAIN_PANE_INDICATORS.has(n)) continue;
+      out.push({ paneId: `kc_${n}_pane`, label: n,
+                 onClose: () => setActiveIndicators((p) => p.filter((x) => x !== n)) });
+    }
+    for (const n of tdx.active) {
+      // 画在主图上的 TDX 指标 paneId 是 candle_pane, 不能给关闭按钮
+      // (按钮会叠在主图右上角, 而且点了会误关整个主图区域的标注)。
+      out.push({ paneId: `tdx_${n}_pane`, label: n, onClose: () => tdx.toggle(n) });
+    }
+    for (const n of activeTrained) {
+      if (n !== "pump" && n !== "didian") continue;   // 只有这两个是副图
+      out.push({ paneId: `trained_${n}_pane`, label: n,
+                 onClose: () => setActiveTrained((p) => p.filter((x) => x !== n)) });
+    }
+    return out;
+  }, [activeIndicators, tdx.active, activeTrained]);
 
   // Persist whenever state changes
   useEffect(() => {
@@ -331,6 +354,7 @@ export function ChartArea({ tradeActions }: Props = {}) {
         didianSignals={activeTrained.includes("didian") ? didianSig : undefined}
         pumpSignals={activeTrained.includes("pump") ? pumpSignals : undefined}
         signalMark={signalMark}
+        panes={panes}
         maimaiSignals={activeTrained.includes("maimai_v3") ? maimaiSignals : undefined}
             ref={mainChartRef}
             tradeActions={marks}

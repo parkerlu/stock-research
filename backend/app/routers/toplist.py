@@ -69,7 +69,9 @@ async def top_list(
         from top_list t
         left join stock_basic b on b.ts_code = t.ts_code
         where t.trade_date = :d {cond}
-        order by t.net_amount desc nulls last
+        -- 按净额【绝对值】排序: 净卖 5 亿和净买 5 亿都是大资金动作, 都该排在
+        -- 前面。按原值排, "全部"视图里净卖出会全被挤到末尾, 反而看不到。
+        order by abs(t.net_amount) desc nulls last
     """), {"d": d})).fetchall()
     return {"date": str(d), "side": side, "count": len(rows), "items": [
         {"ts_code": r[0], "name": r[1],
