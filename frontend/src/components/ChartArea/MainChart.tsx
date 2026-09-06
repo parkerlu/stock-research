@@ -391,6 +391,9 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
           // ⚠️ 成交量柱必须跟 K 线同色板(A股: 涨红 #e94560 / 跌绿 #4caf50)。
           // klinecharts 默认是欧美色板(涨绿跌红), 不改的话量和K线颜色相反。
           bars: [{ style: "fill", upColor: "#e94560", downColor: "#4caf50", noChangeColor: "#888888" }],
+          // SAR 画的是 circles, 与 bars 是两套独立配色 —— 只改 bars 的话
+          // 成交量对了、SAR 还是欧美色板(涨绿跌红), 和 K 线正好相反。
+          circles: [{ style: "fill", upColor: "#e94560", downColor: "#4caf50", noChangeColor: "#888888" }],
         },
         xAxis: { tickText: { size: AXIS_FONT_SIZE } },
         yAxis: { tickText: { size: AXIS_FONT_SIZE } },
