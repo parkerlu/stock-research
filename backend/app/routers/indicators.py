@@ -200,10 +200,6 @@ TRAINED_META = [
     {"key": "maimai_buy", "label": "买卖很准 v3",
      "desc": "动能参考 · 超卖反转买点。过滤后胜率 48.9%→50.9%, 是改进不是答案",
      "grades": ["强", "中", "弱"], "default_grade": "强"},
-    {"key": "v5", "label": "★★ v5 (三重共振)",
-     "desc": "v3强 × 吸筹强 × 近7日龙虎榜机构净买入。胜率 62.1%, 平均收益 +6.86%(持有20日)。"
-             "全市场一年仅约 7.5 个 —— 建议看 90 日窗口, 出现时值得认真看一眼",
-     "grades": ["强"], "default_grade": "强", "default_days": 90},
     {"key": "combo", "label": "★ 买卖很准 v4 (共振)",
      "desc": "v3 + 主力吸筹共振(近5日内先后触发)。胜率 58.3%, 超同日全市场 +1.93pp。"
              "每天约 1.2 个",
@@ -233,60 +229,6 @@ async def screen_by_trained(
 ):
     """按训练指标选股 —— 返回最近 N 日内出信号的股票 + 当日收盘行情。"""
     from sqlalchemy import text
-
-    if indicator == "v5":
-        # 三重共振: v3强档 × 吸筹强档 × 近5日龙虎榜机构净买入。
-        # ⚠️ 时间窗只能向后看。原来写成 mm.trade_date ± 7 是前视: T 日的信号要求
-        # 知道未来 7 天会不会上龙虎榜, 而龙虎榜是事后才公布的。改成因果口径后
-        # 信号从 609 个掉到 58 个(九成靠未来才成立), 胜率 78.0% → 62.1%。
-        rows = (await db.execute(text("""
-            with mm as (
-              select ts_code, trade_date, rank_pct from maimai_signal
-              where side='buy' and rank_pct >= 0.8
-                and trade_date > (select max(trade_date) from maimai_signal)
-                                 - make_interval(days => :d)
-            ),
-            pp as (select ts_code, trade_date from pump_signal where rank_pct >= 0.95),
-            lb as (select ts_code, trade_date, net_amount from top_list where net_amount > 0),
-            hit as (
-              select mm.ts_code, mm.trade_date, mm.rank_pct,
-                     max(lb.net_amount) as net_amt
-              from mm
-              join pp on pp.ts_code = mm.ts_code
-                     and pp.trade_date between mm.trade_date - 5 and mm.trade_date
-              join lb on lb.ts_code = mm.ts_code
-                     and lb.trade_date between mm.trade_date - 7 and mm.trade_date
-              group by mm.ts_code, mm.trade_date, mm.rank_pct
-            ),
-            px as (
-              select d.ts_code, d.trade_date, d.close, d.adj_factor,
-                     row_number() over (partition by d.ts_code order by d.trade_date desc) rn
-              from daily_candle d
-              where d.trade_date > (select max(trade_date) - interval '20 days' from daily_candle)
-            ),
-            last2 as (
-              select ts_code,
-                     max(close) filter (where rn=1) c1, max(adj_factor) filter (where rn=1) a1,
-                     max(close) filter (where rn=2) c2, max(adj_factor) filter (where rn=2) a2
-              from px where rn <= 2 group by ts_code
-            )
-            select h.ts_code, coalesce(b.name,'') as name, h.trade_date,
-                   h.net_amt as score, h.rank_pct, '强' as grade,
-                   l.c1 as price, (l.c1*l.a1)/nullif(l.c2*l.a2,0)-1 as chg
-            from hit h
-            left join stock_basic b on b.ts_code = h.ts_code
-            left join last2 l on l.ts_code = h.ts_code
-            order by h.trade_date desc, h.net_amt desc nulls last
-            limit :lim
-        """), {"d": days, "lim": limit})).fetchall()
-        return {"indicator": indicator, "grade": "强", "days": days,
-                "count": len(rows), "items": [
-            {"ts_code": r[0], "name": r[1], "date": str(r[2]),
-             "score": round(float(r[3]) / 1e4, 1) if r[3] is not None else None,  # 万元
-             "rank_pct": round(float(r[4]), 4), "grade": r[5],
-             "price": round(float(r[6]), 2) if r[6] is not None else None,
-             "chg": round(float(r[7]) * 100, 2) if r[7] is not None else None}
-            for r in rows]}
 
     if indicator == "combo":
         # 共振: 买卖很准强档(rank>=0.8) 与 主力吸筹强档(rank>=0.95) 在 ±3 交易日内同时出现。
@@ -464,46 +406,6 @@ async def combo_signals(
     rows = (await db.execute(text(sql), params)).fetchall()
     items = [{"date": str(r[0]), "score": round(float(r[1]), 5),
               "rank_pct": round(float(r[1]), 4), "grade": "强"} for r in rows]
-    if start:
-        items = [x for x in items if x["date"] >= start]
-    return {"ts_code": ts_code, "count": len(items), "signals": items}
-
-
-@router.get("/v5/{ts_code}")
-async def v5_signals(
-    ts_code: str,
-    start: str | None = Query(None, description="YYYY-MM-DD"),
-    db: AsyncSession = Depends(get_db),
-):
-    """v5 三重共振 —— v3强 × 主力吸筹强 × 近5日龙虎榜机构净买入。
-
-    龙虎榜覆盖率仅 1.2%(只有异动才上榜), 单独用没意义, 但作为第三层过滤:
-      v4 (v3强×吸筹强)      胜率 58.3%  收益 +5.57%  超全市场 +1.93pp
-      v5 (+龙虎榜净买入)     胜率 62.1%  收益 +6.86%  超全市场 +2.49pp
-    ⚠️ v5 因果口径下 7.7 年只有 58 个信号(约 7.5 个/年), 样本量小, 别当策略用。
-
-    ⚠️ 因果口径下全市场一年仅约 7.5 个。K线菜单里已撤掉(常年空白), 只在选股页出现。
-    """
-    from sqlalchemy import text
-
-    sql = """
-        with mm as (select ts_code, trade_date, rank_pct from maimai_signal
-                    where side='buy' and rank_pct >= 0.8 and ts_code = :c),
-        pp as (select trade_date from pump_signal where rank_pct >= 0.95 and ts_code = :c),
-        lb as (select trade_date, net_amount from top_list
-               where net_amount > 0 and ts_code = :c)
-        select mm.trade_date, mm.rank_pct, max(lb.net_amount) as net_amt
-        from mm
-        join pp on pp.trade_date between mm.trade_date - 5 and mm.trade_date
-        join lb on lb.trade_date between mm.trade_date - 7 and mm.trade_date
-        group by mm.trade_date, mm.rank_pct
-        order by mm.trade_date
-    """
-    rows = (await db.execute(text(sql), {"c": ts_code})).fetchall()
-    items = [{"date": str(r[0]), "score": round(float(r[1]), 5),
-              "rank_pct": round(float(r[1]), 4), "grade": "强",
-              "net_amount_wan": round(float(r[2]) / 1e4, 1) if r[2] is not None else None}
-             for r in rows]
     if start:
         items = [x for x in items if x["date"] >= start]
     return {"ts_code": ts_code, "count": len(items), "signals": items}

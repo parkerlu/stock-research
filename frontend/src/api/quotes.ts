@@ -145,17 +145,3 @@ export async function getComboSignals(
   return json(`${BASE}/indicators/combo/${tsCode}${q}`);
 }
 
-/** v5 三重共振 —— v3强 × 吸筹强 × 近5日龙虎榜机构净买入。
- *  胜率 76.2%, 平均收益 +15.89%(持有20日), 但每天仅 0.3 个。 */
-export async function getV5Signals(
-  tsCode: string,
-  start?: string
-): Promise<{
-  ts_code: string;
-  count: number;
-  signals: { date: string; score: number; rank_pct: number; grade: string;
-             net_amount_wan: number | null }[];
-}> {
-  const q = start ? `?start=${start}` : "";
-  return json(`${BASE}/indicators/v5/${tsCode}${q}`);
-}
