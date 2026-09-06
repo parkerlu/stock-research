@@ -373,6 +373,29 @@ async def daily_sync_job():
     log.info("====== daily sync complete ======")
 
 
+async def hourly_index_bars_job() -> None:
+    """每小时补 1 片中证1000 的分钟 K 线。
+
+    ⚠️ 为什么是每小时 1 次而不是每天 6 次: tushare 的 stk_mins 限速会动态收紧,
+    实测已经到【1 次/小时】。一口气发 6 个只有第一个能成, 剩下 5 个全被拒 ——
+    那样补齐 2025 至今(21 片)要 21 天; 每小时 1 次则约 21 小时。
+    补齐后 todo 里只剩当前季度, 变成每小时刷新一次最新几根, 开销可以忽略。
+    """
+    try:
+        from app.commands.sync_index_bars import main as sync_ibars
+        import sys as _s
+
+        _a = _s.argv
+        _s.argv = ["sync_index_bars", "--start", "2025-01-01",
+                   "--max-calls", "1", "--quiet-wk"]
+        try:
+            await sync_ibars()
+        finally:
+            _s.argv = _a
+    except Exception as exc:                      # noqa: BLE001
+        log.exception("指数分钟K线补片失败: %s", exc)
+
+
 def start_scheduler():
     global _scheduler
     if _scheduler is not None:
@@ -382,6 +405,13 @@ def start_scheduler():
         daily_sync_job,
         CronTrigger(hour=15, minute=30, timezone="Asia/Shanghai"),
         id="daily_sync",
+        replace_existing=True,
+    )
+    # 分钟K线补片 —— 每小时 1 次, 贴着 tushare 的 1次/小时 限速走
+    _scheduler.add_job(
+        hourly_index_bars_job,
+        CronTrigger(minute=7, timezone="Asia/Shanghai"),
+        id="index_bars_hourly",
         replace_existing=True,
     )
     _scheduler.start()

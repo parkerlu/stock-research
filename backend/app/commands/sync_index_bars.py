@@ -45,8 +45,12 @@ async def main() -> None:
                         datefmt="%H:%M:%S")
     ap = argparse.ArgumentParser()
     ap.add_argument("--code", default="000852.SH")
-    ap.add_argument("--start", default="2023-01-01", help="分钟级起始(周月固定2018)")
+    ap.add_argument("--start", default="2025-01-01", help="分钟级起始(周月固定2018)")
     ap.add_argument("--skip-mins", action="store_true")
+    ap.add_argument("--quiet-wk", action="store_true",
+                    help="跳过周/月线(每小时补片时不必重复拉)")
+    ap.add_argument("--max-calls", type=int, default=0,
+                    help="本次最多请求几次(0=不限)。定时任务用小预算分多天补齐")
     a = ap.parse_args()
 
     import tushare as ts
@@ -54,8 +58,9 @@ async def main() -> None:
     eng = create_async_engine(settings.database_url)
 
     # ---- 周 / 月 ----
-    for fn, freq, lab in [("index_weekly", "1w", "周线"),
-                          ("index_monthly", "1m", "月线")]:
+    for fn, freq, lab in ([] if a.quiet_wk else
+                          [("index_weekly", "1w", "周线"),
+                           ("index_monthly", "1m", "月线")]):
         try:
             df = getattr(pro, fn)(ts_code=a.code, start_date="20180101",
                                   end_date=date.today().strftime("%Y%m%d"))
@@ -81,45 +86,75 @@ async def main() -> None:
             "where ts_code = :c group by 1, 2"), {"c": a.code})).fetchall()}
     start = datetime.strptime(a.start, "%Y-%m-%d")
     quarters = pd.date_range(start, datetime.now(), freq="QS").tolist()
-    total_calls = sum(1 for f in ("120min", "60min", "30min") for q in quarters
-                      if (f, q) not in have)
-    log.info("分钟级: %d 个请求 × 65 秒 ≈ %.0f 分钟", total_calls, total_calls * 65 / 60)
+    cur_q = pd.Timestamp(datetime.now()).to_period("Q").start_time
+
+    # 任务顺序: 先把【当前季度】刷一遍(保证最新几根在), 再从近往远补历史。
+    # ⚠️ 当前季度不能跳过 —— 它每天都在长, 按 have 跳过的话永远停在第一次拉的那天。
+    todo: list[tuple[str, pd.Timestamp]] = []
+    for freq in ("120min", "60min", "30min"):
+        todo.append((freq, cur_q))
+    for freq in ("120min", "60min", "30min"):
+        for q in sorted(quarters, reverse=True):
+            if q == cur_q or (freq, q) in have:
+                continue
+            todo.append((freq, q))
+
+    if a.max_calls > 0:
+        todo = todo[:a.max_calls]
+    total_calls = len(todo)
+    log.info("分钟级: %d 个请求 × 65 秒 ≈ %.0f 分钟%s", total_calls,
+             total_calls * 65 / 60,
+             f" (本次上限 {a.max_calls})" if a.max_calls else "")
 
     done = 0
-    for freq in ("120min", "60min", "30min"):
-        for q in quarters:
-            if (freq, q) in have:
-                continue
-            qe = (q + pd.offsets.QuarterEnd(0)).to_pydatetime()
-            for attempt in range(3):
-                try:
-                    df = pro.stk_mins(
-                        ts_code=a.code, freq=freq,
-                        start_date=q.strftime("%Y-%m-%d 09:00:00"),
-                        end_date=qe.strftime("%Y-%m-%d 15:30:00"))
-                    break
-                except Exception as e:  # noqa: BLE001
-                    if "超限" in str(e) or "频率" in str(e):
-                        time.sleep(THROTTLE)
-                        continue
-                    log.warning("  %s %s 失败: %s", freq, q.date(), str(e)[:60])
+    limited = 0
+    for freq, q in todo:
+        qe = (q + pd.offsets.QuarterEnd(0)).to_pydatetime()
+        df = None
+        rate_limited = False
+        for attempt in range(2):
+            try:
+                df = pro.stk_mins(
+                    ts_code=a.code, freq=freq,
+                    start_date=q.strftime("%Y-%m-%d 09:00:00"),
+                    end_date=qe.strftime("%Y-%m-%d 15:30:00"))
+                rate_limited = False
+                break
+            except Exception as e:  # noqa: BLE001
+                msg = str(e)
+                if "超限" in msg or "频率" in msg:
+                    # ⚠️ 限速失败必须与"这段没数据"区分开 —— 混在一起报 "0 根"
+                    # 会让人以为接口正常只是没行情, 实际上一条都没拉到。
+                    # tushare 的 stk_mins 限速会动态收紧(实测 1次/分钟 → 1次/小时),
+                    # 所以重试没意义, 直接记账退出这一片。
+                    rate_limited = True
                     df = None
                     break
-            else:
+                log.warning("  %s %s 失败: %s", freq, q.date(), msg[:60])
                 df = None
-            done += 1
-            if df is None or df.empty:
-                log.info("  [%d/%d] %s %s: 0 根", done, total_calls, freq, q.date())
-            else:
-                rows = [{"ts_code": a.code, "freq": freq,
-                         "bar_time": pd.to_datetime(r.trade_time).to_pydatetime(),
-                         "open": float(r.open), "high": float(r.high),
-                         "low": float(r.low), "close": float(r.close),
-                         "vol": float(r.vol or 0)} for r in df.itertuples()]
-                await _save(eng, rows)
-                log.info("  [%d/%d] %s %s: %d 根", done, total_calls, freq,
-                         q.date(), len(rows))
-            time.sleep(THROTTLE)
+                break
+        done += 1
+        if rate_limited:
+            limited += 1
+            log.warning("  [%d/%d] %s %s: ⛔ 被限速, 未取到数据",
+                        done, total_calls, freq, q.date())
+            if limited >= 2:
+                log.warning("  连续被限速, 本次提前结束 —— 剩余 %d 片留给下次",
+                            total_calls - done)
+                break
+        elif df is None or df.empty:
+            log.info("  [%d/%d] %s %s: 0 根(该区间确实无数据)",
+                     done, total_calls, freq, q.date())
+        else:
+            rows = [{"ts_code": a.code, "freq": freq,
+                     "bar_time": pd.to_datetime(r.trade_time).to_pydatetime(),
+                     "open": float(r.open), "high": float(r.high),
+                     "low": float(r.low), "close": float(r.close),
+                     "vol": float(r.vol or 0)} for r in df.itertuples()]
+            await _save(eng, rows)
+            log.info("  [%d/%d] %s %s: %d 根", done, total_calls, freq,
+                     q.date(), len(rows))
+        time.sleep(THROTTLE)
 
     async with eng.connect() as c:
         for r in (await c.execute(text(

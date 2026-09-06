@@ -45,6 +45,18 @@ def get_tencent() -> TencentProvider:
     return p
 
 
+# 可查看的指数 —— 只在搜索和 K 线接口里特殊处理。
+# ⚠️ 刻意【不】把指数写进 daily_candle: 那张表被所有训练指标(build_dongli /
+# build_pump / build_breakout ...)和板块计算按 distinct ts_code 遍历,
+# 塞进去会给指数也生成买卖信号, 还会把它算进板块均值。
+INDEXES = {
+    "000852.SH": "中证1000",
+    "000905.SH": "中证500",
+    "000300.SH": "沪深300",
+    "000001.SH": "上证指数",
+}
+
+
 @router.get("/quotes/search")
 async def search(
     q: str = Query(..., min_length=1),
@@ -53,7 +65,12 @@ async def search(
 ):
     if not q.strip():
         raise HTTPException(status_code=400, detail="Query must not be empty")
-    return await search_stocks(db, q.strip(), limit)
+    kw = q.strip()
+    hits = [{"ts_code": c, "name": n, "market": "指数"}
+            for c, n in INDEXES.items() if kw in c or kw in n]
+    rows = await search_stocks(db, kw, limit)
+    # 指数排前面 —— 搜 "1000" 时用户多半是要指数, 不是名字带 1000 的股票
+    return hits + list(rows) if hits else rows
 
 
 @router.get("/quotes/{symbol}/candles")
@@ -71,6 +88,10 @@ async def candles(
         end = date.today()
 
     await add_search_history(db, symbol)
+
+    if symbol in INDEXES:
+        return {"symbol": symbol, "tf": tf,
+                "candles": await _index_candles(db, symbol, tf, start, end)}
 
     try:
         data = await get_candles(db, manager, symbol, tf, start, end)
@@ -187,3 +208,30 @@ async def remove_fav(ts_code: str, db: AsyncSession = Depends(get_db)):
 @router.get("/favorites")
 async def list_favs(db: AsyncSession = Depends(get_db)):
     return await get_favorites(db)
+
+
+async def _index_candles(db: AsyncSession, code: str, tf: str,
+                         start: date, end: date) -> list[dict]:
+    """指数 K 线 —— 日线读 index_daily, 周/月读 index_bar。
+
+    返回结构与个股 K 线一致(含 adj_factor=1), 前端不用区分。
+    """
+    from sqlalchemy import text as _t
+
+    if tf == "1d":
+        rows = (await db.execute(_t(
+            "select trade_date, open, high, low, close, vol from index_daily "
+            "where ts_code=:c and trade_date between :s and :e order by trade_date"),
+            {"c": code, "s": start, "e": end})).fetchall()
+        return [{"trade_date": str(r[0]), "open": float(r[1]), "high": float(r[2]),
+                 "low": float(r[3]), "close": float(r[4]), "vol": float(r[5]),
+                 "amount": 0.0, "adj_factor": 1.0} for r in rows]
+
+    rows = (await db.execute(_t(
+        "select bar_time, open, high, low, close, vol from index_bar "
+        "where ts_code=:c and freq=:f and bar_time between :s and :e "
+        "order by bar_time"),
+        {"c": code, "f": tf, "s": start, "e": end})).fetchall()
+    return [{"trade_date": r[0].strftime("%Y-%m-%d"), "open": float(r[1]),
+             "high": float(r[2]), "low": float(r[3]), "close": float(r[4]),
+             "vol": float(r[5]), "amount": 0.0, "adj_factor": 1.0} for r in rows]
