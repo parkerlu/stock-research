@@ -23,6 +23,8 @@ const INDICATORS = [
  *  买卖很准v3: 原指标买点与随机无异(胜率48.7%), 模型在同日×同波动层中性化后
  *  把 Top20% 胜率提到 51.3%、中位翻正到 +0.264%, 三个波动档超出全为正。 */
 export const TRAINED_INDICATORS = [
+  { name: "liftalert", label: "★★ 拉升预警",
+    desc: "动力线×吸筹强 · 10日内触及+10% 命中32.6%(基准17.45%) · 各关全过" },
   { name: "maimai_v3", label: "买卖很准 v3", desc: "动能参考 · 超卖反转买点, 胜率 48.9%→50.9%" },
   { name: "combo", label: "买卖很准 v4", desc: "v3+吸筹共振 · 胜率 58.3%, 超同日全市场 +1.93pp" },
   { name: "didian", label: "低点组合 v2", desc: "动能参考 · 阶段底部+模型过滤, 持有20日" },

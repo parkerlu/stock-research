@@ -72,6 +72,8 @@ interface Props {
   signalMark?: string | null;
   /** 副图关闭按钮: 每个副图右上角一个 ×, 点了从对应的开关状态里移除 */
   panes?: PaneBtn[];
+  /** 拉升预警 —— 各关全过的指标, 用亮青色三角(与 v3红/v4金 区分) */
+  liftSignals?: { date: string; score: number; rank_pct: number; grade: string }[];
   /** 龙虎榜上榜日 —— 画成小圆点 i, 纯参考不是信号 */
   topList?: { date: string; net_wan: number }[];
 }
@@ -151,7 +153,7 @@ function anchorTs(list: { timestamp: number }[], ts: number): number {
 export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
   { timeframe: tfOverride, className, tradeActions, replayDate, forecast, onBarSelected,
     measuring = false, onMeasure,
-    maimaiSignals, comboSignals, pumpSignals, didianSignals, signalMark, panes, topList },
+    maimaiSignals, comboSignals, pumpSignals, didianSignals, signalMark, panes, topList, liftSignals },
   ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -204,6 +206,11 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
     selMarkRef.current = signalMark;
     return paintSelectedSignal(chartRef.current, signalMark);
   }, [signalMark]);
+
+  useEffect(() => {
+    trainedRef.current["lift"] = { sig: liftSignals, color: "#22d3ee" };
+    return paintTrainedMarkers(chartRef.current, "lift", liftSignals, "#22d3ee");
+  }, [liftSignals]);
 
   useEffect(() => {
     trainedRef.current["maimai"] = { sig: maimaiSignals };

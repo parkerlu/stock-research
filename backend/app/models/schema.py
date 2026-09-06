@@ -367,6 +367,23 @@ class PumpSignal(Base):
     grade: Mapped[str] = mapped_column(String(4))
 
 
+class DongliSignal(Base):
+    """动力线上穿 0.2 的日子 —— 即原「低点组合」里的阶段底部信号。
+
+    单独落表是为了能和别的信号做 SQL join(与 maimai_signal 同样的用法)。
+    它自己几乎没有预测力(「10日涨10%」命中率 18.7%, 基准 17.45%),
+    价值在于给主力吸筹做最后一道收紧: 吸筹强 25.7% → 叠上动力线 32.6%。
+
+    ⚠️ 无前视: LLV(10)/HHV(25)/EMA(4) 全是向后看的窗口, 309 次截断重算零不一致。
+    """
+    __tablename__ = "dongli_signal"
+    __table_args__ = (Index("ix_dongli_date", "trade_date"),)
+
+    ts_code: Mapped[str] = mapped_column(String(12), primary_key=True)
+    trade_date: Mapped[date] = mapped_column(Date, primary_key=True)
+    dl_value: Mapped[float] = mapped_column(Numeric(8, 4))
+
+
 class DidianSignal(Base):
     """低点组合 v2 —— 原指标「阶段底部」(动力线上穿0.2) + 模型过滤。
 

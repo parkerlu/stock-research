@@ -145,3 +145,17 @@ export async function getComboSignals(
   return json(`${BASE}/indicators/combo/${tsCode}${q}`);
 }
 
+/** 拉升预警 —— 动力线 × 主力吸筹强档。
+ *  目标是【事件】: 10 个交易日内收盘价触及 +10%。命中率 32.6%(基准 17.45%)。
+ *  目前唯一逐年/按天t/九宫格全过的指标。 */
+export async function getLiftAlertSignals(
+  tsCode: string,
+  start?: string
+): Promise<{
+  ts_code: string;
+  count: number;
+  signals: { date: string; score: number; rank_pct: number; grade: string }[];
+}> {
+  const q = start ? `?start=${start}` : "";
+  return json(`${BASE}/indicators/liftalert/${tsCode}${q}`);
+}

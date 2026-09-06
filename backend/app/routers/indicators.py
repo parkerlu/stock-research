@@ -197,6 +197,11 @@ async def pump_scan(
 # ---- 训练指标选股 ----
 # 信号已在库中(build_maimai / build_pump 盘后算好), 这里直接查, 不跑扫描任务。
 TRAINED_META = [
+    {"key": "liftalert", "label": "★★ 拉升预警",
+     "desc": "动力线 × 主力吸筹强档。目标: 10个交易日内触及+10%。"
+             "命中率 32.6%(基准 17.45%, 1.87倍), 逐年0负年 · 按天t=4.79 · "
+             "波动×市值九格全为正 —— 目前唯一各关全过的指标。全市场约2个/天",
+     "grades": ["强"], "default_grade": "强", "default_days": 20},
     {"key": "maimai_buy", "label": "买卖很准 v3",
      "desc": "动能参考 · 超卖反转买点。过滤后胜率 48.9%→50.9%, 是改进不是答案",
      "grades": ["强", "中", "弱"], "default_grade": "强"},
@@ -229,6 +234,57 @@ async def screen_by_trained(
 ):
     """按训练指标选股 —— 返回最近 N 日内出信号的股票 + 当日收盘行情。"""
     from sqlalchemy import text
+
+    if indicator == "liftalert":
+        # 拉升预警 = 动力线上穿0.2 × 近5日内主力吸筹强档。
+        # ⚠️ 窗口只向后看(dl.trade_date - 5 ~ dl.trade_date), 不重蹈 v4/v5 的前视。
+        # 为什么是这两个: 吸筹强单用已经 25.7%(基准17.45%, t=67, 九格全正),
+        # 动力线单用几乎无效(18.7%), 但叠上去收紧到 32.6% —— 动力线的价值
+        # 不是当基底, 是当最后一道过滤。
+        rows = (await db.execute(text("""
+            with dl as (
+              select ts_code, trade_date, dl_value from dongli_signal
+              where trade_date > (select max(trade_date) from dongli_signal)
+                                 - make_interval(days => :d)
+            ),
+            pp as (select ts_code, trade_date, prob, rank_pct
+                   from pump_signal where rank_pct >= 0.95),
+            hit as (
+              select dl.ts_code, dl.trade_date, max(pp.prob) as prob,
+                     max(pp.rank_pct) as rank_pct
+              from dl join pp on pp.ts_code = dl.ts_code
+                   and pp.trade_date between dl.trade_date - 5 and dl.trade_date
+              group by dl.ts_code, dl.trade_date
+            ),
+            px as (
+              select d.ts_code, d.trade_date, d.close, d.adj_factor,
+                     row_number() over (partition by d.ts_code order by d.trade_date desc) rn
+              from daily_candle d
+              where d.trade_date > (select max(trade_date) - interval '20 days' from daily_candle)
+            ),
+            last2 as (
+              select ts_code,
+                     max(close) filter (where rn=1) c1, max(adj_factor) filter (where rn=1) a1,
+                     max(close) filter (where rn=2) c2, max(adj_factor) filter (where rn=2) a2
+              from px where rn <= 2 group by ts_code
+            )
+            select h.ts_code, coalesce(b.name,'') as name, h.trade_date,
+                   h.prob as score, h.rank_pct, '强' as grade,
+                   l.c1 as price, (l.c1*l.a1)/nullif(l.c2*l.a2,0)-1 as chg
+            from hit h
+            left join stock_basic b on b.ts_code = h.ts_code
+            left join last2 l on l.ts_code = h.ts_code
+            order by h.trade_date desc, h.prob desc nulls last
+            limit :lim
+        """), {"d": days, "lim": limit})).fetchall()
+        return {"indicator": indicator, "grade": "强", "days": days,
+                "count": len(rows), "items": [
+            {"ts_code": r[0], "name": r[1], "date": str(r[2]),
+             "score": round(float(r[3]), 4) if r[3] is not None else None,
+             "rank_pct": round(float(r[4]), 4), "grade": r[5],
+             "price": round(float(r[6]), 2) if r[6] is not None else None,
+             "chg": round(float(r[7]) * 100, 2) if r[7] is not None else None}
+            for r in rows]}
 
     if indicator == "combo":
         # 共振: 买卖很准强档(rank>=0.8) 与 主力吸筹强档(rank>=0.95) 在 ±3 交易日内同时出现。
@@ -409,3 +465,40 @@ async def combo_signals(
     if start:
         items = [x for x in items if x["date"] >= start]
     return {"ts_code": ts_code, "count": len(items), "signals": items}
+
+
+@router.get("/liftalert/{ts_code}")
+async def liftalert_signals(
+    ts_code: str,
+    start: str | None = Query(None, description="YYYY-MM-DD"),
+    db: AsyncSession = Depends(get_db),
+):
+    """拉升预警 —— 动力线上穿0.2 × 近5日内主力吸筹强档。
+
+    目标是【事件】而不是收益: 10 个交易日内收盘价触及 +10%。
+    命中率 32.6%(全样本基准 17.45%), T+1 开盘口径 33.60%(次日略低开, 不缩水)。
+
+    验证(2018-06 起, 2227 只抽样, 全部通过):
+      逐年 0 负年 · 按天 t=4.79 · 波动×市值九宫格最小 +1.42pp
+      截断重算 309 次零不一致
+    """
+    sql = ("""
+        with dl as (select ts_code, trade_date from dongli_signal where ts_code = :c),
+        pp as (select ts_code, trade_date, prob, rank_pct from pump_signal
+               where rank_pct >= 0.95 and ts_code = :c)
+        select dl.trade_date, max(pp.prob) prob, max(pp.rank_pct) rank_pct
+        from dl join pp on pp.trade_date between dl.trade_date - 5 and dl.trade_date
+        group by dl.trade_date
+    """)
+    params: dict = {"c": ts_code}
+    if start:
+        try:
+            params["s"] = date.fromisoformat(start)
+            sql += " having dl.trade_date >= :s"
+        except ValueError:
+            raise HTTPException(status_code=400, detail="start 需为 YYYY-MM-DD")
+    sql += " order by dl.trade_date"
+    rows = (await db.execute(text(sql), params)).fetchall()
+    return {"ts_code": ts_code, "count": len(rows), "signals": [
+        {"date": str(r[0]), "score": round(float(r[1]), 4),
+         "rank_pct": round(float(r[2]), 4), "grade": "强"} for r in rows]}
