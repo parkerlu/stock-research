@@ -12,10 +12,11 @@ const TIMEFRAMES: { label: string; value: Timeframe }[] = [
   { label: "月", value: "1m" },
 ];
 
-// 只保留 MA —— 其余标准指标平时不看, 留着反而挤占菜单。
-// MA 周期见 MainChart 的 MA_PERIODS。
+// 标准指标只留常用的两个 —— 其余平时不看, 留着反而挤占菜单。
+// MA 周期见 MainChart 的 MA_PERIODS; MACD 走 klinecharts 内置, 画副图。
 const INDICATORS = [
   { group: "均线", items: ["MA"] },
+  { group: "副图", items: ["MACD"] },
 ];
 
 /** 自训练指标 —— 我们自己训出来的, 与 TDX 移植指标区分开。
