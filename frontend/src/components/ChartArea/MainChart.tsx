@@ -7,12 +7,14 @@ import { useQuoteStore } from "../../stores/quoteStore";
 import type { Candle, Timeframe } from "../../types/quote";
 import type { TradeAction } from "../../types/strategy";
 import { buildTradeLabel, registerReplayDivider, registerTradeMarker } from "./tradeOverlays";
-import { registerTrainedMarker, paintTrainedMarkers } from "./trainedOverlays";
+import { registerTrainedMarker, paintTrainedMarkers,
+         registerSelectedSignal, paintSelectedSignal } from "./trainedOverlays";
 import { createTrainedPane, removeTrainedPane, setTrainedData } from "./TrainedPaneManager";
 
 registerTradeMarker();
 registerReplayDivider();
 registerTrainedMarker();
+registerSelectedSignal();
 
 export interface ForecastDay {
   day: number;
@@ -63,6 +65,8 @@ interface Props {
   /** 副图类: 信号密集时主图会糊成一片, 画成副图能看出评分随时间的变化。 */
   pumpSignals?: { date: string; prob: number; rank_pct: number; grade: string }[];
   didianSignals?: { date: string; score: number; rank_pct: number; grade: string }[];
+  /** 选股页点中的信号日期 —— 在那根K线上打青色高亮带 */
+  signalMark?: string | null;
 }
 
 // 图表字体。klinecharts 默认 12px, 在高分屏上读起来费劲。
@@ -140,7 +144,7 @@ function anchorTs(list: { timestamp: number }[], ts: number): number {
 export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
   { timeframe: tfOverride, className, tradeActions, replayDate, forecast, onBarSelected,
     measuring = false, onMeasure,
-    maimaiSignals, comboSignals, pumpSignals, didianSignals },
+    maimaiSignals, comboSignals, pumpSignals, didianSignals, signalMark },
   ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -163,10 +167,12 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
     if (w > 0) c.setBarSpace(Math.max(w / (n + 8), 0.8));
   });
 
+  const selMarkRef = useRef<string | null | undefined>(null);
   const repaintTrained = useRef(() => {
     for (const [gid, v] of Object.entries(trainedRef.current)) {
       paintTrainedMarkers(chartRef.current, gid, v.sig, v.color);
     }
+    paintSelectedSignal(chartRef.current, selMarkRef.current);
   });
 
   const tf = tfOverride ?? storeTimeframe;
@@ -175,6 +181,11 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
   // ⚠️ 不要改回"固定 setTimeout 后读 getDataList": 从选股列表点进来时信号接口
   // 比 K 线快, 定时到点时 K 线还是空的, overlay 一个都建不出来, 而 effect 只依赖
   // signals 不会因 K 线到位重跑 —— 标记就静默消失了(实测 603997.SH 09-03)。
+  useEffect(() => {
+    selMarkRef.current = signalMark;
+    return paintSelectedSignal(chartRef.current, signalMark);
+  }, [signalMark]);
+
   useEffect(() => {
     trainedRef.current["maimai"] = { sig: maimaiSignals };
     return paintTrainedMarkers(chartRef.current, "maimai", maimaiSignals);

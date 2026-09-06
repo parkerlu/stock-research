@@ -24,6 +24,10 @@ interface QuoteState {
    *  用自增 seq 而不是只看日期 —— 连点同一天也要能再次定位。 */
   focusDate: string | null;
   focusSeq: number;
+  /** 选股页点中的那条信号的日期 —— K线上打高亮带, 区分"点进来的是哪一根"。
+   *  与 focusDate 不同: focusDate 定位完就清空, 这个要一直留着。 */
+  signalMark: string | null;
+  jumpToSignal: (symbol: string, name: string, date: string) => void;
   /** 该股在虚拟盘里的买卖标记, 交给 MainChart 画在K线上 */
   paperMarks: TradeAction[] | null;
   /** 回放已推进到的日期 —— K线上画竖线, 提醒线右边是回放还没走到的未来 */
@@ -58,13 +62,15 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
   currentSymbol: "",
   currentName: "",
   setCurrentStock: (symbol, name) => {
-    set({ currentSymbol: symbol, currentName: name, paperMarks: null, replayDate: null });
+    set({ currentSymbol: symbol, currentName: name, paperMarks: null,
+          replayDate: null, signalMark: null });
     get().fetchSnapshot();
     get().fetchHistory();
   },
 
   focusDate: null,
   focusSeq: 0,
+  signalMark: null,
   paperMarks: null,
   replayDate: null,
   jumpToDate: (symbol, name, date, marks, replayDate) => {
@@ -72,6 +78,13 @@ export const useQuoteStore = create<QuoteState>((set, get) => ({
     set((st) => ({ currentSymbol: symbol, currentName: name,
                    focusDate: date, focusSeq: st.focusSeq + 1,
                    paperMarks: marks ?? null, replayDate: replayDate ?? null }));
+    if (changed) { get().fetchSnapshot(); get().fetchHistory(); }
+  },
+  jumpToSignal: (symbol, name, date) => {
+    const changed = get().currentSymbol !== symbol;
+    set((st) => ({ currentSymbol: symbol, currentName: name, signalMark: date,
+                   focusDate: date, focusSeq: st.focusSeq + 1,
+                   paperMarks: null, replayDate: null }));
     if (changed) { get().fetchSnapshot(); get().fetchHistory(); }
   },
   clearFocusDate: () => set({ focusDate: null }),

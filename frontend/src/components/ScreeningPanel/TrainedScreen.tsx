@@ -11,7 +11,7 @@ import { AddToPool } from "./AddToPool";
 const DAY_OPTIONS = [1, 3, 5, 10, 20, 60, 90];
 
 export function TrainedScreen() {
-  const setCurrentStock = useQuoteStore((s) => s.setCurrentStock);
+  const jumpToSignal = useQuoteStore((s) => s.jumpToSignal);
   const currentSymbol = useQuoteStore((s) => s.currentSymbol);
 
   const [metas, setMetas] = useState<TrainedMeta[]>([]);
@@ -127,7 +127,7 @@ export function TrainedScreen() {
               <button
                 key={`${x.ts_code}-${x.date}`}
                 className={`ts-row${currentSymbol === x.ts_code ? " sel" : ""}`}
-                onClick={() => setCurrentStock(x.ts_code, x.name)}
+                onClick={() => jumpToSignal(x.ts_code, x.name, x.date)}
               >
                 <span className="ts-date">{x.date.slice(5)}</span>
                 <span className="ts-name">{x.name}</span>

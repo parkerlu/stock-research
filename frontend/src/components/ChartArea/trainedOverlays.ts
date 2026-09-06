@@ -139,3 +139,90 @@ export function paintTrainedMarkers(
     clearTimeout(timer);
   };
 }
+
+let selRegistered = false;
+
+/** 选中信号高亮 —— 选股页点某一行时, 在对应那根 K 线上打一道青色高亮带。
+ *
+ * 和训练指标的三角标记是两回事: 三角标记回答"这只票哪些天出过信号",
+ * 高亮带回答"我刚点的是哪一天"。同一只票可能有十几个同色三角, 不标出来
+ * 根本认不出点进来的是哪根。
+ * 颜色用青色, 避开已有的红(v3)/金(v4)/灰(回放线)。 */
+export function registerSelectedSignal(): void {
+  if (selRegistered) return;
+  selRegistered = true;
+
+  registerOverlay({
+    name: "selectedSignal",
+    totalStep: 2,
+    needDefaultPointFigure: false,
+    needDefaultXAxisFigure: false,
+    needDefaultYAxisFigure: false,
+    createPointFigures: (params) => {
+      const { overlay, coordinates, bounding } = params;
+      const d = overlay.extendData as { text?: string } | undefined;
+      const cx = coordinates[0].x;
+      const h = bounding?.height ?? 400;
+      // barSpace 不在公开类型里, 但运行时有 —— 拿不到就退回固定宽度
+      const w = Math.max((params as any).barSpace?.bar ?? 6, 3);
+      const color = "#22d3ee";
+      return [
+        // 高亮带: 半透明底色, 让那根 K 线整体亮起来
+        {
+          type: "rect",
+          attrs: { x: cx - w / 2, y: 0, width: w, height: h },
+          styles: { style: "fill", color: "rgba(34,211,238,.16)" },
+          ignoreEvent: true,
+        },
+        {
+          type: "line",
+          attrs: { coordinates: [{ x: cx, y: 0 }, { x: cx, y: h }] },
+          styles: { style: "dashed", color, size: 1, dashedValue: [3, 3] },
+          ignoreEvent: true,
+        },
+        {
+          type: "text",
+          attrs: { x: cx + 5, y: 4, text: d?.text ?? "", align: "left", baseline: "top" },
+          styles: {
+            color: "#06202a", backgroundColor: color, size: 10, weight: "bold",
+            paddingLeft: 5, paddingRight: 5, paddingTop: 2, paddingBottom: 2,
+            borderRadius: 2,
+          },
+          ignoreEvent: true,
+        },
+      ];
+    },
+  });
+}
+
+/** 画选中信号高亮。与 paintTrainedMarkers 一样等 K 线就绪再画。 */
+export function paintSelectedSignal(chart: any, date: string | null | undefined): () => void {
+  chart?.removeOverlay({ groupId: "selected-signal" });
+  if (!chart || !date) return () => {};
+  let cancelled = false;
+  let tries = 0;
+  let timer: ReturnType<typeof setTimeout>;
+  const attempt = () => {
+    if (cancelled) return;
+    const list = chart.getDataList?.() ?? [];
+    const hit = list.find(
+      (b: any) => new Date(b.timestamp).toISOString().slice(0, 10) === date
+    );
+    if (hit) {
+      chart.createOverlay({
+        name: "selectedSignal",
+        groupId: "selected-signal",
+        lock: true,
+        points: [{ timestamp: hit.timestamp, value: hit.close }],
+        extendData: { text: `信号 ${date.slice(5)}` },
+      });
+      return;
+    }
+    if (++tries < 12) timer = setTimeout(attempt, 300);
+  };
+  timer = setTimeout(attempt, 150);
+  return () => {
+    cancelled = true;
+    clearTimeout(timer);
+  };
+}

@@ -70,6 +70,7 @@ export function ChartArea({ tradeActions }: Props = {}) {
   const timeframe = useQuoteStore((s) => s.timeframe);
   const focusDate = useQuoteStore((s) => s.focusDate);
   const focusSeq = useQuoteStore((s) => s.focusSeq);
+  const signalMark = useQuoteStore((s) => s.signalMark);
   const clearFocusDate = useQuoteStore((s) => s.clearFocusDate);
   const paperMarks = useQuoteStore((s) => s.paperMarks);
   const replayDate = useQuoteStore((s) => s.replayDate);
@@ -329,6 +330,7 @@ export function ChartArea({ tradeActions }: Props = {}) {
         comboSignals={activeTrained.includes("combo") ? comboSig : undefined}
         didianSignals={activeTrained.includes("didian") ? didianSig : undefined}
         pumpSignals={activeTrained.includes("pump") ? pumpSignals : undefined}
+        signalMark={signalMark}
         maimaiSignals={activeTrained.includes("maimai_v3") ? maimaiSignals : undefined}
             ref={mainChartRef}
             tradeActions={marks}
