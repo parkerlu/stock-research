@@ -404,6 +404,26 @@ class IndexDaily(Base):
     amount: Mapped[float] = mapped_column(Numeric(20, 2))
 
 
+class IndexBar(Base):
+    """指数多周期 K 线 —— 日线之外的周/月/120/60/30 分钟。
+
+    日线在 index_daily(择时基准用), 这张表放其他周期供看图。
+    分钟级只有 tushare 的 stk_mins 能给指数数据(baostock 对指数返回 0 行),
+    而它【限速 1 次/分钟】—— 导入必须节流, 别指望一次拉完全部历史。
+    """
+    __tablename__ = "index_bar"
+    __table_args__ = (Index("ix_ibar_lookup", "ts_code", "freq", "bar_time"),)
+
+    ts_code: Mapped[str] = mapped_column(String(12), primary_key=True)
+    freq: Mapped[str] = mapped_column(String(8), primary_key=True)   # 1w/1m/120min/60min/30min
+    bar_time: Mapped[datetime] = mapped_column(DateTime, primary_key=True)
+    open: Mapped[float] = mapped_column(Numeric(12, 4))
+    high: Mapped[float] = mapped_column(Numeric(12, 4))
+    low: Mapped[float] = mapped_column(Numeric(12, 4))
+    close: Mapped[float] = mapped_column(Numeric(12, 4))
+    vol: Mapped[float] = mapped_column(Numeric(20, 2))
+
+
 class BreakoutSignal(Base):
     """突破预警 —— 收盘创 60 日新高 × 近5日内主力吸筹强档。
 
