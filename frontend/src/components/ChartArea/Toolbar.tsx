@@ -12,10 +12,12 @@ const TIMEFRAMES: { label: string; value: Timeframe }[] = [
   { label: "月", value: "1m" },
 ];
 
-// 标准指标只留常用的两个 —— 其余平时不看, 留着反而挤占菜单。
-// MA 周期见 MainChart 的 MA_PERIODS; MACD 走 klinecharts 内置, 画副图。
+// 标准指标 —— 全部走 klinecharts 内置实现。
+// 主图/副图的归属见 indicatorPanes.ts 的 MAIN_PANE_INDICATORS;
+// 归错了会画到错误的面板里(BOLL/SAR 必须叠在 K 线上才有意义)。
+// MA 周期见 MainChart 的 MA_PERIODS。
 const INDICATORS = [
-  { group: "均线", items: ["MA"] },
+  { group: "主图", items: ["MA", "BOLL", "SAR"] },
   { group: "副图", items: ["MACD"] },
 ];
 
