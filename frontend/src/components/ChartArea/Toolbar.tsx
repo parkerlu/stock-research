@@ -28,8 +28,8 @@ export const TRAINED_INDICATORS = [
   { name: "pump", label: "主力吸筹", desc: "动能参考 · 强档拉升率 19.6%(基础 8.6%), 八成不发生" },
 ];
 
-// 画线工具暂时隐藏 —— 日常用不到。改成 true 即可恢复, 代码原样保留。
-const SHOW_DRAWING = false;
+// 画线工具。2026-09-06 打开(此前默认隐藏)。
+const SHOW_DRAWING = true;
 
 const OVERLAYS = [
   { label: "趋势线", type: "segment" },

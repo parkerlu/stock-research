@@ -156,15 +156,20 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
   // 旧K线上不会自己补出标记 —— 表现就是"滚回去标记没了", 和指标坏掉分不清。
   // 这里记住当前各组信号, 由 DataLoader 在补完数据后调用 repaintTrained()。
   const trainedRef = useRef<Record<string, { sig: any; color?: string }>>({});
-  /** 首屏把已加载的 K 线全部铺进可视区。
-   *  klinecharts 默认只显示最近 200 多根 —— 日线加载了 3 年(726根)也只看到 1 年,
-   *  训练指标的标记大半在窗口外。标记画在图表下沿, 密一点也看得清, 所以直接铺满。 */
-  const fitAll = useRef(() => {
+  /** 首屏可视窗口固定约 1 年(日线 243 根)。
+   *
+   *  数据取的是 3 年(见 INIT_YEARS) —— 数据窗口和可视窗口是两回事:
+   *  取 3 年是为了往回滚有东西看、标记有 K 线可落; 只显示 1 年是因为
+   *  726 根铺满后一根 K 线不到 2px, 看不出形态。往回滚会自动补历史,
+   *  补完 repaintTrained() 会把那段的标记画上。 */
+  const VISIBLE_BARS: Record<Timeframe, number> = { "1d": 243, "1w": 120, "1m": 120 };
+  const fitWindow = useRef((tfKey: Timeframe) => {
     const c = chartRef.current;
     const n = (c?.getDataList() ?? []).length;
     if (!c || n === 0) return;
     const w = containerRef.current?.clientWidth ?? 0;
-    if (w > 0) c.setBarSpace(Math.max(w / (n + 8), 0.8));
+    const want = Math.min(VISIBLE_BARS[tfKey] ?? 243, n);
+    if (w > 0 && want > 0) c.setBarSpace(Math.max(w / want, 0.8));
   });
 
   const selMarkRef = useRef<string | null | undefined>(null);
@@ -390,7 +395,7 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
           if (cached && cached.length > 0) {
             const hasMore = !noMoreHistory.has(cacheKey);
             callback(cached, { forward: hasMore, backward: false });
-            setTimeout(() => { fitAll.current(); repaintTrained.current(); }, 120);
+            setTimeout(() => { fitWindow.current(tfVal); repaintTrained.current(); }, 120);
             return;
           }
 
@@ -413,7 +418,7 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
             candleCache.set(cacheKey, data);
             setLoading(false);
             callback(data, { forward: true, backward: false });
-            setTimeout(() => { fitAll.current(); repaintTrained.current(); }, 120);
+            setTimeout(() => { fitWindow.current(tfVal); repaintTrained.current(); }, 120);
             // ⚠️ 图表可能是在面板刚打开、还没有 symbol 时初始化的, 那时纵轴定在
             // 默认的 0~10 且**不会**因为后来数据到位而重算 —— 结果价格 5.5~7.2
             // 的股票被压成贴着 6.00 的一条线。数据首次落地后强制重算一次。
