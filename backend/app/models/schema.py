@@ -384,6 +384,26 @@ class DongliSignal(Base):
     dl_value: Mapped[float] = mapped_column(Numeric(8, 4))
 
 
+class IndexDaily(Base):
+    """指数日线 —— 中证1000 / 中证500 / 沪深300 / 上证指数。
+
+    主要用途是【择时基准】: 突破预警离了大盘择时不能用(裸跑比值 0.17),
+    而原来的择时口径是"全市场等权指数"——每次都要现算一遍。落表后可以直接查,
+    而且中证1000 是真实可交易的小盘指数, 比等权口径更贴近这些信号的标的。
+    """
+    __tablename__ = "index_daily"
+    __table_args__ = (Index("ix_index_lookup", "ts_code", "trade_date"),)
+
+    ts_code: Mapped[str] = mapped_column(String(12), primary_key=True)
+    trade_date: Mapped[date] = mapped_column(Date, primary_key=True)
+    open: Mapped[float] = mapped_column(Numeric(12, 4))
+    high: Mapped[float] = mapped_column(Numeric(12, 4))
+    low: Mapped[float] = mapped_column(Numeric(12, 4))
+    close: Mapped[float] = mapped_column(Numeric(12, 4))
+    vol: Mapped[float] = mapped_column(Numeric(20, 2))
+    amount: Mapped[float] = mapped_column(Numeric(20, 2))
+
+
 class BreakoutSignal(Base):
     """突破预警 —— 收盘创 60 日新高 × 近5日内主力吸筹强档。
 

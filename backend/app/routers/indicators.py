@@ -250,26 +250,15 @@ async def screen_by_trained(
               where trade_date > (select max(trade_date) from breakout_signal)
                                  - make_interval(days => :d)
             ),
-            -- ⚠️ 聚合函数里不能套窗口函数(GroupingError), 必须先算涨跌幅再聚合
-            praw as (
-              select trade_date,
-                     close / nullif(lag(close) over
-                       (partition by ts_code order by trade_date), 0) - 1 as r
-              from daily_candle where trade_date >= current_date - 400
-            ),
-            mret as (
-              select trade_date, avg(r) m from praw where r is not null
-              group by trade_date
-            ),
-            midx as (
-              select trade_date,
-                     exp(sum(ln(1+coalesce(m,0))) over (order by trade_date)) idx
-              from mret
-            ),
+            -- 择时基准 = 中证1000 在自身 MA20 之上。
+            -- ⚠️ 基准要和标的匹配: 突破预警选的是小盘股, 用沪深300/上证判断
+            -- 是拿蓝筹的脸色看小盘股死活。实测比值 中证1000 2.62 >
+            -- 中证500 2.26 > 沪深300 1.92 > 上证 1.17 > 等权 1.91(MA10)。
             mflag as (
-              select trade_date, idx,
-                     avg(idx) over (order by trade_date rows between 9 preceding and current row) ma10
-              from midx
+              select trade_date, close,
+                     avg(close) over (order by trade_date
+                         rows between 19 preceding and current row) ma20
+              from index_daily where ts_code = '000852.SH'
             ),
             px as (
               select d.ts_code, d.trade_date, d.close, d.adj_factor,
@@ -285,7 +274,7 @@ async def screen_by_trained(
             )
             select b.ts_code, coalesce(s.name,'') name, b.trade_date, b.prob, b.hh60,
                    l.c1 price, (l.c1*l.a1)/nullif(l.c2*l.a2,0)-1 chg,
-                   (f.idx > f.ma10) as mkt_ok
+                   (f.close > f.ma20) as mkt_ok
             from b
             left join stock_basic s on s.ts_code = b.ts_code
             left join last2 l on l.ts_code = b.ts_code

@@ -168,6 +168,18 @@ async def main() -> None:
             fetch_top_list_recent(args.days)
         except Exception as exc:  # noqa: BLE001
             log.warning("龙虎榜拉取失败(继续): %s", exc)
+        # 指数 —— 突破预警的择时基准。不更新的话基准停在导入那天, 而"停更"
+        # 在界面上和"大盘不好"长得一样, 会静默把信号全挡掉。
+        try:
+            from app.commands.sync_index import main as sync_index
+            import sys as _s
+            _a = _s.argv; _s.argv = ["sync_index", "--start", "20250101"]
+            try:
+                await sync_index()
+            finally:
+                _s.argv = _a
+        except Exception as exc:  # noqa: BLE001
+            log.warning("指数拉取失败(继续): %s", exc)
 
     # 面板重建 → 三个指标重算。
     # 目前直接调 build_*(全量), 因为单次几分钟可接受, 且能保证
