@@ -7,6 +7,7 @@ import { Toolbar } from "./Toolbar";
 import { LinkedView } from "./LinkedView";
 import { MAIN_PANE_INDICATORS } from "./indicatorPanes";
 import { StockSectors } from "./StockSectors";
+import { TopListBadge } from "./TopListBadge";
 import { getMaimaiSignals, getPumpSignals, getDidianSignals, getComboSignals } from "../../api/quotes";
 import { useTdxIndicators } from "../../hooks/useTdxIndicators";
 
@@ -82,6 +83,7 @@ export function ChartArea({ tradeActions }: Props = {}) {
   );
 
   // 自训练指标 —— 目前只有买卖很准v3, 后续新增的训练指标都挂这里
+  const [lhb, setLhb] = useState<{ date: string; net_wan: number }[]>([]);
   const [activeTrained, setActiveTrained] = useState<string[]>(() => {
     try {
       const raw = localStorage.getItem("chart.trained.v1");
@@ -317,7 +319,10 @@ export function ChartArea({ tradeActions }: Props = {}) {
         measuring={measuring}
         onToggleMeasure={() => setMeasuring((v) => !v)}
       />
-      <StockSectors symbol={currentSymbol} />
+      <div className="chart-info-row">
+        <StockSectors symbol={currentSymbol} />
+        <TopListBadge symbol={currentSymbol} onData={setLhb} />
+      </div>
       {measuring && <MeasureBar result={measure} />}
       {hasActions && (
         <div className="trade-nav">
@@ -355,6 +360,7 @@ export function ChartArea({ tradeActions }: Props = {}) {
         pumpSignals={activeTrained.includes("pump") ? pumpSignals : undefined}
         signalMark={signalMark}
         panes={panes}
+        topList={lhb}
         maimaiSignals={activeTrained.includes("maimai_v3") ? maimaiSignals : undefined}
             ref={mainChartRef}
             tradeActions={marks}

@@ -337,7 +337,10 @@ async def daily_sync_job():
 
     # 训练指标(买卖很准v3 / 主力吸筹 / 低点组合v2) —— 拉当日筹码后重算评分。
     # 放在最后: 依赖当日 K 线已入库, 且失败不该影响前面任何一步。
-    # 模型不在这里重训(见 update_indicators 注释), 只用已有模型打分。
+    # ⚠️ 这里【会】重训: update_indicators 直接调 build_*(全量), 含 walk-forward
+    # 逐年重训。之所以没问题, 是因为切分是 `训练年 < 打分年` —— 2026 年的信号
+    # 只用 2017-2025 训出的模型打分, 不偷看。但模型必须固定随机种子, 否则
+    # 每日重训会让历史信号的档位天天漂(已在 build_* 里设 random_state=42)。
     try:
         from app.commands.update_indicators import main as update_indicators
         import sys

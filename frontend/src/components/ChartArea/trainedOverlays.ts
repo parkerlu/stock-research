@@ -226,3 +226,48 @@ export function paintSelectedSignal(chart: any, date: string | null | undefined)
     clearTimeout(timer);
   };
 }
+
+/** 画龙虎榜标记 —— 纯参考, 不是买卖信号。
+ *
+ * ⚠️ 复用 trainedMarker, 不另注册 overlay 模板。实测再注册第三个模板会让
+ * trainedMarker 整体失效(v3 的 22 个 overlay 建出来了但一个都画不出来),
+ * 原因没查到, 但复用是稳的 —— 别再试着自建。
+ *
+ * 用 side="sell" 画在图【上】沿 + 橙色, 与买点三角(图下沿, 红/金)错开;
+ * 详细内容看工具栏右侧的「龙虎榜 N 次」徽章。
+ *
+ * 为什么只标不做信号: 龙虎榜盘后公布, 这些票次日平均高开 1.31%,
+ * 「10日涨10%」命中率从 41.53%(收盘基准)掉到 37.22%(可交易基准)。 */
+export function paintTopList(
+  chart: any,
+  items: { date: string; net_wan: number }[] | undefined
+): () => void {
+  chart?.removeOverlay({ groupId: "toplist" });
+  if (!chart || !items || items.length === 0) return () => {};
+  let cancelled = false, tries = 0;
+  let timer: ReturnType<typeof setTimeout>;
+  const attempt = () => {
+    if (cancelled) return;
+    const list = chart.getDataList?.() ?? [];
+    if (list.length > 0) {
+      const hi = new Map<string, number>();
+      for (const b of list) {
+        hi.set(new Date(b.timestamp).toISOString().slice(0, 10), b.high as number);
+      }
+      const ovs: any[] = [];
+      for (const it of items) {
+        const h = hi.get(it.date);
+        if (h === undefined) continue;
+        ovs.push({
+          name: "trainedMarker", groupId: "toplist", lock: true,
+          points: [{ timestamp: Date.parse(`${it.date}T00:00:00Z`), value: h }],
+          extendData: { side: "sell", grade: "强", color: "#f59e0b" },
+        });
+      }
+      if (ovs.length) { chart.createOverlay(ovs); return; }
+    }
+    if (++tries < 12) timer = setTimeout(attempt, 300);
+  };
+  timer = setTimeout(attempt, 150);
+  return () => { cancelled = true; clearTimeout(timer); };
+}

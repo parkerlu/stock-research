@@ -9,6 +9,7 @@ import type { TradeAction } from "../../types/strategy";
 import { buildTradeLabel, registerReplayDivider, registerTradeMarker } from "./tradeOverlays";
 import { PaneCloseButtons } from "./PaneCloseButtons";
 import type { PaneBtn } from "./PaneCloseButtons";
+import { paintTopList } from "./trainedOverlays";
 import { registerTrainedMarker, paintTrainedMarkers,
          registerSelectedSignal, paintSelectedSignal } from "./trainedOverlays";
 import { createTrainedPane, removeTrainedPane, setTrainedData } from "./TrainedPaneManager";
@@ -71,6 +72,8 @@ interface Props {
   signalMark?: string | null;
   /** 副图关闭按钮: 每个副图右上角一个 ×, 点了从对应的开关状态里移除 */
   panes?: PaneBtn[];
+  /** 龙虎榜上榜日 —— 画成小圆点 i, 纯参考不是信号 */
+  topList?: { date: string; net_wan: number }[];
 }
 
 // 图表字体。klinecharts 默认 12px, 在高分屏上读起来费劲。
@@ -148,7 +151,7 @@ function anchorTs(list: { timestamp: number }[], ts: number): number {
 export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
   { timeframe: tfOverride, className, tradeActions, replayDate, forecast, onBarSelected,
     measuring = false, onMeasure,
-    maimaiSignals, comboSignals, pumpSignals, didianSignals, signalMark, panes },
+    maimaiSignals, comboSignals, pumpSignals, didianSignals, signalMark, panes, topList },
   ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -182,6 +185,7 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
       paintTrainedMarkers(chartRef.current, gid, v.sig, v.color);
     }
     paintSelectedSignal(chartRef.current, selMarkRef.current);
+    paintTopList(chartRef.current, lhbRef.current);
   });
 
   const tf = tfOverride ?? storeTimeframe;
@@ -190,6 +194,12 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
   // ⚠️ 不要改回"固定 setTimeout 后读 getDataList": 从选股列表点进来时信号接口
   // 比 K 线快, 定时到点时 K 线还是空的, overlay 一个都建不出来, 而 effect 只依赖
   // signals 不会因 K 线到位重跑 —— 标记就静默消失了(实测 603997.SH 09-03)。
+  const lhbRef = useRef<{ date: string; net_wan: number }[] | undefined>(undefined);
+  useEffect(() => {
+    lhbRef.current = topList;
+    return paintTopList(chartRef.current, topList);
+  }, [topList]);
+
   useEffect(() => {
     selMarkRef.current = signalMark;
     return paintSelectedSignal(chartRef.current, signalMark);

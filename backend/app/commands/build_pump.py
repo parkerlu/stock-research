@@ -124,7 +124,11 @@ def build():
         m = xgb.XGBClassifier(n_estimators=250, max_depth=5, learning_rate=0.06,
                               subsample=0.8, colsample_bytree=0.8, min_child_weight=200,
                               reg_lambda=2.0, tree_method="hist", n_jobs=8,
-                              verbosity=0, eval_metric="logloss", max_bin=128)
+                              verbosity=0, eval_metric="logloss", max_bin=128,
+                              # ⚠️ 必须固定种子: 每日 15:30 全量重训, 不固定的话
+                              # subsample/colsample 的随机性会让同一个历史信号的
+                              # rank_pct 天天漂, 昨天"强"今天可能变"中"。
+                              random_state=42)
         m.fit(X[tr], y[tr])
         prob[te] = m.predict_proba(X[te])[:, 1]
         log.info("  %d 年: 训练 %d, 打分 %d", Y, int(tr.sum()), int(te.sum()))

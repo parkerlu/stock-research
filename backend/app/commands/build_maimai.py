@@ -154,7 +154,11 @@ def build():
     def mk():
         return xgb.XGBRegressor(n_estimators=250, max_depth=5, learning_rate=0.05,
                                 subsample=0.8, colsample_bytree=0.8, min_child_weight=100,
-                                reg_lambda=2.0, tree_method="hist", n_jobs=8, verbosity=0)
+                                reg_lambda=2.0, tree_method="hist", n_jobs=8, verbosity=0,
+                                # ⚠️ 必须固定种子: 每日 15:30 都会全量重训,
+                                # 不固定的话 subsample/colsample 的随机性会让同一个历史
+                                # 信号的 rank_pct 天天漂, 昨天"强"今天可能变"中"。
+                                random_state=42)
 
     score = np.full(len(sc_r), np.nan, dtype=np.float32)
     years = sorted(set(yr_sc))
