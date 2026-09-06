@@ -159,3 +159,17 @@ export async function getLiftAlertSignals(
   const q = start ? `?start=${start}` : "";
   return json(`${BASE}/indicators/liftalert/${tsCode}${q}`);
 }
+
+/** 突破预警 —— 收盘创60日新高 × 主力吸筹强档。
+ *  ⚠️ 必须配大盘择时: 裸跑组合比值仅 0.17(回撤59.7%), 加择时 1.21~1.91。 */
+export async function getBreakoutSignals(
+  tsCode: string,
+  start?: string
+): Promise<{
+  ts_code: string;
+  count: number;
+  signals: { date: string; score: number; rank_pct: number; grade: string }[];
+}> {
+  const q = start ? `?start=${start}` : "";
+  return json(`${BASE}/indicators/breakout/${tsCode}${q}`);
+}

@@ -197,6 +197,11 @@ async def pump_scan(
 # ---- 训练指标选股 ----
 # 信号已在库中(build_maimai / build_pump 盘后算好), 这里直接查, 不跑扫描任务。
 TRAINED_META = [
+    {"key": "breakout", "label": "★★★ 突破预警",
+     "desc": "收盘创60日新高 × 主力吸筹强档。命中率 32.0%(基准 17.52%), 逐年0负年 · "
+             "按天t=41.53 · 九格全正。⚠️ 必须配大盘择时: 裸跑组合比值仅 0.17(回撤59.7%), "
+             "加择时 1.21~1.91(回撤21.5%)。列表里已标出当日大盘状态",
+     "grades": ["强"], "default_grade": "强", "default_days": 5},
     {"key": "liftalert", "label": "★★ 拉升预警",
      "desc": "动力线 × 主力吸筹强档。目标: 10个交易日内触及+10%。"
              "命中率 32.6%(基准 17.45%, 1.87倍), 逐年0负年 · 按天t=4.79 · "
@@ -234,6 +239,68 @@ async def screen_by_trained(
 ):
     """按训练指标选股 —— 返回最近 N 日内出信号的股票 + 当日收盘行情。"""
     from sqlalchemy import text
+
+    if indicator == "breakout":
+        # 突破预警 = 收盘创60日新高 × 近5日吸筹强档。
+        # ⚠️ 同时返回当日大盘择时状态(等权指数 vs 自身MA10) —— 这个指标离了
+        # 择时不能用: 裸跑比值 0.17, 加择时 1.21~1.91。所以状态必须一起给出来。
+        rows = (await db.execute(text("""
+            with b as (
+              select ts_code, trade_date, prob, hh60 from breakout_signal
+              where trade_date > (select max(trade_date) from breakout_signal)
+                                 - make_interval(days => :d)
+            ),
+            -- ⚠️ 聚合函数里不能套窗口函数(GroupingError), 必须先算涨跌幅再聚合
+            praw as (
+              select trade_date,
+                     close / nullif(lag(close) over
+                       (partition by ts_code order by trade_date), 0) - 1 as r
+              from daily_candle where trade_date >= current_date - 400
+            ),
+            mret as (
+              select trade_date, avg(r) m from praw where r is not null
+              group by trade_date
+            ),
+            midx as (
+              select trade_date,
+                     exp(sum(ln(1+coalesce(m,0))) over (order by trade_date)) idx
+              from mret
+            ),
+            mflag as (
+              select trade_date, idx,
+                     avg(idx) over (order by trade_date rows between 9 preceding and current row) ma10
+              from midx
+            ),
+            px as (
+              select d.ts_code, d.trade_date, d.close, d.adj_factor,
+                     row_number() over (partition by d.ts_code order by d.trade_date desc) rn
+              from daily_candle d
+              where d.trade_date > (select max(trade_date) - interval '20 days' from daily_candle)
+            ),
+            last2 as (
+              select ts_code,
+                     max(close) filter (where rn=1) c1, max(adj_factor) filter (where rn=1) a1,
+                     max(close) filter (where rn=2) c2, max(adj_factor) filter (where rn=2) a2
+              from px where rn <= 2 group by ts_code
+            )
+            select b.ts_code, coalesce(s.name,'') name, b.trade_date, b.prob, b.hh60,
+                   l.c1 price, (l.c1*l.a1)/nullif(l.c2*l.a2,0)-1 chg,
+                   (f.idx > f.ma10) as mkt_ok
+            from b
+            left join stock_basic s on s.ts_code = b.ts_code
+            left join last2 l on l.ts_code = b.ts_code
+            left join mflag f on f.trade_date = b.trade_date
+            order by b.trade_date desc, b.prob desc
+            limit :lim
+        """), {"d": days, "lim": limit})).fetchall()
+        return {"indicator": indicator, "grade": "强", "days": days,
+                "count": len(rows), "items": [
+            {"ts_code": r[0], "name": r[1], "date": str(r[2]),
+             "score": round(float(r[3]), 4), "rank_pct": 0.95, "grade": "强",
+             "price": round(float(r[5]), 2) if r[5] is not None else None,
+             "chg": round(float(r[6]) * 100, 2) if r[6] is not None else None,
+             "mkt_ok": bool(r[7]) if r[7] is not None else None}
+            for r in rows]}
 
     if indicator == "liftalert":
         # 拉升预警 = 动力线上穿0.2 × 近5日内主力吸筹强档。
@@ -502,3 +569,36 @@ async def liftalert_signals(
     return {"ts_code": ts_code, "count": len(rows), "signals": [
         {"date": str(r[0]), "score": round(float(r[1]), 4),
          "rank_pct": round(float(r[2]), 4), "grade": "强"} for r in rows]}
+
+
+@router.get("/breakout/{ts_code}")
+async def breakout_signals(
+    ts_code: str,
+    start: str | None = Query(None, description="YYYY-MM-DD"),
+    db: AsyncSession = Depends(get_db),
+):
+    """突破预警 —— 收盘创 60 日新高 × 近5日内主力吸筹强档。
+
+    ⚠️ 必须配大盘择时用: 裸跑组合年化 10.0% / 回撤 59.7% = 0.17;
+    加择时(等权指数 > 自身 MA10) 年化 41.0% / 回撤 21.5% = 1.91。
+    择时口径越短越好, 单调: MA10 1.91 > MA20 1.21 > MA30 1.18 > MA60 0.72。
+
+    与「拉升预警」是一对反向的东西: 那个抄底(信号日 89.1% 空头排列),
+    这个追势(0.0% 空头排列)。信号级命中率几乎一样, 差别全在相关性 ——
+    突破型高度同步, 裸跑一起崩, 但也因此一个择时开关就能整批挡住。
+    """
+    from sqlalchemy import text
+
+    sql = ("select trade_date, prob, hh60 from breakout_signal where ts_code = :c")
+    params: dict = {"c": ts_code}
+    if start:
+        try:
+            params["s"] = date.fromisoformat(start)
+            sql += " and trade_date >= :s"
+        except ValueError:
+            raise HTTPException(status_code=400, detail="start 需为 YYYY-MM-DD")
+    sql += " order by trade_date"
+    rows = (await db.execute(text(sql), params)).fetchall()
+    return {"ts_code": ts_code, "count": len(rows), "signals": [
+        {"date": str(r[0]), "score": round(float(r[1]), 4),
+         "rank_pct": 0.95, "grade": "强"} for r in rows]}

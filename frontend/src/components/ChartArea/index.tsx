@@ -8,7 +8,7 @@ import { LinkedView } from "./LinkedView";
 import { MAIN_PANE_INDICATORS } from "./indicatorPanes";
 import { StockSectors } from "./StockSectors";
 import { TopListBadge } from "./TopListBadge";
-import { getMaimaiSignals, getPumpSignals, getDidianSignals, getComboSignals , getLiftAlertSignals } from "../../api/quotes";
+import { getMaimaiSignals, getPumpSignals, getDidianSignals, getComboSignals , getLiftAlertSignals, getBreakoutSignals } from "../../api/quotes";
 import { useTdxIndicators } from "../../hooks/useTdxIndicators";
 
 interface Props {
@@ -102,6 +102,9 @@ export function ChartArea({ tradeActions }: Props = {}) {
       return ["toplist"];
     }
   });
+  const [boSig, setBoSig] = useState<
+    { date: string; score: number; rank_pct: number; grade: string }[]
+  >([]);
   const [liftSig, setLiftSig] = useState<
     { date: string; score: number; rank_pct: number; grade: string }[]
   >([]);
@@ -185,6 +188,20 @@ export function ChartArea({ tradeActions }: Props = {}) {
     getLiftAlertSignals(currentSymbol)
       .then((r) => live && setLiftSig(r.signals ?? []))
       .catch(() => live && setLiftSig([]));
+    return () => {
+      live = false;
+    };
+  }, [currentSymbol, activeTrained]);
+
+  useEffect(() => {
+    if (!currentSymbol || !activeTrained.includes("breakout")) {
+      setBoSig([]);
+      return;
+    }
+    let live = true;
+    getBreakoutSignals(currentSymbol)
+      .then((r) => live && setBoSig(r.signals ?? []))
+      .catch(() => live && setBoSig([]));
     return () => {
       live = false;
     };
@@ -386,6 +403,7 @@ export function ChartArea({ tradeActions }: Props = {}) {
         pumpSignals={activeTrained.includes("pump") ? pumpSignals : undefined}
         signalMark={signalMark}
         liftSignals={activeTrained.includes("liftalert") ? liftSig : undefined}
+        breakoutSignals={activeTrained.includes("breakout") ? boSig : undefined}
         panes={panes}
         topList={activeTrained.includes("toplist") ? lhb : undefined}
         maimaiSignals={activeTrained.includes("maimai_v3") ? maimaiSignals : undefined}

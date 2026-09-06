@@ -384,6 +384,30 @@ class DongliSignal(Base):
     dl_value: Mapped[float] = mapped_column(Numeric(8, 4))
 
 
+class BreakoutSignal(Base):
+    """突破预警 —— 收盘创 60 日新高 × 近5日内主力吸筹强档。
+
+    与「拉升预警」(动力线×吸筹)是一对反向的东西:
+      拉升预警  抄底型, 信号日 89.1% 处于空头排列, 组合天花板 0.71
+      突破预警  趋势型, 信号日  0.0% 处于空头排列, 组合可达 1.21~1.91
+
+    信号级两者几乎一样(命中 32.0% vs 32.6%), 差别全在【相关性】:
+    突破型信号高度同步, 裸跑一起崩(回撤 59.7%), 但也因此大盘择时能整批挡住
+    (回撤降到 21.5%, 年化反而从 10.0% 升到 41.0%)。
+    ⚠️ 必须配大盘择时用 —— 不带择时比值只有 0.17。
+
+    验证(2018-06 起, 2227 只抽样, 标签=10个交易日内触及+10%):
+      命中率 32.0%(基准 17.52%) · 逐年 0 负年 · 按天 t=41.53 · 九格最小 +2.68pp
+    """
+    __tablename__ = "breakout_signal"
+    __table_args__ = (Index("ix_breakout_date", "trade_date"),)
+
+    ts_code: Mapped[str] = mapped_column(String(12), primary_key=True)
+    trade_date: Mapped[date] = mapped_column(Date, primary_key=True)
+    prob: Mapped[float] = mapped_column(Numeric(8, 5))       # 吸筹概率
+    hh60: Mapped[float] = mapped_column(Numeric(12, 4))      # 被突破的60日高点
+
+
 class DidianSignal(Base):
     """低点组合 v2 —— 原指标「阶段底部」(动力线上穿0.2) + 模型过滤。
 
