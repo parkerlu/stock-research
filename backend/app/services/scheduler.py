@@ -329,6 +329,22 @@ async def daily_sync_job():
         log.info("信号增量: %s", await build_signals(PAPER_STRATEGY, since=last))
     except Exception as exc:                      # noqa: BLE001
         log.exception("signal build failed: %s", exc)
+    # 拉升预警的信号增量 —— 必须在结算之前, 否则虚拟盘拿不到当天的新信号。
+    # ⚠️ 它依赖 dongli_signal + pump_signal, 而这两张表在下面的 update_indicators
+    # 里才更新, 所以这里写的是【昨天及以前】的信号; 今天的信号明天补上, 而
+    # 虚拟盘本来就是 next_open(信号日次日开盘买), 时序正好对得上。
+    try:
+        from app.commands.sync_liftalert_signals import main as sync_lift
+        import sys as _sys
+        _argv = _sys.argv
+        _sys.argv = ["sync_liftalert_signals"]
+        try:
+            await sync_lift()
+        finally:
+            _sys.argv = _argv
+    except Exception as exc:                      # noqa: BLE001
+        log.exception("拉升预警信号同步失败: %s", exc)
+
     try:
         await _settle_paper()
     except Exception as exc:                      # noqa: BLE001

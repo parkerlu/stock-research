@@ -318,6 +318,16 @@ async def run_day(db: AsyncSession, acct: PaperAccount, day: date,
             _sell(p.shares, c, "timeout", f"持有超 {cfg['max_hold_days']} 交易日")
             p.status = "closed"; p.close_date = day; p.close_reason = "timeout"
 
+        # ⚠️ 兜底: 股数归零就必须关仓。
+        # tier1 分支只置 tier1_done 不置 status —— tier1_frac<1 时永远卖不空,
+        # 所以一直没暴露; 但 tier1_frac=1.0(一次清仓)会把持仓卖空却仍挂 open,
+        # 变成僵尸行永久占用一个仓位, 账户到某天就再也不买了(实测 slots=5 时
+        # 五个僵尸把账户冻住)。这里不依赖各分支自觉, 统一收口。
+        if p.shares == 0 and p.status == "open":
+            p.status = "closed"
+            p.close_date = day
+            p.close_reason = p.close_reason or "tier1"
+
     await db.flush()
 
     # ---------- 2. 再用当日信号补仓 ----------
