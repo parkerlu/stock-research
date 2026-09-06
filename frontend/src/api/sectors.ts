@@ -69,3 +69,18 @@ export async function getStockSectorsHot(
 ): Promise<{ ts_code: string; sectors: StockSectorHot[] }> {
   return json(`${BASE}/stocks/${tsCode}/sectors`);
 }
+
+export interface HotSector {
+  code: string; name: string; members: number;
+  cum_pct: number | null; up_days: number; n_days: number;
+  up_ratio: number | null; last_pct: number | null; last_day: string;
+}
+
+/** N 日持续热度榜。⚠️ 信息工具, 不是信号 —— 板块动量样本外 t≈0。 */
+export async function getHotSectors(days = 5, limit = 30): Promise<{
+  days: number; count: number; items: HotSector[];
+}> {
+  const r = await fetch(`/api/sectors/hot?days=${days}&limit=${limit}`);
+  if (!r.ok) throw new Error(`${r.status}`);
+  return r.json();
+}

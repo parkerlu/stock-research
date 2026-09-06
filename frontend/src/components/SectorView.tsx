@@ -3,7 +3,7 @@
 // 热度口径: 上涨占比 = 板块内上涨家数/有行情家数; 平均涨幅 = 成分股等权平均。
 // 用等权而非市值加权 —— 市值加权会被一两只权重股主导, 掩盖主题的真实广度。
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getSectors, getSectorMembers } from "../api/sectors";
+import { getHotSectors, getSectors, getSectorMembers } from "../api/sectors";
 import type { SectorItem, SectorMember } from "../types/sector";
 import { useQuoteStore } from "../stores/quoteStore";
 import { MainChart } from "./ChartArea/MainChart";
@@ -29,6 +29,11 @@ export function SectorView() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("avg_pct");
+  // 回看周期。0 = 当日(原有热力图); >0 = N 日持续热度榜。
+  // 单日榜首常是一两只涨停把均值拉起来的, 换个日子就掉出去; 多日榜看的是
+  // "这个主题在连续走强"。⚠️ 仍是信息工具 —— 板块动量样本外 t≈0。
+  const [period, setPeriod] = useState(0);
+  const [hotDays, setHotDays] = useState<Record<string, string>>({});
   const [kw, setKw] = useState("");
   const [sel, setSel] = useState<SectorItem | null>(null);
   const [members, setMembers] = useState<SectorMember[]>([]);
@@ -125,8 +130,28 @@ export function SectorView() {
 
   const pull = useCallback(async () => {
     try {
+      if (period > 0) {
+        // N 日榜映射成与当日榜同一形状, 复用同一套热力图渲染。
+        // avg_pct 位放累计涨幅, 另用 hotDays 记 "涨N/共M日"。
+        const h = await getHotSectors(period, 60);
+        if (!alive.current) return;
+        setSectors(h.items.map((x) => ({
+          ts_code: x.code, name: x.name, count: x.members,
+          quoted: x.members, up: 0, down: 0, flat: 0,
+          avg_pct: x.cum_pct, median_pct: null,
+          max_pct: x.last_pct, min_pct: null,
+          up_ratio: x.up_ratio, list_date: null,
+        })) as never);
+        setHotDays(Object.fromEntries(
+          h.items.map((x) => [x.code, `${x.up_days}/${x.n_days}日`])));
+        setTradeDate(h.items[0]?.last_day ?? null);
+        setCoverage(null);
+        setErr(null);
+        return;
+      }
       const r = await getSectors();
       if (!alive.current) return;
+      setHotDays({});
       setSectors(r.sectors);
       setTradeDate(r.trade_date ?? null);
       setCoverage(r.coverage ?? null);
@@ -136,7 +161,7 @@ export function SectorView() {
     } finally {
       if (alive.current) setLoading(false);
     }
-  }, []);
+  }, [period]);
 
   useEffect(() => {
     alive.current = true;
@@ -187,6 +212,13 @@ export function SectorView() {
           value={kw}
           onChange={(e) => setKw(e.target.value)}
         />
+        <div className="sector-sort sector-period">
+          {([[0, "当日"], [5, "5日"], [10, "10日"], [20, "20日"]] as [number, string][])
+            .map(([d, label]) => (
+              <button key={d} className={period === d ? "on" : ""}
+                onClick={() => setPeriod(d)}>{label}</button>
+            ))}
+        </div>
         <div className="sector-sort">
           {([
             ["avg_pct", "平均涨幅"],
@@ -237,7 +269,7 @@ export function SectorView() {
                 {s.avg_pct === null ? "—" : `${s.avg_pct > 0 ? "+" : ""}${s.avg_pct.toFixed(2)}%`}
               </span>
               <span className="heat-ratio">
-                {s.up_ratio === null ? "" : `${s.up}/${s.quoted}`}
+                {hotDays[s.ts_code] ?? (s.up_ratio === null ? "" : `${s.up}/${s.quoted}`)}
               </span>
             </button>
           ))}

@@ -89,6 +89,76 @@ async def list_sectors(
             "coverage": round(quoted / tot * 100, 1) if tot else None}
 
 
+@router.get("/sectors/hot")
+async def hot_sectors(
+    days: int = Query(5, ge=1, le=60, description="回看几个交易日"),
+    limit: int = Query(30, ge=1, le=100),
+    theme_only: bool = Query(True),
+    db: AsyncSession = Depends(get_db),
+):
+    """N 日持续热度榜 —— 哪些主题在连续走强, 而不是只看今天涨了多少。
+
+    单日榜首常是一两只涨停票把均值拉起来的, 换个日子就掉出去。这里给三个量:
+      cum_pct   N 日累计平均涨幅(等权)
+      up_days   N 日里板块均涨为正的天数 —— 持续性
+      up_ratio  最新一日成分股上涨占比 —— 广度
+
+    ⚠️ 这是信息工具, 不是信号。板块动量、换手热度、Top-N 轮动都做过样本外
+    检验, t 值都在 ±0.1 量级, 不构成可交易的边(见 docs/训练指标.md)。
+    排在前面只说明"最近这个主题在动", 不代表明天还会动。
+    """
+    rows = (await db.execute(text("""
+        with cal as (
+          select distinct trade_date from daily_candle
+          order by trade_date desc limit :d + 1
+        ),
+        px as (
+          select ts_code, trade_date, close * adj_factor as adj,
+                 row_number() over (partition by ts_code order by trade_date) rn
+          from daily_candle where trade_date in (select trade_date from cal)
+        ),
+        chg as (
+          select a.ts_code, a.trade_date,
+                 a.adj / nullif(b.adj, 0) - 1 as c
+          from px a join px b on b.ts_code = a.ts_code and b.rn = a.rn - 1
+        ),
+        sec_day as (
+          select m.sector_code, chg.trade_date, avg(chg.c) as avg_c,
+                 count(*) as n,
+                 count(*) filter (where chg.c > 0)::float / nullif(count(*), 0) as up_r
+          from concept_member m join chg on chg.ts_code = m.ts_code
+          group by m.sector_code, chg.trade_date
+        ),
+        agg as (
+          select sector_code,
+                 exp(sum(ln(1 + avg_c))) - 1                as cum,
+                 count(*) filter (where avg_c > 0)          as up_days,
+                 count(*)                                   as n_days,
+                 max(trade_date)                            as last_day
+          from sec_day where avg_c > -0.99 group by sector_code
+        )
+        select s.ts_code, s.name, s.count,
+               agg.cum * 100 as cum_pct, agg.up_days, agg.n_days,
+               (select up_r from sec_day sd
+                 where sd.sector_code = s.ts_code and sd.trade_date = agg.last_day) * 100 as up_ratio,
+               (select avg_c from sec_day sd
+                 where sd.sector_code = s.ts_code and sd.trade_date = agg.last_day) * 100 as last_pct,
+               agg.last_day
+        from agg join concept_sector s on s.ts_code = agg.sector_code
+        where (:theme = false or s.name not like any(array['%指数%','%成份%','%样本%']))
+        order by agg.cum desc nulls last
+        limit :l
+    """), {"d": days, "l": limit, "theme": theme_only})).fetchall()
+
+    return {"days": days, "count": len(rows), "items": [
+        {"code": r[0], "name": r[1], "members": r[2],
+         "cum_pct": round(float(r[3]), 2) if r[3] is not None else None,
+         "up_days": r[4], "n_days": r[5],
+         "up_ratio": round(float(r[6]), 1) if r[6] is not None else None,
+         "last_pct": round(float(r[7]), 2) if r[7] is not None else None,
+         "last_day": str(r[8])} for r in rows]}
+
+
 @router.get("/sectors/{sector_code}/members")
 async def sector_members(sector_code: str, db: AsyncSession = Depends(get_db)):
     """板块成分股 + 当日收盘行情, 按涨幅排序。"""
