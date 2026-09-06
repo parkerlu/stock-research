@@ -11,6 +11,9 @@ import {
   setIndicatorData,
 } from "../components/ChartArea/TdxIndicatorManager";
 
+/** 图上可能出现过的全部周期 —— purge 要按这个逐个清。 */
+const ALL_TFS = ["1d", "1w", "1m"] as const;
+
 interface Options {
   /** 惰性取图表实例 —— 图表可能晚于 hook 初始化 */
   getChart: () => Chart | null;
@@ -52,6 +55,20 @@ export function useTdxIndicators({
   }, [active, storageKey]);
 
   /** 取数并在图上建/更新一个指标。create=false 时只刷新数据。 */
+  /** 把某个 TDX 指标【所有周期】的变体从图上摘干净。
+   *
+   * ⚠️ 必须按全周期清, 不能只清当前周期: klinecharts 的指标名带周期
+   * (getKlineIndicatorName), 而面板 id 不带, 且 createIndicator 用的是
+   * isStack=true —— 切一次周期就往同一个面板里多叠一层, 而移除只按当前周期
+   * 的名字删, 别的周期永远留着。实测叠了四层"买卖很准"。
+   * 原来靠 appliedTf 记录上次周期来清理, 但 active 为空时那段 effect 直接
+   * return, appliedTf 就停在旧值, 状态一漂就漏。清全部才是幂等的。 */
+  const purge = useCallback((chart: Chart, name: string) => {
+    for (const tf of ALL_TFS) {
+      chart.removeIndicator({ name: getKlineIndicatorName(name, tf) });
+    }
+  }, []);
+
   const apply = useCallback(
     async (name: string, create: boolean) => {
       const chart = getChart();
@@ -66,6 +83,7 @@ export function useTdxIndicators({
       const kcName = getKlineIndicatorName(name, timeframe);
       if (create) {
         const paneId = result.pane === "main" ? "candle_pane" : `tdx_${name}_pane`;
+        purge(chart, name);              // 建之前先清掉所有周期的旧变体
         chart.createIndicator(kcName, true, { id: paneId });
         paneIds.current[name] = paneId;
       } else {
@@ -73,7 +91,7 @@ export function useTdxIndicators({
       }
       return true;
     },
-    [getChart, symbol, timeframe]
+    [getChart, symbol, timeframe, purge]
   );
 
   const toggle = useCallback(
@@ -81,7 +99,7 @@ export function useTdxIndicators({
       const chart = getChart();
       if (!symbol) return;
       if (active.includes(name)) {
-        chart?.removeIndicator({ name: getKlineIndicatorName(name, timeframe) });
+        if (chart) purge(chart, name);   // 同样清全部周期
         delete paneIds.current[name];
         setActive((p) => p.filter((n) => n !== name));
         return;

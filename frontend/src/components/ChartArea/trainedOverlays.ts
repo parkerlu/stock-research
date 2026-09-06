@@ -25,7 +25,8 @@ export function registerTrainedMarker(): void {
     needDefaultYAxisFigure: false,
     createPointFigures: ({ overlay, coordinates, bounding }) => {
       const d = overlay.extendData as
-        | { side: "buy" | "sell"; grade: "强" | "中" | "弱"; color?: string }
+        | { side: "buy" | "sell"; grade: "强" | "中" | "弱"; color?: string;
+            shape?: "triangle" | "circle"; noLine?: boolean }
         | undefined;
       if (!d) return [];
       const isBuy = d.side === "buy";
@@ -46,6 +47,26 @@ export function registerTrainedMarker(): void {
       // 虚线: 从 K 线端点连到三角尖, 留一点缝隙不碰到蜡烛
       const lineFrom = isBuy ? barY + 4 : barY - 4;
       const lineTo = isBuy ? tipY - 2 : tipY + 2;
+
+      // 圆圈变体(龙虎榜用): 贴着 K 线画一个小圆, 不要牵引线 —— 它是参考信息,
+      // 不该像买卖信号那样抢视线。
+      // ⚠️ 圆用 polygon 近似, 不用 circle: circle 的 per-figure styles 在
+      // klinecharts v10 上不生效, 会退回默认蓝。
+      if (d.shape === "circle") {
+        const r = 5;
+        const cy = isBuy ? barY + r + 6 : barY - r - 6;
+        const pts = Array.from({ length: 14 }, (_, i) => {
+          const a = (i / 14) * Math.PI * 2;
+          return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+        });
+        return [{
+          type: "polygon",
+          attrs: { coordinates: pts },
+          styles: { style: "stroke_fill", color: `${base}33`,
+                    borderColor: base, borderSize: 1.4 },
+          ignoreEvent: true,
+        }];
+      }
 
       return [
         {
@@ -233,7 +254,8 @@ export function paintSelectedSignal(chart: any, date: string | null | undefined)
  * trainedMarker 整体失效(v3 的 22 个 overlay 建出来了但一个都画不出来),
  * 原因没查到, 但复用是稳的 —— 别再试着自建。
  *
- * 用 side="sell" 画在图【上】沿 + 橙色, 与买点三角(图下沿, 红/金)错开;
+ * 画成蓝色小圆圈贴在 K 线上方(不带牵引线) —— 与买卖三角(图上下沿, 红/金)
+ * 在颜色和形状上都区分开, 一眼就知道不是买卖信号;
  * 详细内容看工具栏右侧的「龙虎榜 N 次」徽章。
  *
  * 为什么只标不做信号: 龙虎榜盘后公布, 这些票次日平均高开 1.31%,
@@ -261,7 +283,8 @@ export function paintTopList(
         ovs.push({
           name: "trainedMarker", groupId: "toplist", lock: true,
           points: [{ timestamp: Date.parse(`${it.date}T00:00:00Z`), value: h }],
-          extendData: { side: "sell", grade: "强", color: "#f59e0b" },
+          extendData: { side: "sell", grade: "强", color: "#3b9dff",
+                        shape: "circle", noLine: true },
         });
       }
       if (ovs.length) { chart.createOverlay(ovs); return; }
