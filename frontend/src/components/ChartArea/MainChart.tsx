@@ -72,6 +72,8 @@ interface Props {
   signalMark?: string | null;
   /** 副图关闭按钮: 每个副图右上角一个 ×, 点了从对应的开关状态里移除 */
   panes?: PaneBtn[];
+  /** SAR预警 —— 趋势型, 紫色三角(与突破绿/拉升青区分) */
+  sarSignals?: { date: string; score: number; rank_pct: number; grade: string }[];
   /** 突破预警 —— 趋势型, 亮绿色三角 */
   breakoutSignals?: { date: string; score: number; rank_pct: number; grade: string }[];
   /** 拉升预警 —— 各关全过的指标, 用亮青色三角(与 v3红/v4金 区分) */
@@ -155,7 +157,7 @@ function anchorTs(list: { timestamp: number }[], ts: number): number {
 export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
   { timeframe: tfOverride, className, tradeActions, replayDate, forecast, onBarSelected,
     measuring = false, onMeasure,
-    maimaiSignals, comboSignals, pumpSignals, didianSignals, signalMark, panes, topList, liftSignals, breakoutSignals },
+    maimaiSignals, comboSignals, pumpSignals, didianSignals, signalMark, panes, topList, liftSignals, breakoutSignals, sarSignals },
   ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -208,6 +210,11 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
     selMarkRef.current = signalMark;
     return paintSelectedSignal(chartRef.current, signalMark);
   }, [signalMark]);
+
+  useEffect(() => {
+    trainedRef.current["sar"] = { sig: sarSignals, color: "#c084fc" };
+    return paintTrainedMarkers(chartRef.current, "sar", sarSignals, "#c084fc");
+  }, [sarSignals]);
 
   useEffect(() => {
     trainedRef.current["bo"] = { sig: breakoutSignals, color: "#4ade80" };

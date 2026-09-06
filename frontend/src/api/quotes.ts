@@ -173,3 +173,17 @@ export async function getBreakoutSignals(
   const q = start ? `?start=${start}` : "";
   return json(`${BASE}/indicators/breakout/${tsCode}${q}`);
 }
+
+/** SAR 预警 —— SAR由空翻多 × 主力吸筹强档。
+ *  ⚠️ 必须配大盘择时(中证1000>MA20): 裸跑比值 0.29, 加择时 1.74, 胜率 52.5%。 */
+export async function getSarSignals(
+  tsCode: string,
+  start?: string
+): Promise<{
+  ts_code: string;
+  count: number;
+  signals: { date: string; score: number; rank_pct: number; grade: string }[];
+}> {
+  const q = start ? `?start=${start}` : "";
+  return json(`${BASE}/indicators/sar/${tsCode}${q}`);
+}

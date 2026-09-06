@@ -197,6 +197,12 @@ async def pump_scan(
 # ---- 训练指标选股 ----
 # 信号已在库中(build_maimai / build_pump 盘后算好), 这里直接查, 不跑扫描任务。
 TRAINED_META = [
+    {"key": "sar", "label": "★★★ SAR预警",
+     "desc": "SAR由空翻多 × 主力吸筹强档。命中率 29.3%(基准 17.55%), 逐年0负年 · "
+             "按天t=20.40 · 九格最小+3.93pp(所有组合里最高, 各格子都均匀)。"
+             "⚠️ 同样必须配大盘择时: 裸跑比值 0.29, 加择时 1.74。"
+             "与突破预警的分工: 那个更狠(2.62)但胜率仅35%, 这个胜率 52.5% 更好拿",
+     "grades": ["强"], "default_grade": "强", "default_days": 5},
     {"key": "breakout", "label": "★★★ 突破预警",
      "desc": "收盘创60日新高 × 主力吸筹强档。命中率 32.0%(基准 17.52%), 逐年0负年 · "
              "按天t=41.53 · 九格全正。⚠️ 必须配大盘择时: 裸跑组合比值仅 0.17(回撤59.7%), "
@@ -239,6 +245,58 @@ async def screen_by_trained(
 ):
     """按训练指标选股 —— 返回最近 N 日内出信号的股票 + 当日收盘行情。"""
     from sqlalchemy import text
+
+    if indicator == "sar":
+        # SAR预警 = SAR由空翻多 × 近5日吸筹强档。与突破预警同一族,
+        # 胜率高 17 个点(52.5% vs 35%), 连亏的串更短。
+        # ⚠️ 同时返回当日大盘择时状态(等权指数 vs 自身MA10) —— 这个指标离了
+        # 择时不能用: 裸跑比值 0.17, 加择时 1.21~1.91。所以状态必须一起给出来。
+        rows = (await db.execute(text("""
+            with b as (
+              select ts_code, trade_date, prob from sar_signal
+              where trade_date > (select max(trade_date) from sar_signal)
+                                 - make_interval(days => :d)
+            ),
+            -- 择时基准 = 中证1000 在自身 MA20 之上。
+            -- ⚠️ 基准要和标的匹配: 突破预警选的是小盘股, 用沪深300/上证判断
+            -- 是拿蓝筹的脸色看小盘股死活。实测比值 中证1000 2.62 >
+            -- 中证500 2.26 > 沪深300 1.92 > 上证 1.17 > 等权 1.91(MA10)。
+            mflag as (
+              select trade_date, close,
+                     avg(close) over (order by trade_date
+                         rows between 19 preceding and current row) ma20
+              from index_daily where ts_code = '000852.SH'
+            ),
+            px as (
+              select d.ts_code, d.trade_date, d.close, d.adj_factor,
+                     row_number() over (partition by d.ts_code order by d.trade_date desc) rn
+              from daily_candle d
+              where d.trade_date > (select max(trade_date) - interval '20 days' from daily_candle)
+            ),
+            last2 as (
+              select ts_code,
+                     max(close) filter (where rn=1) c1, max(adj_factor) filter (where rn=1) a1,
+                     max(close) filter (where rn=2) c2, max(adj_factor) filter (where rn=2) a2
+              from px where rn <= 2 group by ts_code
+            )
+            select b.ts_code, coalesce(s.name,'') name, b.trade_date, b.prob, 0 as pad,
+                   l.c1 price, (l.c1*l.a1)/nullif(l.c2*l.a2,0)-1 chg,
+                   (f.close > f.ma20) as mkt_ok
+            from b
+            left join stock_basic s on s.ts_code = b.ts_code
+            left join last2 l on l.ts_code = b.ts_code
+            left join mflag f on f.trade_date = b.trade_date
+            order by b.trade_date desc, b.prob desc
+            limit :lim
+        """), {"d": days, "lim": limit})).fetchall()
+        return {"indicator": indicator, "grade": "强", "days": days,
+                "count": len(rows), "items": [
+            {"ts_code": r[0], "name": r[1], "date": str(r[2]),
+             "score": round(float(r[3]), 4), "rank_pct": 0.95, "grade": "强",
+             "price": round(float(r[5]), 2) if r[5] is not None else None,
+             "chg": round(float(r[6]) * 100, 2) if r[6] is not None else None,
+             "mkt_ok": bool(r[7]) if r[7] is not None else None}
+            for r in rows]}
 
     if indicator == "breakout":
         # 突破预警 = 收盘创60日新高 × 近5日吸筹强档。
@@ -579,6 +637,39 @@ async def breakout_signals(
     from sqlalchemy import text
 
     sql = ("select trade_date, prob, hh60 from breakout_signal where ts_code = :c")
+    params: dict = {"c": ts_code}
+    if start:
+        try:
+            params["s"] = date.fromisoformat(start)
+            sql += " and trade_date >= :s"
+        except ValueError:
+            raise HTTPException(status_code=400, detail="start 需为 YYYY-MM-DD")
+    sql += " order by trade_date"
+    rows = (await db.execute(text(sql), params)).fetchall()
+    return {"ts_code": ts_code, "count": len(rows), "signals": [
+        {"date": str(r[0]), "score": round(float(r[1]), 4),
+         "rank_pct": 0.95, "grade": "强"} for r in rows]}
+
+
+@router.get("/sar/{ts_code}")
+async def sar_signals(
+    ts_code: str,
+    start: str | None = Query(None, description="YYYY-MM-DD"),
+    db: AsyncSession = Depends(get_db),
+):
+    """SAR 预警 —— SAR 由空翻多 × 近5日内主力吸筹强档。
+
+    ⚠️ 必须配大盘择时(中证1000 > 自身MA20): 裸跑比值 0.29(回撤 40.6%),
+    加择时 1.74(年化 +34.65% / 回撤 19.96%, 胜率 52.5%)。
+
+    与突破预警同一族(都是"趋势确认 × 吸筹"), 性格不同:
+      突破预警 比值 2.62 但胜率约 35%, 靠少数大赢家
+      SAR预警  比值 1.74 但胜率 52.5%, 连亏的串更短, 好拿住
+    九格最小 +3.93pp 是所有组合里最高的 —— 各波动/市值格子都均匀。
+    """
+    from sqlalchemy import text
+
+    sql = "select trade_date, prob from sar_signal where ts_code = :c"
     params: dict = {"c": ts_code}
     if start:
         try:

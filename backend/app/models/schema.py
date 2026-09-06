@@ -424,6 +424,28 @@ class IndexBar(Base):
     vol: Mapped[float] = mapped_column(Numeric(20, 2))
 
 
+class SarSignal(Base):
+    """SAR 预警 —— SAR 由空翻多 × 近5日内主力吸筹强档。
+
+    与突破预警是同一族(都是"趋势确认 × 吸筹"), 差别在性格:
+      突破预警  比值 2.62, 年化 +39.96% / 回撤 15.24%, 胜率约 35%
+      SAR预警   比值 1.74, 年化 +34.65% / 回撤 19.96%, 胜率  52.5%
+    突破版更狠但靠少数大赢家; SAR 版胜率高 17 个点, 连亏的串更短, 好拿住。
+
+    ⚠️ 同样必须配大盘择时(中证1000 > 自身MA20): 裸跑比值只有 0.29(回撤 40.6%)。
+
+    信号级(标签=10个交易日内触及+10%, 基准 17.55%):
+      命中 29.3% · 超基准 +10.80pp · 逐年 0 负年 · 按天 t=20.40 ·
+      九格最小 +3.93pp —— 九格最小值是所有组合里最高的, 各波动/市值格子都均匀。
+    """
+    __tablename__ = "sar_signal"
+    __table_args__ = (Index("ix_sar_date", "trade_date"),)
+
+    ts_code: Mapped[str] = mapped_column(String(12), primary_key=True)
+    trade_date: Mapped[date] = mapped_column(Date, primary_key=True)
+    prob: Mapped[float] = mapped_column(Numeric(8, 5))
+
+
 class BreakoutSignal(Base):
     """突破预警 —— 收盘创 60 日新高 × 近5日内主力吸筹强档。
 

@@ -25,6 +25,8 @@ const INDICATORS = [
  *  买卖很准v3: 原指标买点与随机无异(胜率48.7%), 模型在同日×同波动层中性化后
  *  把 Top20% 胜率提到 51.3%、中位翻正到 +0.264%, 三个波动档超出全为正。 */
 export const TRAINED_INDICATORS = [
+  { name: "sar", label: "★★★ SAR预警",
+    desc: "SAR翻多×吸筹强 · 命中29.3% · 胜率52.5%(比突破版高17点) · 必须配择时" },
   { name: "breakout", label: "★★★ 突破预警",
     desc: "创60日新高×吸筹强 · 命中32.0% · 必须配大盘择时(裸跑回撤59.7%)" },
   { name: "liftalert", label: "★★ 拉升预警",

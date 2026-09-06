@@ -8,7 +8,7 @@ import { LinkedView } from "./LinkedView";
 import { MAIN_PANE_INDICATORS } from "./indicatorPanes";
 import { StockSectors } from "./StockSectors";
 import { TopListBadge } from "./TopListBadge";
-import { getMaimaiSignals, getPumpSignals, getDidianSignals, getComboSignals , getLiftAlertSignals, getBreakoutSignals } from "../../api/quotes";
+import { getMaimaiSignals, getPumpSignals, getDidianSignals, getComboSignals , getLiftAlertSignals, getBreakoutSignals, getSarSignals } from "../../api/quotes";
 import { useTdxIndicators } from "../../hooks/useTdxIndicators";
 
 interface Props {
@@ -102,6 +102,9 @@ export function ChartArea({ tradeActions }: Props = {}) {
       return ["toplist"];
     }
   });
+  const [sarSig, setSarSig] = useState<
+    { date: string; score: number; rank_pct: number; grade: string }[]
+  >([]);
   const [boSig, setBoSig] = useState<
     { date: string; score: number; rank_pct: number; grade: string }[]
   >([]);
@@ -202,6 +205,20 @@ export function ChartArea({ tradeActions }: Props = {}) {
     getBreakoutSignals(currentSymbol)
       .then((r) => live && setBoSig(r.signals ?? []))
       .catch(() => live && setBoSig([]));
+    return () => {
+      live = false;
+    };
+  }, [currentSymbol, activeTrained]);
+
+  useEffect(() => {
+    if (!currentSymbol || !activeTrained.includes("sar")) {
+      setSarSig([]);
+      return;
+    }
+    let live = true;
+    getSarSignals(currentSymbol)
+      .then((r) => live && setSarSig(r.signals ?? []))
+      .catch(() => live && setSarSig([]));
     return () => {
       live = false;
     };
@@ -404,6 +421,7 @@ export function ChartArea({ tradeActions }: Props = {}) {
         signalMark={signalMark}
         liftSignals={activeTrained.includes("liftalert") ? liftSig : undefined}
         breakoutSignals={activeTrained.includes("breakout") ? boSig : undefined}
+        sarSignals={activeTrained.includes("sar") ? sarSig : undefined}
         panes={panes}
         topList={activeTrained.includes("toplist") ? lhb : undefined}
         maimaiSignals={activeTrained.includes("maimai_v3") ? maimaiSignals : undefined}
