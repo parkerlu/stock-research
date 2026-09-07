@@ -121,6 +121,56 @@ def _feats(g: pd.DataFrame) -> pd.DataFrame:
         streak[i] = run
     out["streak"] = streak
 
+    # ================= 量能机制 (2026-09-07 新增) =================
+    # 全部是比值/分位/相关, 无量纲 —— 不引入市值和绝对活跃度。
+    vs = pd.Series(v.astype(np.float64))
+    vma5 = vs.rolling(5).mean().values
+    vma60 = vs.rolling(60).mean().values
+    up1 = r1 > 0
+
+    # 1. 量在自身过去120日中的分位: 现在是活跃还是冷清
+    out["vol_pct120"] = vs.rolling(120).rank(pct=True).values
+
+    # 2/3. 放量上涨 与 缩量下跌 的占比 —— 量价配合是否健康。
+    #      缩量下跌是"回调不恐慌"的标志, 与放量下跌完全两回事。
+    big = v > np.where(vma20 > 0, vma20, np.inf)
+    out["up_vol_rate20"] = pd.Series((up1 & big).astype(np.float32)).rolling(20).mean().values
+    out["dn_shrink_rate20"] = pd.Series(((~up1) & (~big)).astype(np.float32)).rolling(20).mean().values
+
+    # 4. 量价相关: 涨放量/跌缩量 -> 正相关
+    dv = pd.Series(np.concatenate([[np.nan], np.diff(v.astype(np.float64))]))
+    out["pv_corr20"] = pd.Series(r1).rolling(20).corr(dv).values
+
+    # 5. OBV 斜率, 用均量归一化 -> 去掉规模
+    obv = np.nancumsum(np.where(np.isfinite(r1), np.sign(r1) * v, 0.0))
+    obv_s = pd.Series(obv)
+    out["obv_slope20"] = ((obv_s - obv_s.shift(20)) /
+                          np.where(vma20 > 0, vma20 * 20, np.nan)).values
+
+    # 6. 主动买盘代理: 收盘落在当日区间的哪个位置, 用量加权
+    clv = np.where((h - l) > 1e-9, ((c - l) - (h - c)) / (h - l), 0.0)
+    for w in (5, 20):
+        num = pd.Series(clv * v).rolling(w).sum().values
+        den = vs.rolling(w).sum().values
+        out[f"mfi{w}"] = num / np.where(den > 0, den, np.nan)
+
+    # 7. 量堆: 短期均量 / 长期均量, >1 = 在积聚
+    out["vol_pile"] = vma5 / np.where(vma60 > 0, vma60, np.nan)
+
+    # 8. 地量: 近5日最低量 / 60日均量, 越小说明抛压越枯竭
+    out["vol_dry"] = vs.rolling(5).min().values / np.where(vma60 > 0, vma60, np.nan)
+
+    # 9. 突破放量: 是否创20日新高, 以及当日量比(两者相乘 -> 只有突破日非零)
+    hh20 = pd.Series(h).rolling(20).max().shift(1).values
+    brk = (c > hh20).astype(np.float32)
+    out["brk_vol"] = brk * (v / np.where(vma20 > 0, vma20, np.nan))
+
+    # 10. 量能收敛: 量的短期波动 / 长期波动
+    out["vol_std_5_20"] = (vs.rolling(5).std().values /
+                           np.where(vs.rolling(20).std().values > 1e-9,
+                                    vs.rolling(20).std().values, np.nan))
+    # ==============================================================
+
     # --- 9. 近20日里涨停/跌停的根数(比例) —— A股特有的形态信息 ---
     lim = (np.abs(r1) > 0.095).astype(np.float32)
     out["limit_rate20"] = pd.Series(lim).rolling(20).mean().values
@@ -175,7 +225,7 @@ async def main() -> None:
 
     feat = pd.concat(parts, ignore_index=True)
     feat = feat.dropna(subset=["pos60"])          # 前60根不可用
-    p = f"{OUT_DIR}/features.parquet"
+    p = f"{OUT_DIR}/features_v2.parquet"
     feat.to_parquet(p, index=False)
     log.info("特征 %s 行 × %s 列 -> %s", f"{len(feat):,}", feat.shape[1], p)
     log.info("特征名: %s", [c for c in feat.columns

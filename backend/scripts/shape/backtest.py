@@ -191,7 +191,7 @@ async def main():
     ap.add_argument("--stops", default="none,0.05,0.08,0.12")
     a = ap.parse_args()
 
-    sig = pd.read_parquet(f"{DIR}/oos_top_h{a.h}.parquet")
+    sig = pd.read_parquet(f"{DIR}/oos_top_v2_h{a.h}.parquet")
     sig = sig[sig.rk >= a.top]
     sig["trade_date"] = pd.to_datetime(sig["trade_date"]).dt.date
     start = min(sig["trade_date"])
