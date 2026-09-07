@@ -505,12 +505,26 @@ async def scan_signals(db: AsyncSession, day: date, exclude: set[str] | None = N
         amt20 = sum(amts[:20]) / 20
         if amt20 < DEFAULT_CONFIG["min_amount_k"]:
             continue
-        if closes[0] > closes[1] * 1.099:      # 涨停买不进
+        # ⚠️ 涨停买不进 —— 要查两处, 少一处就会把买不到的单子算成成交:
+        #   1) 信号日涨停: 尾盘买模式下当场就买不进
+        #   2) 【买入当日】开盘一字涨停: 次日开盘买模式下的真正约束
+        # 只查第 1 处是本项目长期的缺口。形态模型上吃过大亏 ——
+        # 22% 的买入是次日一字涨停, 而那批不可成交的单子贡献了【全部】收益,
+        # 组合比值 1.70 补上约束后变成 -0.10。这两个策略实测只有 0.5%~2.4%
+        # 撞上, 影响很小, 但漏洞得堵死, 否则下一个策略还会栽。
+        if closes[0] > closes[1] * 1.099:
             continue
-        nx = (await db.execute(
-            select(DailyCandle.open).where(DailyCandle.ts_code == cd,
-                                           DailyCandle.trade_date == nxt)
-        )).scalar_one_or_none() if nxt else None
+        lim = 0.20 if cd[:3] in ("300", "301", "688") else 0.10
+        nb = (await db.execute(
+            select(DailyCandle.open, DailyCandle.high, DailyCandle.low)
+            .where(DailyCandle.ts_code == cd, DailyCandle.trade_date == nxt)
+        )).first() if nxt else None
+        if nb is not None:
+            n_open, n_high, n_low = (float(x) for x in nb)
+            # 一字涨停 = 全天最低价也在涨停位, 挂单排不上
+            if n_low >= closes[0] * (1 + lim - 0.005) and n_high == n_low:
+                continue
+        nx = nb[0] if nb is not None else None
         # ⚠️ 只有"次日开盘买"才能因次日停牌而放弃。尾盘买模式下, 下单那一刻
         # 根本不知道明天停不停牌 —— 拿它做过滤就是未来函数。
         if require_next and nx is None:
