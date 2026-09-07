@@ -318,19 +318,37 @@ export function ChartArea({ tradeActions }: Props = {}) {
     setTradeIdx(-1);
   }, [tradeActions]);
 
-  // 挂载标准指标(MA/MACD/BOLL/SAR)。
-  // ⚠️ 依赖必须带 linkedMode: 多周期联动是 `linkedMode ? <LinkedView/> : <MainChart/>`,
-  // 切过去时 MainChart 被【卸载】, 切回来是全新的图表实例。而这段跑在 ChartArea 里,
-  // ChartArea 自己没卸载 —— 原来依赖是 [] 只在首次挂载执行一次, 于是切回来后
-  // 指标就永久消失了(用户实测)。TDX 那边同理, 见 useTdxIndicators。
+  // 标准指标(MA/BOLL/SAR/MACD)与图表状态【对账】—— 幂等, 可以随便重跑。
+  //
+  // ⚠️ 不能写成"再 createIndicator 一次": klinecharts 主图用的是 isStack=true,
+  // 重复创建会往同一面板叠一层。这个 effect 依赖 activeIndicators, 而 toggle
+  // 本身也会创建 —— 两条路径一起跑就叠两层, 切几次就是 5 层 MA(用户实测)。
+  //
+  // 对账的写法天然没有这个问题: 先看图上现在有什么, 多的删、缺的补。
+  // 联动切回来是全新图表(什么都没有), 走的也是同一段逻辑, 不需要特殊处理。
   useEffect(() => {
     if (linkedMode) return;                 // 联动视图自己管指标
     const t = setTimeout(() => {
       const chart = mainChartRef.current?.getChart();
       if (!chart) return;
-      for (const name of activeIndicators) {
-        const isMain = MAIN_PANE_INDICATORS.has(name);
-        if (isMain) {
+      const want = new Set(activeIndicators);
+      const STD = new Set([...MAIN_PANE_INDICATORS, "MACD"]);
+      const have = new Map<string, number>();
+      for (const ind of chart.getIndicators()) {
+        if (!STD.has(ind.name)) continue;   // 别碰 VOL / TDX_* / TRAINED_*
+        have.set(ind.name, (have.get(ind.name) ?? 0) + 1);
+      }
+      // 多的删干净(包括重复叠加出来的那些)
+      for (const [name, n] of have) {
+        if (!want.has(name) || n > 1) {
+          for (let i = 0; i < n; i++) chart.removeIndicator({ name });
+          have.delete(name);
+        }
+      }
+      // 缺的补上
+      for (const name of want) {
+        if (have.has(name)) continue;
+        if (MAIN_PANE_INDICATORS.has(name)) {
           chart.createIndicator(
             name === "MA" ? { name, calcParams: MA_PERIODS } : name,
             true, { id: "candle_pane" });
@@ -356,36 +374,11 @@ export function ChartArea({ tradeActions }: Props = {}) {
     [tradeActions]
   );
 
+  // toggle 只改状态, 图表由上面的对账 effect 收敛 —— 两处都动就会叠加。
   const handleToggleIndicator = useCallback(
-    (name: string, isMainPane: boolean) => {
-      const chart = mainChartRef.current?.getChart();
-      setActiveIndicators((prev) => {
-        if (prev.includes(name)) {
-          if (chart) {
-            if (isMainPane) {
-              chart.removeIndicator({ paneId: "candle_pane", name });
-            } else {
-              chart.removeIndicator({ name });
-              delete indicatorPaneIds.current[name];
-            }
-          }
-          return prev.filter((n) => n !== name);
-        } else {
-          if (chart) {
-            if (isMainPane) {
-              // isStack=true → overlay onto candle pane without wiping it
-              chart.createIndicator(
-            name === "MA" ? { name, calcParams: MA_PERIODS } : name,
-            true, { id: "candle_pane" });
-            } else {
-              const paneId = `kc_${name}_pane`;
-              chart.createIndicator(name, false, { id: paneId });
-              indicatorPaneIds.current[name] = paneId;
-            }
-          }
-          return [...prev, name];
-        }
-      });
+    (name: string, _isMainPane: boolean) => {
+      setActiveIndicators((prev) =>
+        prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]);
     },
     []
   );
