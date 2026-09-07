@@ -166,31 +166,43 @@ def main() -> None:
     a_h, a_tr1, a_sample = a.h, a.tr1, a.sample
     BARS = [(0.08, 0.05), (0.12, 0.06), (0.15, 0.08), (0.20, 0.10)]
     log.info("三重障碍标签 h=%d, 障碍(止盈,止损) %s ...", a.h, BARS)
+    # ⚠️ 取全市场开盘/最低价用于判"次日能不能买到"。必须【按年分批】——
+    #    fetchall 1200万行 Row 对象会直接 OOM(这个坑本轮已经踩过三次)。
     import asyncio as _aio
+    import datetime as _dt
     from sqlalchemy import text as _text
     from app.db import engine as _eng
 
-    async def _ohlc():
-        async with _eng.connect() as conn:
-            return (await conn.execute(_text(
-                "select ts_code, trade_date, open*adj_factor, low*adj_factor "
-                "from daily_candle where trade_date >= :s"),
-                {"s": __import__("datetime").date(2016, 1, 1)})).fetchall()
-    rws = _aio.run(_ohlc())
     cmap = {c: i for i, c in enumerate(code_index)}
-    ok_ = np.array([r[0] in cmap for r in rws])
-    kk = np.array([cmap[r[0]] * 100000 + (r[1] - __import__("datetime").date(1970, 1, 1)).days
-                   for r in rws if r[0] in cmap], dtype=np.int64)
-    oo = np.array([float(r[2]) for r in rws if r[0] in cmap], dtype=np.float32)
-    ll = np.array([float(r[3]) for r in rws if r[0] in cmap], dtype=np.float32)
-    del rws
+    EPOCH = _dt.date(1970, 1, 1)
+
+    async def _ohlc():
+        ks, os_, ls_ = [], [], []
+        async with _eng.connect() as conn:
+            for yy in range(2016, 2027):
+                rr = (await conn.execute(_text(
+                    "select ts_code, trade_date, open*adj_factor, low*adj_factor "
+                    "from daily_candle where trade_date >= :a and trade_date < :b"),
+                    {"a": _dt.date(yy, 1, 1), "b": _dt.date(yy + 1, 1, 1)})).fetchall()
+                if not rr:
+                    continue
+                ks.append(np.array([cmap[r[0]] * 100000 + (r[1] - EPOCH).days
+                                    for r in rr if r[0] in cmap], dtype=np.int64))
+                os_.append(np.array([float(r[2]) for r in rr if r[0] in cmap], np.float32))
+                ls_.append(np.array([float(r[3]) for r in rr if r[0] in cmap], np.float32))
+                del rr
+        return np.concatenate(ks), np.concatenate(os_), np.concatenate(ls_)
+
+    kk, oo, ll = _aio.run(_ohlc())
     key_f = cid.astype(np.int64) * 100000 + day
     srt = np.argsort(kk)
-    pos_ = np.searchsorted(kk[srt], key_f)
-    pos_ = np.minimum(pos_, len(kk) - 1)
-    hit = kk[srt][pos_] == key_f
+    ks_ = kk[srt]
+    pos_ = np.minimum(np.searchsorted(ks_, key_f), len(ks_) - 1)
+    hit = ks_[pos_] == key_f
     opens = np.where(hit, oo[srt][pos_], np.nan).astype(np.float32)
     lows = np.where(hit, ll[srt][pos_], np.nan).astype(np.float32)
+    del kk, oo, ll, srt, ks_, pos_, hit
+    gc.collect()
     lims = np.array([0.20 if code_index[i][:3] in ("300", "301", "688") else 0.10
                      for i in range(len(code_index))], dtype=np.float32)[cid]
     lab = barrier_labels(pd.DataFrame({"cid": cid, "day": day, "c": closes,
@@ -275,7 +287,7 @@ def main() -> None:
                              min_child_weight=50, reg_lambda=2.0,
                              tree_method="hist", n_jobs=8, random_state=42)
         m.fit(tr[cols], tr_y)
-        m.save_model(f"{DIR}/shape_v4_{tag}_h{a_h}.json")
+        m.save_model(f"{DIR}/shape_v5_{tag}_h{a_h}.json")
         VOLF = {"vol_pct120", "up_vol_rate20", "dn_shrink_rate20", "pv_corr20",
                 "obv_slope20", "mfi5", "mfi20", "vol_pile", "vol_dry", "brk_vol",
                 "vol_std_5_20", "vol_ratio", "amt_ratio", "vol_trend"}
@@ -318,7 +330,7 @@ def main() -> None:
         out["ts_code"] = code_index[out["cid"].to_numpy()]
         out["trade_date"] = pd.to_datetime(out["day"], unit="D")
         out[["ts_code", "trade_date", "score", "rk"]].to_parquet(
-            f"{DIR}/oos_v4_{tag}_h{a_h}.parquet", index=False)
+            f"{DIR}/oos_v5_{tag}_h{a_h}.parquet", index=False)
         del out, tops, dl, jd
         gc.collect()
 

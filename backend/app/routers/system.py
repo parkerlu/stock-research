@@ -24,8 +24,14 @@ router = APIRouter(prefix="/api/system", tags=["system"])
 
 
 @router.get("/data-status")
-async def data_status():
-    """Per-stock summary: latest local date, bars count, days stale."""
+async def data_status(include_dead: bool = False):
+    """Per-stock summary: latest local date, bars count, days stale.
+
+    ⚠️ 默认隐藏【已退市/已禁用】的票。它们永远补不上 —— 数据源里没有数据,
+       而列表按落后天数倒序, 于是这批死票把真正该补的挤到看不见的地方
+       (实测 293 只停在 2019 年以前的里面 233 只根本不在 stock_basic 里)。
+       include_dead=true 可以看全量。
+    """
     async with async_session() as db:
         max_row = await db.execute(
             select(DailyCandle.trade_date).order_by(DailyCandle.trade_date.desc()).limit(1)
@@ -58,11 +64,20 @@ async def data_status():
 
     # List stocks needing backfill (active + stale OR < market latest)
     stale = []
+    dead_hidden = 0
     for ts_code, latest, bars, name, active in rows:
         if not latest:
             continue
         gap = (market_latest - latest).days
-        if gap > 0:
+        if gap <= 0:
+            continue
+        # 三种都补不上: 不在 stock_basic(已移除) / 已禁用 / 名字带"退"(退市整理期)
+        dead = (name is None) or (active is False) or ("退" in (name or ""))
+        if dead:
+            dead_hidden += 1
+            if not include_dead:
+                continue
+        if True:
             stale.append({
                 "ts_code": ts_code,
                 "name": name,
@@ -70,6 +85,7 @@ async def data_status():
                 "bars": int(bars),
                 "days_stale": gap,
                 "active": bool(active) if active is not None else True,
+                "dead": dead,
             })
     stale.sort(key=lambda r: (-r["days_stale"], r["ts_code"]))
 
@@ -81,6 +97,7 @@ async def data_status():
             "stale_7d": stale_7d,
             "stale_30d": stale_30d,
             "inactive": inactive,
+            "dead_hidden": dead_hidden,
         },
         "stale": stale[:200],   # cap to avoid huge payloads
     }
