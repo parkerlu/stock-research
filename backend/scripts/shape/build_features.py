@@ -42,8 +42,10 @@ OUT_DIR = "/app/data/research/shape"   # ⚠️ 必须放挂载卷, /app 下别�
 WINDOWS = (5, 10, 20, 60)
 
 
-def _feats(g: pd.DataFrame) -> pd.DataFrame:
-    """单只股票的形状特征。g 已按 trade_date 升序, 且是前复权价。"""
+def _feats(g: pd.DataFrame, mkt: np.ndarray | None = None) -> pd.DataFrame:
+    """单只股票的形状特征。g 已按 trade_date 升序, 且是前复权价。
+    mkt: 与 g 逐行对齐的【当日全市场等权收益】, 只用于算 beta/corr(比值, 无量纲)。
+    传 None(生产打分路径)时 corr_mkt60/beta60 置 NaN —— 生产模型不用这两列。"""
     o, h, l, c = g["o"].values, g["h"].values, g["l"].values, g["c"].values
     v, amt = g["v"].values, g["amt"].values
     n = len(c)
@@ -175,6 +177,76 @@ def _feats(g: pd.DataFrame) -> pd.DataFrame:
     lim = (np.abs(r1) > 0.095).astype(np.float32)
     out["limit_rate20"] = pd.Series(lim).rolling(20).mean().values
 
+    # ================= v3 新增 (2026-09-07): 四组新特征 =================
+    # 全部仍是比值/分位/以波动率为单位的距离 —— 无绝对价格/日期/身份。
+    from numpy.lib.stride_tricks import sliding_window_view as _swv
+
+    # ---- L 组: 长周期形态 (120/250日) ----
+    vol250 = s.rolling(250).std().values
+    for w in (120, 250):
+        if n > w:
+            rw = c / np.concatenate([[np.nan] * w, c[:-w]]) - 1
+            out[f"ret{w}_z"] = rw / (denom * np.sqrt(w))
+        else:
+            out[f"ret{w}_z"] = np.full(n, np.nan, dtype=np.float32)
+        hi_w = pd.Series(h).rolling(w).max().values
+        lo_w = pd.Series(l).rolling(w).min().values
+        rng_w = hi_w - lo_w
+        out[f"pos{w}"] = np.where(rng_w > 1e-9, (c - lo_w) / rng_w, 0.5)
+        ma_w = pd.Series(c).rolling(w).mean().values
+        out[f"dist_ma{w}"] = (c - ma_w) / atr_s
+    # 距 250日最高/最低点已过多少天(占窗口比例): 0=今天刚创, 1=一年前
+    dhi = np.full(n, np.nan, dtype=np.float32)
+    dlo = np.full(n, np.nan, dtype=np.float32)
+    if n >= 250:
+        Wh = _swv(h, 250)
+        Wl = _swv(l, 250)
+        dhi[249:] = (249 - Wh.argmax(1)) / 250.0
+        dlo[249:] = (249 - Wl.argmin(1)) / 250.0
+    out["dhi250"] = dhi
+    out["dlo250"] = dlo
+    out["vol_60_250"] = vol60 / np.where(vol250 > 1e-6, vol250, np.nan)
+
+    # ---- P 组: 路径/形状 ----
+    absr = pd.Series(np.abs(r1))
+    for w in (20, 60):
+        rw_abs = np.abs(c / np.concatenate([[np.nan] * w, c[:-w]]) - 1)
+        sm = absr.rolling(w).sum().values
+        out[f"er{w}"] = rw_abs / np.where(sm > 1e-9, sm, np.nan)   # 趋势效率
+        out[f"up_rate{w}"] = pd.Series(up1.astype(np.float32)).rolling(w).mean().values
+    out["skew60"] = s.rolling(60).skew().values
+    out["spike20"] = absr.rolling(20).max().values / denom
+    out["clv_std20"] = pd.Series(clv).rolling(20).std().values
+    rngc = pd.Series((h - l) / np.where(c > 1e-9, c, np.nan))
+    a20 = rngc.rolling(20).mean().values
+    out["amp_5_20"] = rngc.rolling(5).mean().values / np.where(a20 > 1e-9, a20, np.nan)
+    gap_abs = np.abs(o / prev_c - 1)
+    out["gapfreq20"] = pd.Series((gap_abs > vol20).astype(np.float32)).rolling(20).mean().values
+
+    # ---- D 组: 量价背离 / 流动性 ----
+    cs_path = pd.Series(np.nancumsum(np.where(np.isfinite(r1), r1, 0.0)))
+    out["pv_div20"] = cs_path.rolling(20).corr(obv_s).values     # 价格路径 vs OBV路径
+    ama60 = pd.Series(amt).rolling(60).mean().values
+    rel_amt = amt / np.where(ama60 > 0, ama60, np.nan)
+    out["illiq20"] = pd.Series(np.abs(r1) / np.where(rel_amt > 1e-9, rel_amt, np.nan)
+                               ).rolling(20).mean().values       # 无量纲 Amihud
+    vsum20 = vs.rolling(20).sum().values
+    out["vol_conc20"] = vs.rolling(20).max().values / np.where(vsum20 > 0, vsum20, np.nan)
+    vt = out["vol_trend"]
+    vt5 = np.concatenate([[np.nan] * 5, vt[:-5]])
+    out["vol_accel"] = vt / np.where(vt5 > 1e-9, vt5, np.nan)    # 换手加速度
+
+    # ---- M 组: 与等权市场的相关结构 (不引入指数水平, 只有相关/比值) ----
+    if mkt is not None:
+        m_s = pd.Series(mkt)
+        out["corr_mkt60"] = s.rolling(60).corr(m_s).values
+        mvar = m_s.rolling(60).var().values
+        out["beta60"] = s.rolling(60).cov(m_s).values / np.where(mvar > 1e-10, mvar, np.nan)
+    else:
+        out["corr_mkt60"] = np.full(n, np.nan, dtype=np.float32)
+        out["beta60"] = np.full(n, np.nan, dtype=np.float32)
+    # ====================================================================
+
     d = pd.DataFrame(out, index=g.index).astype(np.float32)
     d["ts_code"] = g["ts_code"].values
     d["trade_date"] = g["trade_date"].values
@@ -189,15 +261,35 @@ async def main() -> None:
     ap.add_argument("--start", default="2016-01-01")
     a = ap.parse_args()
     start = _date.fromisoformat(a.start)
-    os.makedirs(OUT_DIR, exist_ok=True)
+    # v3: 250日窗口需要暖机 —— 往前多取 550 个日历日, 但只输出 start 之后的行
+    import datetime as _dtm
+    warm = start - _dtm.timedelta(days=550)
+    v3_dir = f"{OUT_DIR}/features_v3"
+    os.makedirs(v3_dir, exist_ok=True)
+    for f_ in os.listdir(v3_dir):                 # 重跑先清空旧 part
+        os.remove(os.path.join(v3_dir, f_))
 
     async with engine.connect() as conn:
         codes = [r[0] for r in (await conn.execute(text(
             "select distinct ts_code from daily_candle "
             "where trade_date >= :s order by ts_code"), {"s": start})).fetchall()]
-    log.info("全市场 %d 只", len(codes))
+        # 全市场等权日收益(供 beta/corr 用), 服务器端算好, 无前视
+        mrows = (await conn.execute(text("""
+            select trade_date, avg(r) from (
+              select trade_date,
+                     close*adj_factor / nullif(lag(close*adj_factor) over
+                       (partition by ts_code order by trade_date), 0) - 1 as r
+              from daily_candle where trade_date >= :w
+            ) s where r is not null and r > -0.5 and r < 0.5
+            group by trade_date order by trade_date
+        """), {"w": warm})).fetchall()
+    mkt_map = pd.Series([float(r[1]) for r in mrows],
+                        index=[r[0] for r in mrows], dtype="float64")
+    log.info("全市场 %d 只, 市场收益序列 %d 天 (%s~%s)",
+             len(codes), len(mkt_map), mkt_map.index.min(), mkt_map.index.max())
 
-    parts = []
+    total = 0
+    ncols = None
     for i in range(0, len(codes), 400):
         batch = codes[i:i + 400]
         async with engine.connect() as conn:
@@ -208,28 +300,41 @@ async def main() -> None:
                 from daily_candle
                 where ts_code = any(:cs) and trade_date >= :s
                 order by ts_code, trade_date
-            """), {"cs": batch, "s": start})).fetchall()
+            """), {"cs": batch, "s": warm})).fetchall()
         if not rows:
             continue
         df = pd.DataFrame(rows, columns=["ts_code", "trade_date", "o", "h",
                                          "l", "c", "v", "amt"])
+        del rows
         for col in ("o", "h", "l", "c", "v", "amt"):
             df[col] = pd.to_numeric(df[col], errors="coerce").astype("float64")
         df = df.dropna(subset=["o", "h", "l", "c"])
         # ⚠️ 不用 groupby.apply: pandas 3.0 里分组键不再传进函数, 会 KeyError。
         #    显式遍历分组, 顺带也好控制内存。
+        parts = []
         for _, g in df.groupby("ts_code", sort=False):
             if len(g) > 60:
-                parts.append(_feats(g.reset_index(drop=True)))
-        log.info("  %d/%d", min(i + 400, len(codes)), len(codes))
+                g = g.reset_index(drop=True)
+                mkt = mkt_map.reindex(g["trade_date"]).to_numpy("float64")
+                parts.append(_feats(g, mkt))
+        del df
+        if not parts:
+            continue
+        feat = pd.concat(parts, ignore_index=True)
+        del parts
+        feat = feat.dropna(subset=["pos60"])            # 前60根不可用
+        feat = feat[feat["trade_date"] >= start]        # 暖机段不输出
+        feat.to_parquet(f"{v3_dir}/part-{i // 400:04d}.parquet", index=False)
+        total += len(feat)
+        ncols = feat.shape[1]
+        if i // 400 == 0:
+            log.info("特征名: %s", [c for c in feat.columns
+                                    if c not in ("ts_code", "trade_date", "c")])
+        del feat
+        log.info("  %d/%d  累计 %s 行", min(i + 400, len(codes)), len(codes),
+                 f"{total:,}")
 
-    feat = pd.concat(parts, ignore_index=True)
-    feat = feat.dropna(subset=["pos60"])          # 前60根不可用
-    p = f"{OUT_DIR}/features_v2.parquet"
-    feat.to_parquet(p, index=False)
-    log.info("特征 %s 行 × %s 列 -> %s", f"{len(feat):,}", feat.shape[1], p)
-    log.info("特征名: %s", [c for c in feat.columns
-                            if c not in ("ts_code", "trade_date", "c")])
+    log.info("完成: %s 行 × %s 列 -> %s/", f"{total:,}", ncols, v3_dir)
     await engine.dispose()
 
 
