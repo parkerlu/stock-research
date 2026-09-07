@@ -42,52 +42,55 @@ def cs_rank_inplace(df: pd.DataFrame, cols: list[str]) -> None:
             log.info("    分位 %d/%d", i, len(cols))
 
 
-def path_parts(px: pd.DataFrame, h: int) -> pd.DataFrame:
-    """把奖励拆成三个【分量】返回, 不在这里合成 —— 合成放外面, 这样扫
-    权重时不用重算(重算一次要几分钟, 而合成只是几次加减)。
+def barrier_labels(px: pd.DataFrame, h: int, bars: list[tuple]) -> pd.DataFrame:
+    """三重障碍标签 —— 标签 = 在给定出场规则下【真正落袋】的超额收益。
 
-        A   = mean(cum_s)        持有期内净值曲线的平均高度  -> "待得住"
-        MAE = -min(0, min cum_s) 最深水下                    -> "挖坑罚"
-        MFE = max(0, max cum_s)  窗口内最高点                -> "能吃到多少"
+    ⚠️ 这是 2026-09-07 第三版。前两版的教训:
+       v1 用终点收益 -> 模型学成纯动量, 组合 0.12
+       v2 用 A - λ·MAE(只罚亏不奖赚) -> 模型去挑不动的票, Top5% 掉到 +0.12
+       v2.5 加 MFE(奖励窗口内最高点) -> 更差, Top5% 掉到 -1.05
+             原因: MFE 是【吃不到】的利润。固定持有到期按收盘卖, 那个高点
+             早还回去了; 重奖 MFE 等于挑"冲上去再砸下来"的彩票票。
 
-    ⚠️ MFE 这一项是 2026-09-07 补的。此前只有 A 和 MAE, 等于"只罚亏不奖赚",
-       模型于是去挑那些不动的票 —— 不挖坑也不涨, Top5% 从 +0.92 掉到 +0.12。
-       奖励里必须有一项明确奖励"吃到大利润", 否则它会退化成求稳不动。
+    结论: 奖励必须和出场规则对齐, 只奖励【可兑现】的利润。
+       上障碍 +u 先碰 -> 实得 +u      (止盈落袋)
+       下障碍 -d 先碰 -> 实得 -d      (止损)
+       都没碰       -> 实得 cum_h    (到期收盘)
+    回测可以逐字执行同一套规则, 所以标签里的收益是真能拿到的。
 
-    cum_s 用的是【当日超额】(减去全市场当日等权均值)累计, 所以牛市普涨
-    在第一步就被减掉, 去 regime 保证不变。
+    cum 用【当日超额】累计(减全市场当日等权均值), 去 regime 保证不变。
     """
     px = px.sort_values(["cid", "day"]).reset_index(drop=True)
     px["r"] = px.groupby("cid", sort=False)["c"].pct_change().astype(np.float32)
     mkt = px.groupby("day")["r"].transform("mean")
     px["e"] = (px["r"] - mkt).astype(np.float32)
 
+    from numpy.lib.stride_tricks import sliding_window_view as swv
     outs = []
     for _, g in px.groupby("cid", sort=False, observed=True):
-        e = g["e"].to_numpy(np.float32)
+        e = np.nan_to_num(g["e"].to_numpy(np.float32))
         n = len(e)
         if n <= h + 1:
             continue
-        cs = np.concatenate([[0.0], np.nancumsum(np.nan_to_num(e))]).astype(np.float32)
-        base = cs[1:n + 1]
-        idx = np.arange(n)
-        valid = idx + h < n
-        cs_pad = np.concatenate([cs, np.full(h + 2, cs[-1], np.float32)])
-        win_sum = np.convolve(cs_pad, np.ones(h, np.float32), "valid")
-        A_all = win_sum[2:2 + n] / h - base
-        ser = pd.Series(cs_pad)
-        mn = ser.rolling(h).min().to_numpy(np.float32)[h + 1:h + 1 + n] - base
-        mx = ser.rolling(h).max().to_numpy(np.float32)[h + 1:h + 1 + n] - base
-        A = np.full(n, np.nan, np.float32); MAE = A.copy(); MFE = A.copy()
-        fwd = A.copy()
-        A[valid] = A_all[valid]
-        MAE[valid] = -np.minimum(0.0, mn[valid])
-        MFE[valid] = np.maximum(0.0, mx[valid])
-        fwd[valid] = (cs[np.minimum(idx + 1 + h, n)] - base)[valid]
-        outs.append(pd.DataFrame({"cid": g["cid"].to_numpy(),
-                                  "day": g["day"].to_numpy(),
-                                  "A": A, "MAE": MAE, "MFE": MFE, "fwd": fwd}))
-    return pd.concat(outs, ignore_index=True).dropna(subset=["A"])
+        cs = np.concatenate([[0.0], np.cumsum(e)]).astype(np.float32)
+        # W[t, s] = 从 t 买入后第 s+1 步的累计超额, s=0..h-1
+        W = swv(cs[2:], h)[:max(n - h, 0)] - cs[1:1 + max(n - h, 0), None]
+        m = W.shape[0]
+        rec = {"cid": g["cid"].to_numpy()[:m], "day": g["day"].to_numpy()[:m],
+               "fwd": W[:, -1].astype(np.float32)}
+        for u, d in bars:
+            up = W >= u
+            dn = W <= -d
+            iu = np.where(up.any(1), up.argmax(1), h + 1)
+            idn = np.where(dn.any(1), dn.argmax(1), h + 1)
+            # 同一根同时触及两边时按最坏处理(先止损)
+            realized = np.where(idn <= iu, -d,
+                       np.where(iu < idn, u, W[:, -1])).astype(np.float32)
+            both = (iu > h) & (idn > h)
+            realized[both] = W[both, -1]
+            rec[f"y_{u:.2f}_{d:.2f}"] = realized
+        outs.append(pd.DataFrame(rec))
+    return pd.concat(outs, ignore_index=True)
 
 
 def audit_regime(te: pd.DataFrame) -> None:
@@ -141,9 +144,11 @@ def main() -> None:
     n = len(cid)
     log.info("  %s 行", f"{n:,}")
 
-    log.info("奖励分量 A / MAE / MFE, h=%d ...", a.h)
     a_h, a_tr1, a_sample = a.h, a.tr1, a.sample
-    lab = path_parts(pd.DataFrame({"cid": cid, "day": day, "c": closes}), a.h)
+    BARS = [(0.08, 0.05), (0.12, 0.06), (0.15, 0.08), (0.20, 0.10)]
+    log.info("三重障碍标签 h=%d, 障碍(止盈,止损) %s ...", a.h, BARS)
+    lab = barrier_labels(pd.DataFrame({"cid": cid, "day": day, "c": closes}),
+                         a.h, BARS)
     del closes
     gc.collect()
     log.info("  标签 %s 行", f"{len(lab):,}")
@@ -167,9 +172,8 @@ def main() -> None:
     pos = np.searchsorted(key_sorted, lab_key)
     ok = (pos < len(key_sorted)) & (key_sorted[np.minimum(pos, len(key_sorted) - 1)] == lab_key)
     rows = order[pos[ok]]
-    PA = lab["A"].to_numpy(np.float32)[ok]
-    PMAE = lab["MAE"].to_numpy(np.float32)[ok]
-    PMFE = lab["MFE"].to_numpy(np.float32)[ok]
+    ycols = [c for c in lab.columns if c.startswith("y_")]
+    YS = {c: lab[c].to_numpy(np.float32)[ok] for c in ycols}
     fwd = lab["fwd"].to_numpy(np.float32)[ok]
     del lab, key_all, order, key_sorted, lab_key, pos
     gc.collect()
@@ -186,12 +190,13 @@ def main() -> None:
         d = pd.DataFrame(R[rows[sel]], columns=cols)
         d["day"] = day[rows[sel]]
         d["cid"] = cid[rows[sel]]
-        d["A"] = PA[sel]; d["MAE"] = PMAE[sel]; d["MFE"] = PMFE[sel]
+        for c, arr in YS.items():
+            d[c] = arr[sel]
         d["fwd"] = fwd[sel]
         d.to_parquet(f"{tmp}/{yv}.parquet", index=False)
         del d
     years = sorted(int(v) for v in np.unique(yr_all))
-    del R, rows, PA, PMAE, PMFE, fwd, yr_all
+    del R, rows, YS, fwd, yr_all
     gc.collect()
     log.info("  按年落盘完成: %s", years)
 
@@ -212,20 +217,18 @@ def main() -> None:
     #   (0, 0, 1)   等价 v1 终点收益的近似(只看曲线高度)
     #   (0, 1, 0)   v2 的老配置: 只罚亏不奖赚 -> 模型挑不动的票
     #   带 MFE 的几档才是这次要验的
-    CONFIGS = [(1.0, 0.0, 0.0), (1.0, 1.0, 0.0), (1.0, 1.0, 1.0),
-               (1.0, 0.5, 2.0), (0.5, 0.3, 2.0)]
+    CONFIGS = [c for c in tr.columns if c.startswith("y_")]
     log.info("=" * 78)
-    log.info("扫权重: 奖励 = wA·A - wMAE·MAE + wMFE·MFE")
+    log.info("扫障碍组合: 标签 = 该出场规则下真正落袋的超额")
     results = []
-    for wA, wMAE, wMFE in CONFIGS:
-        tag = f"A{wA}-MAE{wMAE}-MFE{wMFE}"
-        tr_y = (wA * tr["A"] - wMAE * tr["MAE"] + wMFE * tr["MFE"]).astype(np.float32)
+    for tag in CONFIGS:
+        tr_y = tr[tag].to_numpy(np.float32)
         m = xgb.XGBRegressor(n_estimators=400, max_depth=6, learning_rate=0.05,
                              subsample=0.8, colsample_bytree=0.8,
                              min_child_weight=50, reg_lambda=2.0,
                              tree_method="hist", n_jobs=8, random_state=42)
         m.fit(tr[cols], tr_y)
-        m.save_model(f"{DIR}/shape_v3_{tag}_h{a_h}.json")
+        m.save_model(f"{DIR}/shape_v4_{tag}_h{a_h}.json")
         VOLF = {"vol_pct120", "up_vol_rate20", "dn_shrink_rate20", "pv_corr20",
                 "obv_slope20", "mfi5", "mfi20", "vol_pile", "vol_dry", "brk_vol",
                 "vol_std_5_20", "vol_ratio", "amt_ratio", "vol_trend"}
@@ -240,14 +243,14 @@ def main() -> None:
             sc = np.empty(len(d), np.float32)
             for i in range(0, len(d), 500_000):
                 sc[i:i+500_000] = m.predict(d[cols].iloc[i:i+500_000]).astype(np.float32)
-            d = d[["day", "cid", "fwd"]].assign(score=sc)
+            d = d[["day", "cid", "fwd", tag]].assign(score=sc)
             d["rk"] = d.groupby("day")["score"].rank(pct=True)
             for k, (lo, hi) in {"Top1%": (0.99, 1.01), "Top5%": (0.95, 1.01),
                                 "Bot20%": (0.0, 0.20)}.items():
                 g = d[(d.rk >= lo) & (d.rk < hi)]
-                acc[k][0] += len(g); acc[k][1] += float(g["fwd"].sum())
+                acc[k][0] += len(g); acc[k][1] += float(g[tag].sum())
             g5 = d[d.rk >= 0.95]
-            yearly.append(float(g5["fwd"].mean()) * 100)
+            yearly.append(float(g5[tag].mean()) * 100)
             dl.append(d.groupby("day").agg(avg=("score","mean"), m=("fwd","mean")).reset_index())
             tops.append(d[d.rk >= 0.99][["day", "cid", "score", "rk"]])
             del d, sc
@@ -268,7 +271,7 @@ def main() -> None:
         out["ts_code"] = code_index[out["cid"].to_numpy()]
         out["trade_date"] = pd.to_datetime(out["day"], unit="D")
         out[["ts_code", "trade_date", "score", "rk"]].to_parquet(
-            f"{DIR}/oos_v3_{tag}_h{a_h}.parquet", index=False)
+            f"{DIR}/oos_v4_{tag}_h{a_h}.parquet", index=False)
         del out, tops, dl, jd
         gc.collect()
 

@@ -69,7 +69,7 @@ async def load(start):
 
 
 def run(sig, px, cal, tim, hold, maxpos, regime, min_amt_k,
-        stop=None, cap=1_000_000.0):
+        stop=None, tp=None, cap=1_000_000.0):
     """⚠️ 价格不要存成 {(code,date): tuple} 的字典 —— 750万条 Python 元组
     直接把容器撑爆(实测 OOM, 退出码137)。按股票存 numpy 数组, 用
     searchsorted 定位, 内存降到几十兆。"""
@@ -111,9 +111,13 @@ def run(sig, px, cal, tim, hold, maxpos, regime, min_amt_k,
                 keep.append(hh); continue
             o_, hi_, lo_, c_ = float(b[0]), float(b[1]), float(b[2]), float(b[3])
             px_out = None
-            # 止损优先于到期(同日两者都触发时按最坏处理)
+            # ⚠️ 出场规则必须与【训练标签的定义】逐字一致, 否则模型优化的东西
+            #    和回测执行的东西不是一回事 —— 这个项目已经栽过两次。
+            #    顺序: 止损优先于止盈(同日都触及时按最坏处理), 再到期。
             if stop is not None and lo_ <= hh["stop_px"]:
                 px_out = o_ if o_ < hh["stop_px"] else hh["stop_px"]
+            elif tp is not None and hi_ >= hh["tp_px"]:
+                px_out = max(o_, hh["tp_px"])
             elif i >= hh["exit_i"]:
                 px_out = c_
             if px_out is None:
@@ -149,7 +153,8 @@ def run(sig, px, cal, tim, hold, maxpos, regime, min_amt_k,
                     cash -= cost + fee
                     holds.append({"ts_code": code, "sh": sh, "cost": cost + fee,
                                   "exit_i": i + hold, "last": p,
-                                  "stop_px": p * (1 - stop) if stop else 0.0})
+                                  "stop_px": p * (1 - stop) if stop else 0.0,
+                                  "tp_px": p * (1 + tp) if tp else 1e18})
                     held.add(code)
         for x in holds:
             bb = bar(x["ts_code"], i)
@@ -188,10 +193,12 @@ async def main():
     ap.add_argument("--top", type=float, default=0.99, help="取当日分位以上")
     ap.add_argument("--maxpos", type=int, default=10)
     ap.add_argument("--min-amt-k", type=float, default=20000)
-    ap.add_argument("--stops", default="none,0.05,0.08,0.12")
+    ap.add_argument("--rules", default="none:none,0.12:0.06,0.15:0.08,0.08:0.05",
+                    help="止盈:止损 组合, 逗号分隔")
+    ap.add_argument("--sigfile", default=None)
     a = ap.parse_args()
 
-    sig = pd.read_parquet(f"{DIR}/oos_top_v2_h{a.h}.parquet")
+    sig = pd.read_parquet(a.sigfile or f"{DIR}/oos_top_v2_h{a.h}.parquet")
     sig = sig[sig.rk >= a.top]
     sig["trade_date"] = pd.to_datetime(sig["trade_date"]).dt.date
     start = min(sig["trade_date"])
@@ -206,11 +213,13 @@ async def main():
 
     print(f"\n形态模型 h={a.h}  分位>={a.top}  {len(sig):,} 个信号  "
           f"{a.maxpos} 仓位  样本外 {start} ~ {max(sig['trade_date'])}\n")
-    print(f"{'止损':<8}{'年化':>9}{'回撤':>9}{'比值':>8}{'胜率':>8}{'笔数':>8}")
-    for sv in a.stops.split(","):
-        stop = None if sv == "none" else float(sv)
-        r = run(sig, px, cal, tim, a.h, a.maxpos, False, a.min_amt_k, stop)
-        print(f"{sv:<8}{r['年化']:>9.2%}{r['回撤']:>9.2%}{r['比值']:>8.2f}"
+    print(f"{'止盈/止损':<12}{'年化':>9}{'回撤':>9}{'比值':>8}{'胜率':>8}{'笔数':>8}")
+    for rule in a.rules.split(","):
+        tps, sls = rule.split(":")
+        tp = None if tps == "none" else float(tps)
+        stop = None if sls == "none" else float(sls)
+        r = run(sig, px, cal, tim, a.h, a.maxpos, False, a.min_amt_k, stop, tp)
+        print(f"{rule:<12}{r['年化']:>9.2%}{r['回撤']:>9.2%}{r['比值']:>8.2f}"
               f"{r['胜率']:>8.1%}{r['笔数']:>8d}")
         e = r["eq"].copy()
         e["y"] = pd.to_datetime(e["d"]).dt.year
