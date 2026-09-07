@@ -49,6 +49,7 @@ interface Props {
   onToggleIndicator: (name: string, isMainPane: boolean) => void;
   onToggleTdxIndicator: (name: string) => void;
   onSelectOverlay: (type: string) => void;
+  onClearOverlays: () => void;
   measuring: boolean;
   onToggleMeasure: () => void;
   /** 自训练指标 —— 与 TDX 移植指标分开管理 */
@@ -62,6 +63,7 @@ export function Toolbar({
   onToggleIndicator,
   onToggleTdxIndicator,
   onSelectOverlay,
+  onClearOverlays,
   measuring,
   onToggleMeasure,
   activeTrained,
@@ -186,6 +188,14 @@ export function Toolbar({
               {o.label}
             </button>
           ))}
+          <div className="overlay-sep" />
+          <button
+            className="overlay-item overlay-clear"
+            onClick={onClearOverlays}
+            title="删掉所有手画的线(测量线和信号标记不受影响)"
+          >
+            🗑 清除画线
+          </button>
         </div>
       </div>
       </>}

@@ -383,8 +383,26 @@ export function ChartArea({ tradeActions }: Props = {}) {
     []
   );
 
+  // 画线 —— 全部挂到 groupId "user-draw" 下, 才能整组清掉。
+  // ⚠️ 不挂 groupId 的话没有任何办法批量删: klinecharts 的 removeOverlay
+  //    只认 id / groupId / name, 而用户画的线 id 是随机生成的。
   const handleSelectOverlay = useCallback((type: string) => {
-    mainChartRef.current?.getChart()?.createOverlay(type);
+    const chart = mainChartRef.current?.getChart();
+    if (!chart) return;
+    chart.createOverlay({
+      name: type,
+      groupId: "user-draw",
+      // 右键单条删除。返回 true 表示事件已处理, 不再往下传。
+      onRightClick: (e: { overlay: { id: string } }) => {
+        chart.removeOverlay({ id: e.overlay.id });
+        return true;
+      },
+    });
+  }, []);
+
+  // 清掉所有手画的线 —— 只删 user-draw 组, 测量线/交易标记/信号标记不受影响。
+  const handleClearOverlays = useCallback(() => {
+    mainChartRef.current?.getChart()?.removeOverlay({ groupId: "user-draw" });
   }, []);
 
 
@@ -404,6 +422,7 @@ export function ChartArea({ tradeActions }: Props = {}) {
         onToggleIndicator={handleToggleIndicator}
         onToggleTdxIndicator={tdx.toggle}
         onSelectOverlay={handleSelectOverlay}
+        onClearOverlays={handleClearOverlays}
         measuring={measuring}
         onToggleMeasure={() => setMeasuring((v) => !v)}
       />

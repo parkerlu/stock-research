@@ -2541,3 +2541,12 @@ body {
 /* 「训练」菜单里的参考项(龙虎榜) —— 加分隔线, 与训练指标区分 */
 .indicator-item.ref-item { border-top: 1px solid var(--border, #3a3f4b);
   margin-top: 4px; padding-top: 8px; }
+
+/* 画线菜单里的分隔线与「清除画线」 —— 与画线工具区分开, 避免误点 */
+.overlay-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: #2a2f3a;
+}
+.overlay-clear { color: #ff6b6b; }
+.overlay-clear:hover { background: rgba(255, 107, 107, 0.12); }
