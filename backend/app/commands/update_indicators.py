@@ -208,7 +208,8 @@ async def main() -> None:
     #    模型文件 /app/data/research/shape/*.json —— 那个目录必须是挂载的,
     #    放 /app 别处重建镜像就没了。
     from app.commands import (build_shape_scores, sync_breakout_signals,
-                              sync_mmweek_signals, sync_sar_signals)
+                              sync_mmweek_signals, sync_sar_signals,
+                              sync_shape_signals)
     import sys as _sys
 
     async def _run(name, mod, argv):
@@ -227,6 +228,9 @@ async def main() -> None:
     await _run("SAR预警信号", sync_sar_signals, ["x"])
     await _run("周线版信号", sync_mmweek_signals, ["x"])
     await _run("周线版信号(过滤)", sync_mmweek_signals, ["x", "--filtered"])
+    # 形态模型自己当日线策略 —— Top1%。回测判据没过(0.24), 建账户是为了
+    # 向前验; 回测已经骗过我一次(v4 的 1.70 全来自买不到的一字涨停)。
+    await _run("形态模型信号", sync_shape_signals, ["x"])
 
     eng = create_async_engine(settings.database_url)
     async with eng.connect() as c:
