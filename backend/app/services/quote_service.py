@@ -189,6 +189,46 @@ async def get_candles(
             "amount": float(c.amount),
         })
 
+    # 4.5 今天这根 —— 盘中从实时快照拼出来。
+    # ⚠️ 历史接口在收盘前【没有】当天的日线(实测源里最新只到上一个交易日),
+    #    所以光靠 fetch_daily 补不出来: 盘中切过去看到的永远是昨天收盘那根。
+    # ⚠️ 只出现在返回值里, 不写库 —— 这根没走完, 落库会被 on_conflict_do_nothing
+    #    永久冻住半截数据, 而所有训练指标都读这张表。
+    # 前复权系数用的是该股最新的 adj_factor, 最新那根的 factor 恒为 1,
+    # 所以快照的原始价与调整后的历史序列本来就在同一标度上, 不用再换算。
+    today = date.today()
+    if daily_rows and end >= today and daily_rows[-1]["trade_date"] < today:
+        try:
+            snap = await manager.fetch_snapshot(ts_code)
+        except Exception:
+            snap = None
+        qt = (snap or {}).get("quote_time")
+        qdate = None
+        if isinstance(qt, str) and len(qt) >= 10:
+            try:
+                qdate = date.fromisoformat(qt[:10])
+            except ValueError:
+                qdate = None
+        elif hasattr(qt, "date"):
+            qdate = qt.date()
+        # quote_time 必须是今天: 周末/假日快照给的是上一个交易日的数据,
+        # 照拼会平白多出一根重复的K线。
+        # ⚠️ 必须要求 vol > 0: 盘前(9:20)快照给的是昨收、量为 0, 照拼会画出
+        #    一根 开=高=低=收 的平K线, 看着像今天没波动。停牌同理。
+        if (snap and qdate == today and (snap.get("price") or 0) > 0
+                and (snap.get("vol") or 0) > 0):
+            px = float(snap["price"])
+            daily_rows.append({
+                "trade_date": today,
+                "open": round(float(snap.get("open") or px), 4),
+                "high": round(float(snap.get("high") or px), 4),
+                "low": round(float(snap.get("low") or px), 4),
+                "close": round(px, 4),
+                "vol": int(snap.get("vol") or 0),
+                # 快照的成交额是元, daily_candle.amount 是千元
+                "amount": float(snap.get("amount") or 0) / 1000.0,
+            })
+
     # 5. Aggregate if needed
     if tf == "1w":
         return aggregate_weekly(daily_rows)
