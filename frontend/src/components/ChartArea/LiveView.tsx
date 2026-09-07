@@ -7,7 +7,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { useQuoteStore } from "../../stores/quoteStore";
-import { getMinute, getT0Signals, getMaimaiSignals, getPumpSignals, getDidianSignals, getComboSignals } from "../../api/quotes";
+import { getMinute, getT0Signals } from "../../api/quotes";
+import { useTrainedSignals } from "../../hooks/useTrainedSignals";
 import { syncSymbol } from "../../api/system";
 import type { MinuteData, T0Trade, Timeframe } from "../../types/quote";
 import { MinuteChart } from "./MinuteChart";
@@ -40,29 +41,18 @@ export function LiveView() {
     () => localStorage.getItem("live.t0") === "1"
   );
   // 阈值: 高 = 信号少但准 (0.7 精确率约 68%), 低 = 信号多 (0.5 约 52%)
-  // 买卖很准 v3 —— K线上的买点标记
-  const [mmSignals, setMmSignals] = useState<
-    { date: string; score: number; rank_pct: number; grade: string; side?: "buy" | "sell" }[]
-  >([]);
-  const [comboSig, setComboSig] = useState<
-    { date: string; score: number; rank_pct: number; grade: string }[]
-  >([]);
-  const [comboOn, setComboOn] = useState(false);
-  const [didianSig, setDidianSig] = useState<
-    { date: string; score: number; rank_pct: number; grade: string }[]
-  >([]);
-  const [didianOn, setDidianOn] = useState<boolean>(
-    () => localStorage.getItem("live.didian") === "1"
-  );
-  const [pumpSig, setPumpSig] = useState<
-    { date: string; prob: number; rank_pct: number; grade: string }[]
-  >([]);
-  const [pumpOn, setPumpOn] = useState<boolean>(
-    () => localStorage.getItem("live.pump") === "1"
-  );
-  const [mmOn, setMmOn] = useState<boolean>(
-    () => localStorage.getItem("live.mm") === "1"
-  );
+  // 训练指标的开关 —— 存成数组而不是一堆布尔量。
+  // ⚠️ 以前每个指标一个 useState + 一个 useEffect, 新增指标要在四个地方动手,
+  // 结果实时页停在四个指标, 行情页已经九个。取数统一交给 useTrainedSignals。
+  const [trained, setTrained] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("live.trained") ?? "[]"); }
+    catch { return []; }
+  });
+  useEffect(() => {
+    localStorage.setItem("live.trained", JSON.stringify(trained));
+  }, [trained]);
+  const trainedData = useTrainedSignals(currentSymbol, trained);
+
   const [t0Th, setT0Th] = useState<number>(() => {
     const v = parseFloat(localStorage.getItem("live.t0th") ?? "");
     return [0.5, 0.6, 0.7].includes(v) ? v : 0.6;
@@ -163,68 +153,6 @@ export function LiveView() {
   useEffect(() => {
     localStorage.setItem("live.t0th", String(t0Th));
   }, [t0Th]);
-
-  // 买卖很准信号 —— 盘后数据, 切股票时拉一次即可
-  useEffect(() => {
-    localStorage.setItem("live.mm", mmOn ? "1" : "0");
-    if (!currentSymbol || !mmOn) {
-      setMmSignals([]);
-      return;
-    }
-    let live = true;
-    getMaimaiSignals(currentSymbol, "弱")
-      .then((r) => live && setMmSignals(r.signals ?? []))
-      .catch(() => live && setMmSignals([]));
-    return () => {
-      live = false;
-    };
-  }, [currentSymbol, mmOn]);
-
-  useEffect(() => {
-    localStorage.setItem("live.pump", pumpOn ? "1" : "0");
-    if (!currentSymbol || !pumpOn) {
-      setPumpSig([]);
-      return;
-    }
-    let live = true;
-    getPumpSignals(currentSymbol, "中")
-      .then((r) => live && setPumpSig(r.signals ?? []))
-      .catch(() => live && setPumpSig([]));
-    return () => {
-      live = false;
-    };
-  }, [currentSymbol, pumpOn]);
-
-  useEffect(() => {
-    localStorage.setItem("live.didian", didianOn ? "1" : "0");
-    if (!currentSymbol || !didianOn) {
-      setDidianSig([]);
-      return;
-    }
-    let live = true;
-    getDidianSignals(currentSymbol, "中")
-      .then((r) => live && setDidianSig(r.signals ?? []))
-      .catch(() => live && setDidianSig([]));
-    return () => {
-      live = false;
-    };
-  }, [currentSymbol, didianOn]);
-
-  useEffect(() => {
-    if (!currentSymbol || !comboOn) {
-      setComboSig([]);
-      return;
-    }
-    let live = true;
-    getComboSignals(currentSymbol)
-      .then((r) => live && setComboSig(r.signals ?? []))
-      .catch(() => live && setComboSig([]));
-    return () => {
-      live = false;
-    };
-  }, [currentSymbol, comboOn]);
-
-
 
   const tick = useCallback(async () => {
     if (!currentSymbol) return;
@@ -442,25 +370,20 @@ export function LiveView() {
               tdxActive={tdx.active}
               onToggleTdx={tdx.toggle}
               tdxBusy={tdx.busy}
-              trainedActive={[...(mmOn ? ["maimai_v3"] : []), ...(pumpOn ? ["pump"] : []),
-                              ...(didianOn ? ["didian"] : []), ...(comboOn ? ["combo"] : [])]}
+              trainedActive={trained}
               onToggleTrained={(n) =>
-                n === "pump" ? setPumpOn((v) => !v)
-                : n === "didian" ? setDidianOn((v) => !v)
-                : n === "combo" ? setComboOn((v) => !v)
-                : setMmOn((v) => !v)
+                setTrained((v) => v.includes(n) ? v.filter((x) => x !== n) : [...v, n])
               }
-              trainedCounts={{ maimai_v3: mmSignals.length, pump: pumpSig.length,
-                               didian: didianSig.length,
-                               combo: comboSig.length }}
+              trainedCounts={Object.fromEntries(
+                Object.entries(trainedData.props).map(([k, v]) =>
+                  [k.replace(/Signals$/, ""), Array.isArray(v) ? v.length : 0])
+              )}
             />
           </div>
           <div className="live-pane-body">
             <MainChart
-              maimaiSignals={mmOn ? mmSignals : undefined}
-              pumpSignals={pumpOn ? pumpSig : undefined}
-              didianSignals={didianOn ? didianSig : undefined}
-              comboSignals={comboOn ? comboSig : undefined} ref={dailyRef} timeframe={tf} className="live-daily" />
+              {...trainedData.props}
+              ref={dailyRef} timeframe={tf} className="live-daily" />
           </div>
         </div>
       </div>

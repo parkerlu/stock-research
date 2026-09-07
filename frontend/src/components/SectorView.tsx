@@ -12,7 +12,7 @@ import { FavButton } from "./ChartArea/FavButton";
 import type { MainChartHandle } from "./ChartArea/MainChart";
 import { useTdxIndicators } from "../hooks/useTdxIndicators";
 import { IndicatorMenus } from "./ChartArea/IndicatorMenus";
-import { getMaimaiSignals, getPumpSignals, getDidianSignals, getComboSignals } from "../api/quotes";
+import { useTrainedSignals } from "../hooks/useTrainedSignals";
 
 type SortKey = "avg_pct" | "up_ratio" | "count" | "max_pct";
 // 盘后口径 —— 数据来自当日收盘, 不做轮询
@@ -43,79 +43,9 @@ export function SectorView() {
   // 单周期显示 + 按钮切换 —— 三张图挤在一起谁都看不清
   const [chartTf, setChartTf] = useState<"1d" | "1w" | "1m">("1d");
   const chartRef = useRef<MainChartHandle>(null);
-  // 训练指标(买卖很准v3) —— 与行情/实时页同一套数据
-  const [mmOn, setMmOn] = useState(false);
-  const [pumpOn, setPumpOn] = useState(false);
-  const [didianOn, setDidianOn] = useState(false);
-  const [comboSig, setComboSig] = useState<
-    { date: string; score: number; rank_pct: number; grade: string }[]
-  >([]);
-  const [comboOn, setComboOn] = useState(false);
-  const [didianSig, setDidianSig] = useState<
-    { date: string; score: number; rank_pct: number; grade: string }[]
-  >([]);
-  const [pumpSig, setPumpSig] = useState<
-    { date: string; prob: number; rank_pct: number; grade: string }[]
-  >([]);
-  const [mmSig, setMmSig] = useState<
-    { date: string; score: number; rank_pct: number; grade: string; side?: "buy" | "sell" }[]
-  >([]);
-  useEffect(() => {
-    if (!pick || !mmOn) {
-      setMmSig([]);
-      return;
-    }
-    let live = true;
-    getMaimaiSignals(pick.code, "弱")
-      .then((r) => live && setMmSig(r.signals ?? []))
-      .catch(() => live && setMmSig([]));
-    return () => {
-      live = false;
-    };
-  }, [pick, mmOn]);
-
-  useEffect(() => {
-    if (!pick || !pumpOn) {
-      setPumpSig([]);
-      return;
-    }
-    let live = true;
-    getPumpSignals(pick.code, "中")
-      .then((r) => live && setPumpSig(r.signals ?? []))
-      .catch(() => live && setPumpSig([]));
-    return () => {
-      live = false;
-    };
-  }, [pick, pumpOn]);
-
-  useEffect(() => {
-    if (!pick || !didianOn) {
-      setDidianSig([]);
-      return;
-    }
-    let live = true;
-    getDidianSignals(pick.code, "中")
-      .then((r) => live && setDidianSig(r.signals ?? []))
-      .catch(() => live && setDidianSig([]));
-    return () => {
-      live = false;
-    };
-  }, [pick, didianOn]);
-
-  useEffect(() => {
-    if (!pick || !comboOn) {
-      setComboSig([]);
-      return;
-    }
-    let live = true;
-    getComboSignals(pick.code)
-      .then((r) => live && setComboSig(r.signals ?? []))
-      .catch(() => live && setComboSig([]));
-    return () => {
-      live = false;
-    };
-  }, [pick, comboOn]);
-
+  // 训练指标 —— 清单与取数都在 useTrainedSignals, 三个页面共用一份。
+  const [trained, setTrained] = useState<string[]>([]);
+  const trainedData = useTrainedSignals(pick?.code ?? "", trained);
 
   const tdx = useTdxIndicators({
     getChart: () => chartRef.current?.getChart() ?? null,
@@ -344,27 +274,21 @@ export function SectorView() {
                   tdxActive={tdx.active}
                   onToggleTdx={tdx.toggle}
                   tdxBusy={tdx.busy}
-                  trainedActive={[...(mmOn ? ["maimai_v3"] : []), ...(pumpOn ? ["pump"] : []),
-                                  ...(didianOn ? ["didian"] : []), ...(comboOn ? ["combo"] : [])]}
+                  trainedActive={trained}
                   onToggleTrained={(n) =>
-                    n === "pump" ? setPumpOn((v) => !v)
-                    : n === "didian" ? setDidianOn((v) => !v)
-                    : n === "combo" ? setComboOn((v) => !v)
-                    : setMmOn((v) => !v)
+                    setTrained((v) => v.includes(n) ? v.filter((x) => x !== n) : [...v, n])
                   }
-                  trainedCounts={{ maimai_v3: mmSig.length, pump: pumpSig.length,
-                                   didian: didianSig.length,
-                               combo: comboSig.length }}
+                  trainedCounts={Object.fromEntries(
+                    Object.entries(trainedData.props).map(([k, v]) =>
+                      [k.replace(/Signals$/, ""), Array.isArray(v) ? v.length : 0])
+                  )}
                 />
               </div>
               <button className="sd-close" onClick={() => setPick(null)}>×</button>
             </div>
             <div className="sc-body">
               <MainChart ref={chartRef} timeframe={chartTf} className="sc-chart"
-                         maimaiSignals={mmOn ? mmSig : undefined}
-                         pumpSignals={pumpOn ? pumpSig : undefined}
-                         didianSignals={didianOn ? didianSig : undefined}
-              comboSignals={comboOn ? comboSig : undefined} />
+                         {...trainedData.props} />
             </div>
           </div>
         )}

@@ -24,23 +24,8 @@ const INDICATORS = [
 /** 自训练指标 —— 我们自己训出来的, 与 TDX 移植指标区分开。
  *  买卖很准v3: 原指标买点与随机无异(胜率48.7%), 模型在同日×同波动层中性化后
  *  把 Top20% 胜率提到 51.3%、中位翻正到 +0.264%, 三个波动档超出全为正。 */
-export const TRAINED_INDICATORS = [
-  { name: "sar", label: "★★★ SAR预警",
-    desc: "SAR翻多×吸筹强 · 命中29.3% · 胜率52.5%(比突破版高17点) · 必须配择时" },
-  { name: "breakout", label: "★★★ 突破预警",
-    desc: "创60日新高×吸筹强 · 命中32.0% · 必须配大盘择时(裸跑回撤59.7%)" },
-  { name: "liftalert", label: "★★ 拉升预警",
-    desc: "动力线×吸筹强 · 10日内触及+10% 命中32.6%(基准17.45%) · 各关全过" },
-  { name: "mmweek", label: "买卖很准 周线版",
-    desc: "周线买线>0 的状态(非买点) · 持有8周 +3.39pp · 按周t=5.56 · 九格全正" },
-  { name: "maimai_v3", label: "买卖很准 v3", desc: "动能参考 · 超卖反转买点, 胜率 48.9%→50.9%" },
-  { name: "combo", label: "买卖很准 v4", desc: "v3+吸筹共振 · 胜率 58.3%, 超同日全市场 +1.93pp" },
-  { name: "didian", label: "低点组合 v2", desc: "动能参考 · 阶段底部+模型过滤, 持有20日" },
-  { name: "pump", label: "主力吸筹", desc: "动能参考 · 强档拉升率 19.6%(基础 8.6%), 八成不发生" },
-  // 参考项 —— 不是训练指标, 但同样是"能叠在图上的东西", 放一起方便开关。
-  { name: "toplist", label: "龙虎榜(参考)", ref: true,
-    desc: "蓝圈标出上榜日 · 盘后公布, 次日平均高开1.31%, 只作参考不作信号" },
-];
+import { TRAINED_INDICATORS } from "../../hooks/useTrainedSignals";
+export { TRAINED_INDICATORS };
 
 // 画线工具。2026-09-06 打开(此前默认隐藏)。
 const SHOW_DRAWING = true;

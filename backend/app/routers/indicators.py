@@ -3,6 +3,7 @@ from datetime import date
 
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.datasources.manager import DataSourceManager
@@ -83,7 +84,6 @@ async def maimai_signals(
 
     grade: 强(当日分位≥80%) / 中(≥50%) / 弱 —— 弱档即模型判定的噪声买点。
     """
-    from sqlalchemy import text
 
     order = {"弱": 0.0, "中": 0.5, "强": 0.8}
     floor = order.get(min_grade, 0.0)
@@ -118,7 +118,6 @@ async def maimai_latest(
 
     路径特意用三段: 本路由文件里 `/{name}` 是单段通配, 会抢走任何单段路径。
     """
-    from sqlalchemy import text
 
     rows = (await db.execute(text("""
         select m.trade_date, m.ts_code, coalesce(b.name, '') as name,
@@ -151,7 +150,6 @@ async def pump_signals(
     样本外(2020-2026 walk-forward): Q10/Q1=4.81, 按天t=77.4, 逐年 1.70~2.02 倍。
     强档(当日分位≥95%) 拉升概率约 20~30%, 基础概率仅 9.8%。
     """
-    from sqlalchemy import text
 
     floor = 0.95 if min_grade == "强" else 0.8
     sql = ("select trade_date, prob, rank_pct, grade from pump_signal "
@@ -177,7 +175,6 @@ async def pump_scan(
     db: AsyncSession = Depends(get_db),
 ):
     """盘后扫描 —— 最近几日吸筹嫌疑最大的股票。"""
-    from sqlalchemy import text
 
     rows = (await db.execute(text("""
         select p.trade_date, p.ts_code, coalesce(b.name, '') as name,
@@ -249,7 +246,6 @@ async def screen_by_trained(
     db: AsyncSession = Depends(get_db),
 ):
     """按训练指标选股 —— 返回最近 N 日内出信号的股票 + 当日收盘行情。"""
-    from sqlalchemy import text
 
     if indicator == "mmweek":
         # 周线版 = 周线买线>0 的状态。返回最近处于该状态的股票。
@@ -563,7 +559,6 @@ async def didian_signals(
     只有「阶段底部」(动力线上穿0.2)有效, 所以这里只用后者。
     样本外 Top10%: +4.983%(H=20), 胜率 57.7%, 按天 t=3.88, 波动层内三档 t 全>2.5。
     """
-    from sqlalchemy import text
 
     floor = 0.9 if min_grade == "强" else 0.7
     sql = ("select trade_date, score, rank_pct, grade from didian_signal "
@@ -597,7 +592,6 @@ async def combo_signals(
 
     三关验证: 逐年八年全部>54% / 同日随机对照 z=22.1 / 波动×市值九格超出全为正。
     """
-    from sqlalchemy import text
 
     sql = """
         with mm as (
@@ -679,7 +673,6 @@ async def breakout_signals(
     这个追势(0.0% 空头排列)。信号级命中率几乎一样, 差别全在相关性 ——
     突破型高度同步, 裸跑一起崩, 但也因此一个择时开关就能整批挡住。
     """
-    from sqlalchemy import text
 
     sql = ("select trade_date, prob, hh60 from breakout_signal where ts_code = :c")
     params: dict = {"c": ts_code}
@@ -712,7 +705,6 @@ async def sar_signals(
       SAR预警  比值 1.74 但胜率 52.5%, 连亏的串更短, 好拿住
     九格最小 +3.93pp 是所有组合里最高的 —— 各波动/市值格子都均匀。
     """
-    from sqlalchemy import text
 
     sql = "select trade_date, prob from sar_signal where ts_code = :c"
     params: dict = {"c": ts_code}
@@ -746,7 +738,6 @@ async def maimai_weekly_signals(
 
     建议持有 8 周 —— 持有期单峰(2周+1.68/4周+3.20/8周+3.45/12周+2.55/26周+1.03)。
     """
-    from sqlalchemy import text
 
     sql = "select week_end, buy_line from maimai_weekly where ts_code = :c"
     params: dict = {"c": ts_code}

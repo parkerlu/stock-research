@@ -5,29 +5,11 @@
 // 在来源和可信度上完全不是一回事, 混在一起容易让人以为都是现成公式。
 import type { IndicatorMeta } from "../../types/indicator";
 
-/** 已训练好、可挂到 K 线上的指标。新增训练指标往这里加。 */
-export const TRAINED = [
-  {
-    name: "maimai_v3",
-    label: "买卖很准 v3",
-    desc: "动能参考 · 超卖反转买点, 胜率 48.9%→50.9%",
-  },
-  {
-    name: "combo",
-    label: "买卖很准 v4",
-    desc: "v3+吸筹共振 · 胜率 62.5%(随机 53.2%), 八年全部>54%",
-  },
-  {
-    name: "didian",
-    label: "低点组合 v2",
-    desc: "动能参考 · 胜率 57.7%(原 53.8%), 持有20日",
-  },
-  {
-    name: "pump",
-    label: "主力吸筹",
-    desc: "动能参考 · 强档拉升率 19.6%(基础 8.6%), 八成不发生",
-  },
-];
+// ⚠️ 清单不在这里维护 —— 见 hooks/useTrainedSignals.ts。
+// 以前这里和 Toolbar.tsx 各存一份, 结果实时页的菜单停在四个指标,
+// 而行情页已经有九个。同一份数据抄两遍, 迟早对不上。
+import { TRAINED_INDICATORS } from "../../hooks/useTrainedSignals";
+export const TRAINED = TRAINED_INDICATORS;
 
 interface Props {
   tdxAvailable: IndicatorMeta[];
