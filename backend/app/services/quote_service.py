@@ -1,13 +1,37 @@
 import calendar
+import logging
+import time
 from datetime import date, timedelta
 from itertools import groupby
 
-from sqlalchemy import select, and_
+from sqlalchemy import func, select, and_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.datasources.manager import DataSourceManager
 from app.models.schema import DailyCandle
+
+log = logging.getLogger(__name__)
+
+# 全市场最新交易日 —— 判断"这只票的K线是不是落后了"的基准。
+# 用全市场而不是日历: 不必维护交易日历, 也天然躲开周末和长假
+# (休市日全市场的 max 不会前进, 于是不会去空拉一遍)。
+_MKT_DATE: tuple[date | None, float] = (None, 0.0)
+_MKT_TTL = 300.0
+
+# 已经尝试过但源里确实没有新数据的 (ts_code, 基准日) —— 停牌票会永远
+# 落后于全市场, 不记下来的话每次开图都要白跑一次数据源。
+_TRIED: set[tuple[str, date]] = set()
+
+
+async def _market_last_date(db: AsyncSession) -> date | None:
+    global _MKT_DATE
+    d, at = _MKT_DATE
+    if d is not None and time.monotonic() - at < _MKT_TTL:
+        return d
+    d = (await db.execute(select(func.max(DailyCandle.trade_date)))).scalar()
+    _MKT_DATE = (d, time.monotonic())
+    return d
 
 
 def _iso_week_key(d: date) -> tuple[int, int]:
@@ -102,11 +126,19 @@ async def get_candles(
             except Exception:
                 pass  # Use existing cache if data source fails
 
-        # Forward fill: fetch newer data
-        # Skip if gap is small (<=5 days covers weekends/holidays)
-        if last_cached < end and (end - last_cached).days > 5:
+        # 前向补数 —— 只要落后于【全市场最新交易日】就补, 不留容差。
+        # ⚠️ 原本的判据是 (end - last_cached).days > 5, 想躲开周末假期,
+        #    副作用是差 1~4 天时什么都不做: 开图看到的就是旧K线, 而且没有
+        #    任何提示。改用全市场基准后, 休市日 mkt 不前进 -> 不会空拉,
+        #    开市日只要缺一根就补, 两个目的不再打架。
+        mkt = await _market_last_date(db)
+        stale = mkt is not None and last_cached < mkt and end >= mkt
+        if stale and (ts_code, mkt) not in _TRIED:
             try:
-                fetch_start = last_cached + timedelta(days=1)
+                # ⚠️ 往前多要 10 天: 只请求缺的那一两天会被数据源掐断连接
+                #    (实测 9-04~9-07 报 RemoteDisconnected, 9-01 起同一只票正常)。
+                #    重叠部分走 on_conflict_do_nothing, 多取无害。
+                fetch_start = last_cached - timedelta(days=10)
                 df = await manager.fetch_daily(ts_code, fetch_start, end)
                 if not df.empty:
                     rows = df.to_dict("records")
@@ -114,8 +146,13 @@ async def get_candles(
                     stmt_upsert = stmt_upsert.on_conflict_do_nothing(index_elements=["ts_code", "trade_date"])
                     await db.execute(stmt_upsert)
                     need_reload = True
-            except Exception:
-                pass  # Use existing cache if data source fails
+                    log.info("补K线 %s: %s ~ %s, %d 根", ts_code, fetch_start, end, len(rows))
+                else:
+                    # 停牌 / 已退市 —— 记下来, 同一个基准日内不再重试
+                    _TRIED.add((ts_code, mkt))
+            except Exception as e:
+                _TRIED.add((ts_code, mkt))
+                log.warning("补K线失败 %s: %s", ts_code, e)
 
         if need_reload:
             await db.commit()
