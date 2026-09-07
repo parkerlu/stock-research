@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, BigInteger, Date, DateTime, Index, Integer, JSON, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, BigInteger, Column, Date, DateTime, Index, Integer, JSON, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -589,3 +589,18 @@ class TopList(Base):
     l_sell: Mapped[float | None] = mapped_column(Numeric(18, 2))
     net_amount: Mapped[float | None] = mapped_column(Numeric(18, 2))
     reason: Mapped[str | None] = mapped_column(String(128))
+
+
+class ShapeScore(Base):
+    """形态模型每日全市场打分。
+
+    ⚠️ 这个模型【不能】当选股信号用 —— 带成交约束的组合比值只有 0.24。
+       它的价值在空头端: Bot20%(rank_pct<0.2) 六年一致跑输, 拿来做
+       【排除过滤器】。叠在周线版上胜率 45.8%->49.7%。
+    """
+    __tablename__ = "shape_score"
+    ts_code = Column(String(12), primary_key=True)
+    trade_date = Column(Date, primary_key=True)
+    score = Column(Numeric(12, 6), nullable=False)
+    rank_pct = Column(Numeric(8, 5), nullable=False)
+    __table_args__ = (Index("ix_shape_date", "trade_date"),)

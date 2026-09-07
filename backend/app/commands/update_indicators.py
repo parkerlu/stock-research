@@ -202,8 +202,37 @@ async def main() -> None:
         except Exception as exc:  # noqa: BLE001
             log.exception("%s 重算失败: %s", name, exc)
 
+    # 形态模型每日打分 + 各策略的信号同步。
+    # ⚠️ 顺序不能颠倒: 打分要先有, mmweek_f(过滤版)才 join 得上 shape_score。
+    #    build_shape_scores 依赖上面刚算完的 daily_candle, 也依赖挂载卷上的
+    #    模型文件 /app/data/research/shape/*.json —— 那个目录必须是挂载的,
+    #    放 /app 别处重建镜像就没了。
+    from app.commands import (build_shape_scores, sync_breakout_signals,
+                              sync_mmweek_signals, sync_sar_signals)
+    import sys as _sys
+
+    async def _run(name, mod, argv):
+        old_argv = _sys.argv
+        try:
+            _sys.argv = argv
+            log.info("--- %s ---", name)
+            await mod.main()
+        except Exception as exc:  # noqa: BLE001
+            log.exception("%s 失败: %s", name, exc)
+        finally:
+            _sys.argv = old_argv
+
+    await _run("形态模型打分", build_shape_scores, ["x", "--days", "5"])
+    await _run("突破预警信号", sync_breakout_signals, ["x"])
+    await _run("SAR预警信号", sync_sar_signals, ["x"])
+    await _run("周线版信号", sync_mmweek_signals, ["x"])
+    await _run("周线版信号(过滤)", sync_mmweek_signals, ["x", "--filtered"])
+
     eng = create_async_engine(settings.database_url)
     async with eng.connect() as c:
+        r = (await c.execute(text(
+            "select count(*), max(trade_date) from shape_score"))).fetchone()
+        log.info("形态模型打分: %s 条, 最新 %s", r[0], r[1])
         for tbl, lbl in [("maimai_signal", "买卖很准"), ("pump_signal", "主力吸筹"),
                          ("didian_signal", "低点组合"), ("dongli_signal", "动力线"),
                          ("breakout_signal", "突破预警"),

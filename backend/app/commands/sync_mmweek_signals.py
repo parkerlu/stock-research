@@ -31,16 +31,33 @@ STRATEGY = "mmweek"
 
 SQL = "select ts_code, week_end from maimai_weekly where buy_line > 0"
 
+# 叠加形态模型的排除过滤器: 剔掉模型当日打分最差 20% 的票。
+# ⚠️ 按【信号当天】的分位匹配, 不能用之后某天的 —— 那是穿越。
+# 实测(同引擎同口径): 胜率 45.8% -> 49.7%, 比值 0.19 -> 0.22, 剔掉约 20% 信号。
+# 最差的几年明显改善(2022 -33->-24, 2026 -17->+2), 但 2021/2024 反而变差,
+# 所以单独开一个策略名跑, 与原版并行对照, 不直接替换。
+SQL_FILTERED = """
+select w.ts_code, w.week_end
+from maimai_weekly w
+join shape_score s on s.ts_code = w.ts_code and s.trade_date = w.week_end
+where w.buy_line > 0 and s.rank_pct >= 0.20
+"""
+
 
 async def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s",
                         datefmt="%H:%M:%S")
     ap = argparse.ArgumentParser()
     ap.add_argument("--since", default=None)
+    ap.add_argument("--filtered", action="store_true",
+                    help="叠加形态模型 Bot20% 排除, 写入 mmweek_f")
     a = ap.parse_args()
 
     eng = create_async_engine(settings.database_url)
-    sql = SQL + (" and week_end > :s" if a.since else "")
+    strategy = "mmweek_f" if a.filtered else STRATEGY
+    base = SQL_FILTERED if a.filtered else SQL
+    sql = base + (" and w.week_end > :s" if a.filtered and a.since
+                  else (" and week_end > :s" if a.since else ""))
     async with eng.connect() as c:
         rows = (await c.execute(text(sql), {"s": a.since} if a.since else {})).fetchall()
         total = (await c.execute(text("select count(*) from maimai_weekly"))).scalar()
@@ -50,7 +67,7 @@ async def main() -> None:
         await eng.dispose()
         return
 
-    payload = [{"strategy": STRATEGY, "ts_code": r[0], "trade_date": r[1]} for r in rows]
+    payload = [{"strategy": strategy, "ts_code": r[0], "trade_date": r[1]} for r in rows]
     async with eng.begin() as c:
         for i in range(0, len(payload), 3000):
             st = pg_insert(StrategySignal).values(payload[i:i + 3000])
@@ -58,8 +75,8 @@ async def main() -> None:
                 index_elements=["strategy", "ts_code", "trade_date"]))
         n = (await c.execute(text(
             "select count(*), min(trade_date), max(trade_date) from strategy_signal "
-            "where strategy = :s"), {"s": STRATEGY})).fetchone()
-    log.info("表内合计 %d 条, %s ~ %s", n[0], n[1], n[2])
+            "where strategy = :s"), {"s": strategy})).fetchone()
+    log.info("[%s] 表内合计 %d 条, %s ~ %s", strategy, n[0], n[1], n[2])
     await eng.dispose()
 
 
