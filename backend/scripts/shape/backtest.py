@@ -78,7 +78,8 @@ def _limit(code: str) -> float:
 
 
 def run(sig, px, cal, tim, hold, maxpos, regime, min_amt_k,
-        stop=None, tp=None, strict=False, cap=1_000_000.0):
+        stop=None, tp=None, strict=False, trail=None, arm=None,
+        cap=1_000_000.0):
     """⚠️ 价格不要存成 {(code,date): tuple} 的字典 —— 750万条 Python 元组
     直接把容器撑爆(实测 OOM, 退出码137)。按股票存 numpy 数组, 用
     searchsorted 定位, 内存降到几十兆。"""
@@ -134,6 +135,16 @@ def run(sig, px, cal, tim, hold, maxpos, regime, min_amt_k,
                 px_out = max(o_, hh["tp_px"])
             elif i >= hh["exit_i"]:
                 px_out = c_
+            # 移动止盈: 涨到 arm 之后开始跟踪, 从最高点回撤 trail 才走。
+            # ⚠️ 与固定止盈的取舍: 固定止盈把大涨的票也在同一位置砍掉,
+            #    移动止盈让利润跑但每笔都要还回去一段回撤。
+            if px_out is None and trail is not None:
+                pk = max(hh.get("peak", 0.0), hi_)
+                hh["peak"] = pk
+                if pk >= hh["arm_px"]:
+                    ns = pk * (1 - trail)
+                    if ns > hh["stop_px"]:
+                        hh["stop_px"] = ns
             if px_out is None:
                 keep.append(hh); continue
             p = px_out * (1 - SLIP)
@@ -175,7 +186,9 @@ def run(sig, px, cal, tim, hold, maxpos, regime, min_amt_k,
                     holds.append({"ts_code": code, "sh": sh, "cost": cost + fee,
                                   "exit_i": i + hold, "last": p,
                                   "stop_px": p * (1 - stop) if stop else 0.0,
-                                  "tp_px": p * (1 + tp) if tp else 1e18})
+                                  "tp_px": p * (1 + tp) if tp else 1e18,
+                                  "arm_px": p * (1 + (arm or 0.10)),
+                                  "peak": 0.0})
                     held.add(code)
         for x in holds:
             bb = bar(x["ts_code"], i)
@@ -218,6 +231,8 @@ async def main():
                     help="止盈:止损 组合, 逗号分隔")
     ap.add_argument("--sigfile", default=None)
     ap.add_argument("--strict", action="store_true", help="涨跌停不可成交")
+    ap.add_argument("--trail", type=float, default=None, help="移动止盈回撤比例")
+    ap.add_argument("--arm", type=float, default=None, help="涨到多少才开始跟踪")
     a = ap.parse_args()
 
     sig = pd.read_parquet(a.sigfile or f"{DIR}/oos_top_v2_h{a.h}.parquet")
@@ -240,7 +255,8 @@ async def main():
         tps, sls = rule.split(":")
         tp = None if tps == "none" else float(tps)
         stop = None if sls == "none" else float(sls)
-        r = run(sig, px, cal, tim, a.h, a.maxpos, False, a.min_amt_k, stop, tp, a.strict)
+        r = run(sig, px, cal, tim, a.h, a.maxpos, False, a.min_amt_k, stop, tp,
+                a.strict, a.trail, a.arm)
         print(f"{rule:<12}{r['年化']:>9.2%}{r['回撤']:>9.2%}{r['比值']:>8.2f}"
               f"{r['胜率']:>8.1%}{r['笔数']:>8d}")
         e = r["eq"].copy()
