@@ -47,7 +47,7 @@ SOURCES = {
     # week_end 存的是当周最后一个交易日, 所以下一个交易日开盘买 = 下周一开盘。
     "mmweek": ("""
         select ts_code, week_end trade_date, buy_line::float strength
-        from maimai_weekly where buy_line > 0
+        from maimai_weekly where buy_line > 0 and week_end >= :s
     """, 40),
 }
 
@@ -56,8 +56,9 @@ async def load(src: str, start):
     sql, _ = SOURCES[src]
     async with engine.connect() as c:
         sig = pd.DataFrame(
-            (await c.execute(text(sql + " and trade_date >= :s" if "where" in sql
-                                  else sql + " where trade_date >= :s"),
+            (await c.execute(text(sql if ":s" in sql else
+                                  (sql + " and trade_date >= :s" if "where" in sql
+                                   else sql + " where trade_date >= :s")),
                              {"s": start})).fetchall(),
             columns=["ts_code", "trade_date", "strength"])
         codes = list(sig["ts_code"].unique())
@@ -151,12 +152,24 @@ async def main():
     ap.add_argument("source", choices=list(SOURCES))
     ap.add_argument("--hold", type=int, default=None)
     ap.add_argument("--maxpos", type=int, default=8)
+    ap.add_argument("--exclude", default=None,
+                    help="排除名单 parquet(ts_code, trade_date), 形态模型 Bot20%")
     ap.add_argument("--start", default="2019-01-01")
     a = ap.parse_args()
     start = _date.fromisoformat(a.start)
     hold = a.hold or SOURCES[a.source][1]
 
     sig, px, cal, tim = await load(a.source, start)
+    n0 = len(sig)
+    if a.exclude:
+        # ⚠️ 排除名单按【信号当天】匹配 —— 模型那天嫌弃这只票, 就不买。
+        #    不能用"之后某天"的名单, 那是穿越。
+        ex = pd.read_parquet(a.exclude)
+        ex["trade_date"] = pd.to_datetime(ex["trade_date"]).dt.date
+        ex = set(zip(ex["ts_code"], ex["trade_date"]))
+        keep = [not ((r.ts_code, r.trade_date) in ex) for r in sig.itertuples()]
+        sig = sig[keep]
+        print(f"  排除后 {len(sig):,} / {n0:,} 条 (剔掉 {(1-len(sig)/max(n0,1))*100:.1f}%)")
     print(f"\n{a.source}: 信号 {len(sig)} 条 / {sig['ts_code'].nunique()} 只票 / "
           f"持有 {hold} 交易日 / {a.maxpos} 仓位\n")
     print(f"{'择时':<10}{'年化':>9}{'回撤':>9}{'比值':>8}{'胜率':>8}{'笔数':>8}")
