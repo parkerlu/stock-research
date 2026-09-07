@@ -186,14 +186,16 @@ async def main() -> None:
     # 特征的 rolling 窗口(最长60日)完整 —— 增量算特征要回看60天,
     # 复杂度和全量差不多, 不值得为此引入两套代码路径。
     from app.commands import (build_breakout, build_didian, build_dongli,
-                              build_maimai, build_pump, build_sar)
+                              build_maimai, build_maimai_weekly, build_pump,
+                              build_sar)
 
     # ⚠️ build_dongli 必须在这里跑: 拉升预警 = 动力线 × 吸筹, 动力线不更新
     # 就再也出不了新信号(v3.5 和龙虎榜都因为漏接每日更新静默过期过)。
     for name, mod in [("买卖很准", build_maimai), ("主力吸筹", build_pump),
                       ("低点组合", build_didian), ("动力线", build_dongli),
                       ("突破预警", build_breakout),
-                      ("SAR预警", build_sar)]:
+                      ("SAR预警", build_sar),
+                      ("买卖很准周线", build_maimai_weekly)]:
         try:
             log.info("--- %s 重算 ---", name)
             await mod.main()
@@ -205,7 +207,8 @@ async def main() -> None:
         for tbl, lbl in [("maimai_signal", "买卖很准"), ("pump_signal", "主力吸筹"),
                          ("didian_signal", "低点组合"), ("dongli_signal", "动力线"),
                          ("breakout_signal", "突破预警"),
-                         ("sar_signal", "SAR预警")]:
+                         ("sar_signal", "SAR预警"),
+                         ("maimai_weekly", "买卖很准周线")]:
             r = (await c.execute(text(
                 f"select count(*), max(trade_date) from {tbl}"))).fetchone()
             log.info("%s: %s 条, 最新 %s", lbl, r[0], r[1])

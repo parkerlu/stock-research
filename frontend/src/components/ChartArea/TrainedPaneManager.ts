@@ -42,6 +42,14 @@ export const TRAINED_SPECS: Record<string, Spec> = {
     strongAt: 0.9,      // 用 rank_pct, ≥0.9 为强档
     maxValue: 1,
   },
+  mmweek: {
+    key: "mmweek",
+    label: "买卖很准 周线",
+    color: "#38bdf8",
+    // 买线 0~100, 这里 >0 即处于超卖状态; 80 以上算深度
+    strongAt: 80,
+    maxValue: 100,
+  },
   maimai_v3: {
     key: "maimai_v3",
     label: "买卖很准 v3",

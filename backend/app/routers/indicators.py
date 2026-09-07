@@ -197,6 +197,11 @@ async def pump_scan(
 # ---- 训练指标选股 ----
 # 信号已在库中(build_maimai / build_pump 盘后算好), 这里直接查, 不跑扫描任务。
 TRAINED_META = [
+    {"key": "mmweek", "label": "买卖很准 周线版",
+     "desc": "周线买线>0 的【状态】(不是日线那种边沿)。下周一开盘买入、持有8周, "
+             "超同日全市场 +3.39pp, 按周t=5.56, 九格全正; 九年只有 2020/2023 两个浅负年(-1.7/-1.3pp), "
+             "都是极端抱团行情。⚠️ 这是状态不是买点, 画成副图色带",
+     "grades": ["强"], "default_grade": "强", "default_days": 30},
     {"key": "sar", "label": "★★★ SAR预警",
      "desc": "SAR由空翻多 × 主力吸筹强档。命中率 29.3%(基准 17.55%), 逐年0负年 · "
              "按天t=20.40 · 九格最小+3.93pp(所有组合里最高, 各格子都均匀)。"
@@ -245,6 +250,46 @@ async def screen_by_trained(
 ):
     """按训练指标选股 —— 返回最近 N 日内出信号的股票 + 当日收盘行情。"""
     from sqlalchemy import text
+
+    if indicator == "mmweek":
+        # 周线版 = 周线买线>0 的状态。返回最近处于该状态的股票。
+        # ⚠️ 取【状态】不是【起始】—— 实测持有8周 每周 +3.45pp vs 起始周 +2.51pp,
+        # 价值在"处于超卖状态"本身。
+        rows = (await db.execute(text("""
+            with w as (
+              select ts_code, max(week_end) week_end, max(buy_line) buy_line
+              from maimai_weekly
+              where week_end > (select max(week_end) from maimai_weekly)
+                               - make_interval(days => :d)
+              group by ts_code
+            ),
+            px as (
+              select d.ts_code, d.trade_date, d.close, d.adj_factor,
+                     row_number() over (partition by d.ts_code order by d.trade_date desc) rn
+              from daily_candle d
+              where d.trade_date > (select max(trade_date) - interval '20 days' from daily_candle)
+            ),
+            last2 as (
+              select ts_code,
+                     max(close) filter (where rn=1) c1, max(adj_factor) filter (where rn=1) a1,
+                     max(close) filter (where rn=2) c2, max(adj_factor) filter (where rn=2) a2
+              from px where rn <= 2 group by ts_code
+            )
+            select w.ts_code, coalesce(b.name,'') name, w.week_end, w.buy_line,
+                   l.c1 price, (l.c1*l.a1)/nullif(l.c2*l.a2,0)-1 chg
+            from w
+            left join stock_basic b on b.ts_code = w.ts_code
+            left join last2 l on l.ts_code = w.ts_code
+            order by w.week_end desc, w.buy_line desc
+            limit :lim
+        """), {"d": days, "lim": limit})).fetchall()
+        return {"indicator": indicator, "grade": "强", "days": days,
+                "count": len(rows), "items": [
+            {"ts_code": r[0], "name": r[1], "date": str(r[2]),
+             "score": round(float(r[3]), 2), "rank_pct": 0.9, "grade": "强",
+             "price": round(float(r[4]), 2) if r[4] is not None else None,
+             "chg": round(float(r[5]) * 100, 2) if r[5] is not None else None}
+            for r in rows]}
 
     if indicator == "sar":
         # SAR预警 = SAR由空翻多 × 近5日吸筹强档。与突破预警同一族,
@@ -682,3 +727,37 @@ async def sar_signals(
     return {"ts_code": ts_code, "count": len(rows), "signals": [
         {"date": str(r[0]), "score": round(float(r[1]), 4),
          "rank_pct": 0.95, "grade": "强"} for r in rows]}
+
+
+@router.get("/mmweek/{ts_code}")
+async def maimai_weekly_signals(
+    ts_code: str,
+    start: str | None = Query(None, description="YYYY-MM-DD"),
+    db: AsyncSession = Depends(get_db),
+):
+    """买卖很准 周线版 —— 周线买线 > 0 的那些周。
+
+    ⚠️ 这是【状态】不是【买点】。日线版取边沿(买线 >0→0), 周线版取状态本身:
+    实测持有8周, 每周 +3.45pp(按周t=5.05, 九格全正) vs 起始周 +2.51pp(九格-0.01)。
+    价值在"处于超卖状态"这个持续条件, 不在"刚进入"那一刻。
+
+    ⚠️ 买入价按【下周一开盘】算 —— 信号周五收盘才成立。可交易口径 +3.39pp
+    (t=5.56), 与收盘口径几乎无差(跳空均值 -0.006%)。
+
+    建议持有 8 周 —— 持有期单峰(2周+1.68/4周+3.20/8周+3.45/12周+2.55/26周+1.03)。
+    """
+    from sqlalchemy import text
+
+    sql = "select week_end, buy_line from maimai_weekly where ts_code = :c"
+    params: dict = {"c": ts_code}
+    if start:
+        try:
+            params["s"] = date.fromisoformat(start)
+            sql += " and week_end >= :s"
+        except ValueError:
+            raise HTTPException(status_code=400, detail="start 需为 YYYY-MM-DD")
+    sql += " order by week_end"
+    rows = (await db.execute(text(sql), params)).fetchall()
+    return {"ts_code": ts_code, "count": len(rows), "signals": [
+        {"date": str(r[0]), "value": round(float(r[1]), 2), "grade": "强"}
+        for r in rows]}

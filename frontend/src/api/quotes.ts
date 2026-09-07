@@ -187,3 +187,15 @@ export async function getSarSignals(
   const q = start ? `?start=${start}` : "";
   return json(`${BASE}/indicators/sar/${tsCode}${q}`);
 }
+
+/** 买卖很准 周线版 —— 周线买线>0 的【状态】(不是买点)。
+ *  下周一开盘买、持有8周: 超同日全市场 +3.39pp, 按周t=5.56, 九格全正。 */
+export async function getMmWeekSignals(
+  tsCode: string
+): Promise<{
+  ts_code: string;
+  count: number;
+  signals: { date: string; value: number; grade: string }[];
+}> {
+  return json(`${BASE}/indicators/mmweek/${tsCode}`);
+}

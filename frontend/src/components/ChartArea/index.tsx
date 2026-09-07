@@ -8,7 +8,7 @@ import { LinkedView } from "./LinkedView";
 import { MAIN_PANE_INDICATORS } from "./indicatorPanes";
 import { StockSectors } from "./StockSectors";
 import { TopListBadge } from "./TopListBadge";
-import { getMaimaiSignals, getPumpSignals, getDidianSignals, getComboSignals , getLiftAlertSignals, getBreakoutSignals, getSarSignals } from "../../api/quotes";
+import { getMaimaiSignals, getPumpSignals, getDidianSignals, getComboSignals , getLiftAlertSignals, getBreakoutSignals, getSarSignals, getMmWeekSignals } from "../../api/quotes";
 import { useTdxIndicators } from "../../hooks/useTdxIndicators";
 
 interface Props {
@@ -49,7 +49,20 @@ function MeasureBar({ result }: { result: MeasureResult | null }) {
       <span className="m-item"><i>{result.calendarDays}</i> 自然日</span>
       <span className="m-sep" />
       <span className="m-item">起 <i>{result.fromClose.toFixed(2)}</i></span>
-      <span className="m-item">止 <i>{result.toClose.toFixed(2)}</i></span>
+      <span className="m-sep" />
+      {/* A收盘 → B那根的 最高/最低/收盘 三个口径。
+          最高 = 这段最多能赚到多少(若在B当天最高点卖)
+          最低 = 中途最多要扛多少(若在B当天最低点割)
+          收盘 = 老老实实持有到B收盘的结果 */}
+      <span className="m-item">B最高 <i>{result.toHigh.toFixed(2)}</i></span>
+      <span className={`m-pct ${result.toHighPct >= 0 ? "up" : "down"}`}>
+        {sign(result.toHighPct)}{result.toHighPct.toFixed(2)}%
+      </span>
+      <span className="m-item">B最低 <i>{result.toLow.toFixed(2)}</i></span>
+      <span className={`m-pct ${result.toLowPct >= 0 ? "up" : "down"}`}>
+        {sign(result.toLowPct)}{result.toLowPct.toFixed(2)}%
+      </span>
+      <span className="m-item">B收盘 <i>{result.toClose.toFixed(2)}</i></span>
       <span className={`m-pct ${cls}`}>
         {sign(result.changePct)}{result.changePct.toFixed(2)}%
       </span>
@@ -102,6 +115,9 @@ export function ChartArea({ tradeActions }: Props = {}) {
       return ["toplist"];
     }
   });
+  const [mmwkSig, setMmwkSig] = useState<
+    { date: string; value: number; grade: string }[]
+  >([]);
   const [sarSig, setSarSig] = useState<
     { date: string; score: number; rank_pct: number; grade: string }[]
   >([]);
@@ -224,6 +240,20 @@ export function ChartArea({ tradeActions }: Props = {}) {
     };
   }, [currentSymbol, activeTrained]);
 
+  useEffect(() => {
+    if (!currentSymbol || !activeTrained.includes("mmweek")) {
+      setMmwkSig([]);
+      return;
+    }
+    let live = true;
+    getMmWeekSignals(currentSymbol)
+      .then((r) => live && setMmwkSig(r.signals ?? []))
+      .catch(() => live && setMmwkSig([]));
+    return () => {
+      live = false;
+    };
+  }, [currentSymbol, activeTrained]);
+
 
   const mainChartRef = useRef<MainChartHandle>(null);
   const [tradeIdx, setTradeIdx] = useState(-1);
@@ -272,7 +302,7 @@ export function ChartArea({ tradeActions }: Props = {}) {
       out.push({ paneId: `tdx_${n}_pane`, label: n, onClose: () => tdx.toggle(n) });
     }
     for (const n of activeTrained) {
-      if (n !== "pump" && n !== "didian") continue;   // 只有这两个是副图
+      if (n !== "pump" && n !== "didian" && n !== "mmweek") continue;   // 副图类
       out.push({ paneId: `trained_${n}_pane`, label: n,
                  onClose: () => setActiveTrained((p) => p.filter((x) => x !== n)) });
     }
@@ -422,6 +452,7 @@ export function ChartArea({ tradeActions }: Props = {}) {
         liftSignals={activeTrained.includes("liftalert") ? liftSig : undefined}
         breakoutSignals={activeTrained.includes("breakout") ? boSig : undefined}
         sarSignals={activeTrained.includes("sar") ? sarSig : undefined}
+        mmweekSignals={activeTrained.includes("mmweek") ? mmwkSig : undefined}
         panes={panes}
         topList={activeTrained.includes("toplist") ? lhb : undefined}
         maimaiSignals={activeTrained.includes("maimai_v3") ? maimaiSignals : undefined}

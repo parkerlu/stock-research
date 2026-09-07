@@ -31,6 +31,8 @@ export const TRAINED_INDICATORS = [
     desc: "创60日新高×吸筹强 · 命中32.0% · 必须配大盘择时(裸跑回撤59.7%)" },
   { name: "liftalert", label: "★★ 拉升预警",
     desc: "动力线×吸筹强 · 10日内触及+10% 命中32.6%(基准17.45%) · 各关全过" },
+  { name: "mmweek", label: "买卖很准 周线版",
+    desc: "周线买线>0 的状态(非买点) · 持有8周 +3.39pp · 按周t=5.56 · 九格全正" },
   { name: "maimai_v3", label: "买卖很准 v3", desc: "动能参考 · 超卖反转买点, 胜率 48.9%→50.9%" },
   { name: "combo", label: "买卖很准 v4", desc: "v3+吸筹共振 · 胜率 58.3%, 超同日全市场 +1.93pp" },
   { name: "didian", label: "低点组合 v2", desc: "动能参考 · 阶段底部+模型过滤, 持有20日" },

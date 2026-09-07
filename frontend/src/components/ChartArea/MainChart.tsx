@@ -42,7 +42,12 @@ export interface MeasureResult {
   fromClose: number;
   toClose: number;
   changePct: number;     // A收盘 -> B收盘
-  /** 上涨看区间最高、下跌看区间最低, 相对 A 收盘的幅度 */
+  /** A收盘 -> B当根的最高 / 最低 —— 回答"这段最多能赚多少、最多要扛多少" */
+  toHigh: number;
+  toHighPct: number;
+  toLow: number;
+  toLowPct: number;
+  /** 上涨看区间最高、下跌看区间最低, 相对 A 收盘的幅度(整段的极值, 不是B那根) */
   extremeLabel: "最高" | "最低";
   extremeValue: number;
   extremePct: number;
@@ -72,6 +77,8 @@ interface Props {
   signalMark?: string | null;
   /** 副图关闭按钮: 每个副图右上角一个 ×, 点了从对应的开关状态里移除 */
   panes?: PaneBtn[];
+  /** 买卖很准 周线版 —— 【状态】不是买点, 画副图色带而非三角 */
+  mmweekSignals?: { date: string; value: number; grade: string }[];
   /** SAR预警 —— 趋势型, 紫色三角(与突破绿/拉升青区分) */
   sarSignals?: { date: string; score: number; rank_pct: number; grade: string }[];
   /** 突破预警 —— 趋势型, 亮绿色三角 */
@@ -157,7 +164,7 @@ function anchorTs(list: { timestamp: number }[], ts: number): number {
 export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
   { timeframe: tfOverride, className, tradeActions, replayDate, forecast, onBarSelected,
     measuring = false, onMeasure,
-    maimaiSignals, comboSignals, pumpSignals, didianSignals, signalMark, panes, topList, liftSignals, breakoutSignals, sarSignals },
+    maimaiSignals, comboSignals, pumpSignals, didianSignals, signalMark, panes, topList, liftSignals, breakoutSignals, sarSignals, mmweekSignals },
   ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -234,6 +241,22 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
     trainedRef.current["combo"] = { sig: comboSignals, color: "#f0a020" };
     return paintTrainedMarkers(chartRef.current, "combo", comboSignals, "#f0a020");
   }, [comboSignals]);
+
+  // 副图: 买卖很准周线版 —— 状态指标, 用色带表达"这一周处于超卖中"。
+  // ⚠️ 不画三角: 实测价值在"处于状态"而非"刚进入"(每周 +3.45pp vs 起始周 +2.51pp),
+  // 画成事件标记会误导人只在第一周买。
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    if (!mmweekSignals || mmweekSignals.length === 0) {
+      removeTrainedPane(chart, "mmweek", tf);
+      return;
+    }
+    setTrainedData("mmweek", tf,
+      mmweekSignals.map((p) => ({ date: p.date, value: p.value, grade: p.grade })));
+    createTrainedPane(chart, "mmweek", tf);
+    return () => removeTrainedPane(chart, "mmweek", tf);
+  }, [mmweekSignals, tf]);
 
   // 副图: 主力吸筹 / 低点组合。
   // ⚠️ createTrainedPane 内部必须 isStack=true, 传 false 时 klinecharts 静默不建面板。
@@ -687,6 +710,12 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
         calendarDays: Math.round(ms / 86400000),
         fromClose, toClose,
         changePct: (toClose / fromClose - 1) * 100,
+        // B 那一根的最高/最低 —— 与整段极值不同: 这是"到 B 当天为止,
+        // 盘中最好和最差能成交到什么价", 对判断止盈止损位更直接。
+        toHigh: seg[seg.length - 1].high as number,
+        toHighPct: ((seg[seg.length - 1].high as number) / fromClose - 1) * 100,
+        toLow: seg[seg.length - 1].low as number,
+        toLowPct: ((seg[seg.length - 1].low as number) / fromClose - 1) * 100,
         extremeLabel: up ? "最高" : "最低",
         extremeValue: extVal,
         extremePct: (extVal / fromClose - 1) * 100,
