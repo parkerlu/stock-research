@@ -318,8 +318,13 @@ export function ChartArea({ tradeActions }: Props = {}) {
     setTradeIdx(-1);
   }, [tradeActions]);
 
-  // Apply persisted standard indicators once the chart is initialized.
+  // 挂载标准指标(MA/MACD/BOLL/SAR)。
+  // ⚠️ 依赖必须带 linkedMode: 多周期联动是 `linkedMode ? <LinkedView/> : <MainChart/>`,
+  // 切过去时 MainChart 被【卸载】, 切回来是全新的图表实例。而这段跑在 ChartArea 里,
+  // ChartArea 自己没卸载 —— 原来依赖是 [] 只在首次挂载执行一次, 于是切回来后
+  // 指标就永久消失了(用户实测)。TDX 那边同理, 见 useTdxIndicators。
   useEffect(() => {
+    if (linkedMode) return;                 // 联动视图自己管指标
     const t = setTimeout(() => {
       const chart = mainChartRef.current?.getChart();
       if (!chart) return;
@@ -338,7 +343,7 @@ export function ChartArea({ tradeActions }: Props = {}) {
     }, 100);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [linkedMode, activeIndicators]);
 
   const goToTrade = useCallback(
     (idx: number) => {

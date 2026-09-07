@@ -192,6 +192,28 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
     if (w > 0 && want > 0) c.setBarSpace(Math.max(w / want, 0.8));
   });
 
+  /** 等图表就绪后再挂副图 —— 挂载瞬间 chartRef.current 还是 null。
+   *
+   * ⚠️ 这些 effect 声明在图表 init 之前, React 按声明顺序跑, 所以首次挂载时
+   * chartRef 必然为空。原来直接 `if (!chart) return` 就再也不试了 ——
+   * 平时看不出来(切股票时图表已存在), 但多周期联动切回来是【全新图表】,
+   * 副图就永久消失了(用户实测)。主图标记没这个问题, 因为 paintTrainedMarkers
+   * 自带重试。
+   */
+  const withChart = useRef((fn: (c: Chart) => void) => {
+    let cancelled = false;
+    let tries = 0;
+    let timer: ReturnType<typeof setTimeout>;
+    const attempt = () => {
+      if (cancelled) return;
+      const c = chartRef.current;
+      if (c) { fn(c); return; }
+      if (++tries < 20) timer = setTimeout(attempt, 150);
+    };
+    attempt();
+    return () => { cancelled = true; clearTimeout(timer); };
+  });
+
   const selMarkRef = useRef<string | null | undefined>(null);
   const repaintTrained = useRef(() => {
     for (const [gid, v] of Object.entries(trainedRef.current)) {
@@ -245,9 +267,7 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
   // 副图: 买卖很准周线版 —— 状态指标, 用色带表达"这一周处于超卖中"。
   // ⚠️ 不画三角: 实测价值在"处于状态"而非"刚进入"(每周 +3.45pp vs 起始周 +2.51pp),
   // 画成事件标记会误导人只在第一周买。
-  useEffect(() => {
-    const chart = chartRef.current;
-    if (!chart) return;
+  useEffect(() => withChart.current((chart) => {
     if (!mmweekSignals || mmweekSignals.length === 0) {
       removeTrainedPane(chart, "mmweek", tf);
       return;
@@ -255,34 +275,27 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
     setTrainedData("mmweek", tf,
       mmweekSignals.map((p) => ({ date: p.date, value: p.value, grade: p.grade })));
     createTrainedPane(chart, "mmweek", tf);
-    return () => removeTrainedPane(chart, "mmweek", tf);
-  }, [mmweekSignals, tf]);
+  }), [mmweekSignals, tf]);
 
   // 副图: 主力吸筹 / 低点组合。
   // ⚠️ createTrainedPane 内部必须 isStack=true, 传 false 时 klinecharts 静默不建面板。
-  useEffect(() => {
-    const chart = chartRef.current;
-    if (!chart) return;
+  useEffect(() => withChart.current((chart) => {
     if (!pumpSignals || pumpSignals.length === 0) {
       removeTrainedPane(chart, "pump", tf);
       return;
     }
     setTrainedData("pump", tf, pumpSignals.map((p) => ({ date: p.date, value: p.prob, grade: p.grade })));
     createTrainedPane(chart, "pump", tf);
-    return () => removeTrainedPane(chart, "pump", tf);
-  }, [pumpSignals, tf]);
+  }), [pumpSignals, tf]);
 
-  useEffect(() => {
-    const chart = chartRef.current;
-    if (!chart) return;
+  useEffect(() => withChart.current((chart) => {
     if (!didianSignals || didianSignals.length === 0) {
       removeTrainedPane(chart, "didian", tf);
       return;
     }
     setTrainedData("didian", tf, didianSignals.map((p) => ({ date: p.date, value: p.rank_pct, grade: p.grade })));
     createTrainedPane(chart, "didian", tf);
-    return () => removeTrainedPane(chart, "didian", tf);
-  }, [didianSignals, tf]);
+  }), [didianSignals, tf]);
 
   const [loading, setLoading] = useState(false);
 

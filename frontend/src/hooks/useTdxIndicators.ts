@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Chart } from "klinecharts";
 import { getIndicator, listIndicators } from "../api/indicators";
+import { useQuoteStore } from "../stores/quoteStore";
 import type { IndicatorMeta } from "../types/indicator";
 import {
   getKlineIndicatorName,
@@ -41,6 +42,8 @@ export function useTdxIndicators({
   const [available, setAvailable] = useState<IndicatorMeta[]>([]);
   const [active, setActive] = useState<string[]>(() => readLS(storageKey));
   const [busy, setBusy] = useState<string | null>(null);
+  // 多周期联动开关 —— 切换时主图会卸载/重建, 指标要跟着重挂
+  const linkedMode = useQuoteStore((st) => st.linkedMode);
   const paneIds = useRef<Record<string, string>>({});
   // 已挂在图上的那批指标是按哪个周期注册的 —— 注册名带周期, 换周期时得先按
   // 旧名字摘掉, 否则 overrideIndicator 找不到目标, 图上会留着旧周期的数据。
@@ -123,6 +126,15 @@ export function useTdxIndicators({
     [active, apply, getChart, symbol, timeframe]
   );
 
+  // ⚠️ 联动开关一变就清空 paneIds —— 必须独立成一个 effect, 不能塞进下面那个。
+  // 下面那个要先轮询图表实例, 而切【到】联动时主图已卸载, 轮询 20 次全空后
+  // 直接 return, 清空逻辑根本走不到; 等切【回】来时记录还是旧的,
+  // apply(name, !paneIds.current[name]) 就走了 overrideIndicator 分支 ——
+  // 新图表上没有这个指标, override 什么也不做, 指标就永久消失了(用户实测)。
+  useEffect(() => {
+    paneIds.current = {};
+  }, [linkedMode]);
+
   // 换股 / 换周期后重建已选指标。图表实例可能还没就绪, 轮询几次再放弃。
   useEffect(() => {
     if (!symbol || active.length === 0) return;
@@ -160,9 +172,11 @@ export function useTdxIndicators({
     return () => {
       cancelled = true;
     };
-    // active 变化由 toggle 自己处理, 这里只跟随 symbol/timeframe
+    // active 变化由 toggle 自己处理, 这里跟随 symbol/timeframe/联动开关。
+    // ⚠️ linkedMode 必须在依赖里: 切到多周期联动时主图被卸载, 切回来是全新的
+    // 图表实例, 不重挂的话指标就永久消失(用户实测)。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [symbol, timeframe]);
+  }, [symbol, timeframe, linkedMode]);
 
   return { available, active, toggle, busy };
 }
