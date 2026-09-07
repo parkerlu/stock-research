@@ -57,6 +57,11 @@ async def main() -> None:
         d["trade_date"] = pd.to_datetime(d["trade_date"])
         d = d.sort_values(["ts_code", "trade_date"])
         d["wk"] = d["trade_date"].dt.to_period("W").dt.end_time.dt.normalize()
+        # ⚠️ 丢掉【尚未结束的当周】。任务在周三跑时, 当周只有周一~周三三根日线,
+        # 算出来的买线跟完整周不是一回事, 到周五还可能翻转 —— 这不是穿越
+        # (用的数据更少), 但与回测对象不一致, 会让人按一个没定型的值下单。
+        # 判据: 自然周的周日 <= 今天, 才算这一周已经走完。
+        d = d[d["wk"] <= pd.Timestamp(date.today())]
         # ⚠️ week_end 存【当周最后一个交易日】而不是自然周的周日 ——
         # to_period("W").end_time 给的是周日, 永远不是交易日, 前端按日期
         # 匹配 K 线时一根都对不上(画不出来且不报错)。
