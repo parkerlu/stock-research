@@ -2550,3 +2550,16 @@ body {
 }
 .overlay-clear { color: #ff6b6b; }
 .overlay-clear:hover { background: rgba(255, 107, 107, 0.12); }
+
+/* 虚拟盘账户下拉 —— 与「实操盘/演示回放」两个按钮并排 */
+.pp-acct-sel {
+  margin-left: 8px;
+  background: #1a1f2b;
+  color: #c8d0dd;
+  border: 1px solid #2a3141;
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 12px;
+  max-width: 260px;
+}
+.pp-acct-sel:hover { border-color: #3d4759; }

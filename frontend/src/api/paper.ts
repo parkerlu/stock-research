@@ -125,3 +125,20 @@ export const runPaper = (name = LIVE_ACCOUNT) =>
 export const getPaperRun = (id: string) =>
   json<{ status: string; progress: number; total: number; error: string | null; elapsed_sec: number }>(
     `${BASE}/run/${id}`);
+
+
+export interface PaperAccountRow {
+  id: number;
+  name: string;
+  strategy: string;
+  started_on: string | null;
+  last_run_date: string | null;
+  slots: number;
+  trades: number;
+  pnl_pct: number;
+}
+
+/** 在跑的账户列表。⚠️ 后端只返回 is_active 的 —— 被证伪的策略已停用,
+ *  不该再出现在选择器里让人误以为还在参考。 */
+export const getPaperAccounts = () =>
+  json<{ accounts: PaperAccountRow[] }>(`${BASE}/accounts`);

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   DEMO_ACCOUNT,
   LIVE_ACCOUNT,
+  getPaperAccounts,
   getPaperConfig,
   getPaperEquity,
   getPaperRun,
@@ -101,6 +102,16 @@ export function PaperPanel() {
   const [err, setErr] = useState<string | null>(null);
   const [showRules, setShowRules] = useState(false);
   const [acct, setAcct] = useState<string>(LIVE_ACCOUNT);
+  // 账户列表从后端拿 —— 以前是两个写死的按钮(live-2026 / demo), 结果新建的
+  // 账户在页面上根本点不到。⚠️ 后端只返回 is_active 的。
+  const [accts, setAccts] = useState<
+    { id: number; name: string; strategy: string; trades: number; pnl_pct: number }[]
+  >([]);
+  useEffect(() => {
+    getPaperAccounts()
+      .then((r) => setAccts(r.accounts))
+      .catch(() => setAccts([]));
+  }, []);
   const [signals, setSignals] = useState<SignalPick[]>([]);
   const [playing, setPlaying] = useState(false);
   // 推进一天要等后端撮合, 慢的时候几秒 —— 不给反馈会让人以为点没生效
@@ -258,6 +269,27 @@ export function PaperPanel() {
               演示回放
             </button>
           </div>
+          {accts.length > 0 && (
+            <select
+              className="pp-acct-sel"
+              value={accts.some((x) => x.name === acct) ? acct : ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (!v) return;
+                setPlaying(false);
+                setAcct(v);
+                reload(v);
+              }}
+              title="策略账户 —— 只列在跑的; 被证伪的已停用"
+            >
+              <option value="">策略账户…</option>
+              {accts.map((x) => (
+                <option key={x.id} value={x.name}>
+                  {x.name} · {x.pnl_pct >= 0 ? "+" : ""}{x.pnl_pct}% · {x.trades}笔
+                </option>
+              ))}
+            </select>
+          )}
           {cfg && (
             <button className="pp-rules-btn" onClick={() => setShowRules((v) => !v)}>
               规则 {showRules ? "▴" : "▾"}

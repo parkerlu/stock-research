@@ -8,7 +8,7 @@ from datetime import date
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import delete as sa_delete, select
+from sqlalchemy import delete as sa_delete, select, text
 
 from app.db import async_session
 from app.models.schema import (
@@ -72,6 +72,38 @@ async def create(req: CreateRequest):
         await db.commit()
         return {"id": acct.id, "name": acct.name, "capital": float(acct.initial_capital),
                 "slots": acct.slots, "started_on": str(acct.started_on)}
+
+
+@router.get("/accounts")
+async def accounts():
+    """在跑的账户列表 —— 前端下拉用。
+
+    ⚠️ 只列 is_active。被证伪的策略(突破预警/SAR预警)已停用, 不该再出现在
+       选择器里让人误以为还在参考。数据没删, 需要时把 is_active 改回来即可。
+    """
+    async with async_session() as db:
+        rows = (await db.execute(text("""
+            select a.id, a.name, a.config->>'strategy_signal' as strat,
+                   a.initial_capital, a.started_on, a.last_run_date, a.slots,
+                   (select count(*) from paper_trade t where t.account_id = a.id) trades,
+                   (select e.equity from paper_equity e where e.account_id = a.id
+                    order by e.trade_date desc limit 1) equity
+            from paper_account a
+            where a.is_active
+            order by a.started_on desc, a.id
+        """))).fetchall()
+    out = []
+    for r in rows:
+        cap = float(r[3] or 0) or 1.0
+        eq = float(r[8]) if r[8] is not None else cap
+        out.append({
+            "id": r[0], "name": r[1], "strategy": r[2] or "",
+            "started_on": r[4].isoformat() if r[4] else None,
+            "last_run_date": r[5].isoformat() if r[5] else None,
+            "slots": r[6], "trades": int(r[7] or 0),
+            "pnl_pct": round(eq / cap * 100 - 100, 2),
+        })
+    return {"accounts": out}
 
 
 @router.get("/status")
