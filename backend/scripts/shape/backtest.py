@@ -38,18 +38,22 @@ async def load(start):
         for y in range(y0, y1 + 1):
             rows = (await c.execute(text(
                 "select ts_code,trade_date,open*adj_factor,high*adj_factor,"
-                "low*adj_factor,close*adj_factor,amount from daily_candle "
+                "low*adj_factor,close*adj_factor,amount,"
+                "lag(close*adj_factor) over (partition by ts_code order by trade_date) "
+                "from (select * from daily_candle where trade_date >= :a0) t "
                 "where trade_date >= :a and trade_date < :b"),
-                {"a": max(start, __import__("datetime").date(y, 1, 1)),
+                {"a0": start,
+                 "a": max(start, __import__("datetime").date(y, 1, 1)),
                  "b": __import__("datetime").date(y + 1, 1, 1)})).fetchall()
             if not rows:
                 continue
             cc = np.empty(len(rows), dtype=object)
             dd = np.empty(len(rows), dtype=np.int32)
-            vv = np.empty((len(rows), 5), dtype=np.float32)
+            vv = np.empty((len(rows), 6), dtype=np.float32)
             for k, r in enumerate(rows):
                 cc[k] = r[0]; dd[k] = didx[r[1]]
-                vv[k] = (r[2], r[3], r[4], r[5], r[6])
+                vv[k] = (r[2], r[3], r[4], r[5], r[6],
+                         r[7] if r[7] is not None else np.nan)
             del rows
             chunks_c.append(cc); chunks_d.append(dd); chunks_v.append(vv)
         codes = np.concatenate(chunks_c)
@@ -62,14 +66,19 @@ async def load(start):
             from index_daily where ts_code='000852.SH' and trade_date >= :s
         """), {"s": start})).fetchall(), columns=["trade_date", "ok"])
 
-    px = pd.DataFrame(vals, columns=["o", "h", "l", "c", "amt"])
+    px = pd.DataFrame(vals, columns=["o", "h", "l", "c", "amt", "pc"])
     px["ts_code"] = pd.Categorical(codes)
     px["di"] = di
     return px, cal, tim
 
 
+def _limit(code: str) -> float:
+    """涨跌停幅度。创业板/科创板 20%, 其余 10%(ST 已在别处排除)。"""
+    return 0.20 if code[:3] in ("300", "301", "688") else 0.10
+
+
 def run(sig, px, cal, tim, hold, maxpos, regime, min_amt_k,
-        stop=None, tp=None, cap=1_000_000.0):
+        stop=None, tp=None, strict=False, cap=1_000_000.0):
     """⚠️ 价格不要存成 {(code,date): tuple} 的字典 —— 750万条 Python 元组
     直接把容器撑爆(实测 OOM, 退出码137)。按股票存 numpy 数组, 用
     searchsorted 定位, 内存降到几十兆。"""
@@ -78,7 +87,7 @@ def run(sig, px, cal, tim, hold, maxpos, regime, min_amt_k,
     arr = {}
     for code, g in px.groupby("ts_code", sort=False, observed=True):
         arr[code] = (g["di"].to_numpy(np.int32),
-                     g[["o", "h", "l", "c"]].to_numpy(np.float32),
+                     g[["o", "h", "l", "c", "pc"]].to_numpy(np.float32),
                      g["amt"].to_numpy(np.float32))
 
     def bar(code, i):
@@ -110,6 +119,11 @@ def run(sig, px, cal, tim, hold, maxpos, regime, min_amt_k,
             if b is None:
                 keep.append(hh); continue
             o_, hi_, lo_, c_ = float(b[0]), float(b[1]), float(b[2]), float(b[3])
+            pc_ = float(b[4]) if np.isfinite(b[4]) else c_
+            # ⚠️ 一字跌停当天卖不掉 —— 挂单排不上, 只能继续持有到下一天。
+            #    不加这条会把最坏的那些笔按止损价结算, 系统性高估。
+            if strict and (hi_ - lo_) < 1e-6 and lo_ <= pc_ * (1 - _limit(hh["ts_code"]) + 0.005):
+                keep.append(hh); continue
             px_out = None
             # ⚠️ 出场规则必须与【训练标签的定义】逐字一致, 否则模型优化的东西
             #    和回测执行的东西不是一回事 —— 这个项目已经栽过两次。
@@ -141,6 +155,13 @@ def run(sig, px, cal, tim, hold, maxpos, regime, min_amt_k,
                         continue
                     if amt_of(code, i - 1) < min_amt_k:
                         continue          # 成交额下限, 千元
+                    # ⚠️ 只有【一字涨停】(全天封死, 最低价也在涨停位)才真的
+                    #    买不到。开盘涨停但盘中打开过的, 挂涨停价能成交。
+                    #    早先按"开盘即涨停就跳过"算, 过严。
+                    pc0 = float(bb[4]) if np.isfinite(bb[4]) else float(bb[0])
+                    lim_up = pc0 * (1 + _limit(code) - 0.005)
+                    if strict and float(bb[2]) >= lim_up:
+                        continue
                     p = float(bb[0]) * (1 + SLIP)
                     equity = cash + sum(x["sh"] * x["last"] for x in holds)
                     sh = int(min(equity / maxpos, cash) / p / 100) * 100
@@ -196,6 +217,7 @@ async def main():
     ap.add_argument("--rules", default="none:none,0.12:0.06,0.15:0.08,0.08:0.05",
                     help="止盈:止损 组合, 逗号分隔")
     ap.add_argument("--sigfile", default=None)
+    ap.add_argument("--strict", action="store_true", help="涨跌停不可成交")
     a = ap.parse_args()
 
     sig = pd.read_parquet(a.sigfile or f"{DIR}/oos_top_v2_h{a.h}.parquet")
@@ -218,7 +240,7 @@ async def main():
         tps, sls = rule.split(":")
         tp = None if tps == "none" else float(tps)
         stop = None if sls == "none" else float(sls)
-        r = run(sig, px, cal, tim, a.h, a.maxpos, False, a.min_amt_k, stop, tp)
+        r = run(sig, px, cal, tim, a.h, a.maxpos, False, a.min_amt_k, stop, tp, a.strict)
         print(f"{rule:<12}{r['年化']:>9.2%}{r['回撤']:>9.2%}{r['比值']:>8.2f}"
               f"{r['胜率']:>8.1%}{r['笔数']:>8d}")
         e = r["eq"].copy()
