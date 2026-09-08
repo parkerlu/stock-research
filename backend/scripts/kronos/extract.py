@@ -51,17 +51,22 @@ def build_stamp(days: np.ndarray) -> np.ndarray:
 
 @torch.no_grad()
 def embed(model, tokenizer, x: np.ndarray, stamp: np.ndarray, dev: str) -> np.ndarray:
+    # ⚠️ T4 有 tensor core, fp16 大约快 2 倍。这里只做推理, 精度足够。
+    #    实测 fp32 + batch256 时 356万条要 8 小时(¥40), 必须提速。
     """取 transformer 最后一层的隐状态。复刻 Kronos.forward 的前半段,
     跳过 s1/s2 两个预测头 —— 我们要表示, 不要它的预测。"""
     xt = torch.as_tensor(x, device=dev)
     st = torch.as_tensor(stamp, device=dev)
-    z = tokenizer.encode(xt, half=True)
-    s1, s2 = (z[0], z[1]) if isinstance(z, (list, tuple)) else (z[..., 0], z[..., 1])
-    h = model.embedding([s1, s2])
-    h = h + model.time_emb(st)
-    for layer in model.transformer:
-        h = layer(h)
-    h = model.norm(h)
+    amp = torch.autocast("cuda", dtype=torch.float16) if dev == "cuda" \
+        else torch.autocast("cpu", enabled=False)
+    with amp:
+        z = tokenizer.encode(xt, half=True)
+        s1, s2 = (z[0], z[1]) if isinstance(z, (list, tuple)) else (z[..., 0], z[..., 1])
+        h = model.embedding([s1, s2])
+        h = h + model.time_emb(st)
+        for layer in model.transformer:
+            h = layer(h)
+        h = model.norm(h)
     # 末端 + 全局均值: 末端携带"最近发生了什么", 均值携带整段形态
     return torch.cat([h[:, -1], h.mean(1)], dim=1).float().cpu().numpy()
 
@@ -73,7 +78,7 @@ def main() -> None:
     ap.add_argument("--model", default="NeoQuasar/Kronos-small",
                     help="mini(410万) / small(2474万) / base(1.02亿)")
     ap.add_argument("--tok", default="NeoQuasar/Kronos-Tokenizer-base")
-    ap.add_argument("--bs", type=int, default=256)
+    ap.add_argument("--bs", type=int, default=1024)
     ap.add_argument("--shard", type=int, default=200_000, help="每片样本数, 断点续跑单位")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)

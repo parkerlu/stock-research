@@ -253,8 +253,11 @@ async def main() -> None:
                          ("breakout_signal", "突破预警"),
                          ("sar_signal", "SAR预警"),
                          ("maimai_weekly", "买卖很准周线")]:
+            # ⚠️ maimai_weekly 的日期列叫 week_end 不是 trade_date, 写死 trade_date
+            #    会在最后统计那一步整个任务报错(指标其实都算完了, 只是没打印)。
+            dcol = "week_end" if tbl == "maimai_weekly" else "trade_date"
             r = (await c.execute(text(
-                f"select count(*), max(trade_date) from {tbl}"))).fetchone()
+                f"select count(*), max({dcol}) from {tbl}"))).fetchone()
             log.info("%s: %s 条, 最新 %s", lbl, r[0], r[1])
     await eng.dispose()
 

@@ -2563,3 +2563,46 @@ body {
   max-width: 260px;
 }
 .pp-acct-sel:hover { border-color: #3d4759; }
+
+/* 选股页 · 训练指标的搜索框与拖拽排序 */
+.ts-search {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 6px;
+  padding: 5px 8px;
+  background: #12161f;
+  border: 1px solid #2a3141;
+  border-radius: 4px;
+  color: #c8d0dd;
+  font-size: 12px;
+}
+.ts-search:focus { outline: none; border-color: #3d6ea5; }
+.ts-search::placeholder { color: #5a6478; }
+
+.ts-reset {
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 3px 6px;
+  background: transparent;
+  border: 1px dashed #2a3141;
+  border-radius: 4px;
+  color: #7a8598;
+  font-size: 11px;
+  cursor: pointer;
+}
+.ts-reset:hover { color: #c8d0dd; border-color: #3d4759; }
+
+/* 可拖动时给个抓手, 并在拖过时highlight落点 */
+.ts-ind.draggable { cursor: grab; }
+.ts-ind.draggable:active { cursor: grabbing; }
+.ts-ind.draggable::before {
+  content: "⋮⋮";
+  position: absolute;
+  left: 3px; top: 50%;
+  transform: translateY(-50%);
+  color: #39415280;
+  font-size: 10px;
+  letter-spacing: -2px;
+}
+.ts-ind.draggable { position: relative; padding-left: 16px; }
+.ts-ind.draggable:hover::before { color: #6a7488; }

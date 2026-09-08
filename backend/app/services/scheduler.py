@@ -4,13 +4,13 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 import pandas as pd
 import tushare as ts
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.config import settings
@@ -421,6 +421,64 @@ def start_scheduler():
     if _scheduler is not None:
         return
     _scheduler = AsyncIOScheduler(timezone="Asia/Shanghai")
+async def ensure_daily_job() -> None:
+    """数据完整性自愈 —— 每小时跑, 自己判断该不该补。
+
+    ⚠️ 为什么要独立成一个每小时的任务(2026-09-08 用户提出):
+       收盘数据不是 15:30 就发全的, 一次性同步必然留缺口, 而缺口是【静默】的
+       —— 界面上只是选股结果变少, 没人会发现。实测 09-03/09-04 各缺 899 个
+       标的躺了四天。
+
+    ⚠️ 幂等: 已完整的日子直接跳过, 一小时跑一次几乎不花开销(只查两个 count)。
+    ⚠️ 只在【可能有新数据】的时段跑: 9 点前和 23 点后不折腾。
+    ⚠️ 补完【数据完整】才重算指标 —— 拿残缺数据算比不算更糟, 会写出一批
+       残缺信号, 看起来像"今天没信号"而不是"数据没到"。
+    """
+    now = datetime.now()
+    if not (9 <= now.hour <= 23):
+        return
+    import sys as _s
+    from app.commands.ensure_daily import main as ensure_main
+
+    argv = _s.argv
+    was_complete = True
+    try:
+        _s.argv = ["ensure_daily", "--days", "5", "--fix"]
+        await ensure_main()
+    except SystemExit:
+        was_complete = False       # 补不齐, 下一小时再试
+    except Exception as exc:       # noqa: BLE001
+        log.exception("完整性自愈失败: %s", exc)
+        return
+    finally:
+        _s.argv = argv
+
+    # 数据完整了, 且指标还落后于日线 -> 补算一次
+    try:
+        async with async_session() as db:
+            px = (await db.execute(text(
+                "select max(trade_date) from daily_candle"))).scalar()
+            sig = (await db.execute(text(
+                "select max(trade_date) from breakout_signal"))).scalar()
+        if was_complete and px and sig and sig < px:
+            log.info("数据已完整(%s)而指标停在 %s, 触发重算", px, sig)
+            from app.commands.update_indicators import main as upd
+            argv = _s.argv
+            try:
+                _s.argv = ["update_indicators", "--days", "5"]
+                await upd()
+            finally:
+                _s.argv = argv
+    except Exception as exc:       # noqa: BLE001
+        log.exception("指标补算失败: %s", exc)
+
+
+    # ⚠️ 每小时的完整性自愈 —— 放在最前面注册, 它是其它一切的前提
+    _scheduler.add_job(
+        ensure_daily_job,
+        CronTrigger(minute=25, timezone="Asia/Shanghai"),
+        id="ensure_daily", replace_existing=True, max_instances=1,
+    )
     _scheduler.add_job(
         daily_sync_job,
         CronTrigger(hour=15, minute=30, timezone="Asia/Shanghai"),

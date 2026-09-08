@@ -2,7 +2,7 @@
 //
 // 信号是盘后批量算好入库的(build_maimai / build_pump), 这里直接查,
 // 不跑扫描任务, 所以是秒出。
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { listTrained, screenByTrained } from "../../api/trained";
 import type { ScreenItem, TrainedMeta } from "../../api/trained";
 import { useQuoteStore } from "../../stores/quoteStore";
@@ -21,6 +21,16 @@ export function TrainedScreen() {
   const [items, setItems] = useState<ScreenItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // 搜索 + 自定义顺序。顺序存 localStorage —— 这是个人偏好, 不该每次重开就丢。
+  const [q, setQ] = useState("");
+  const [order, setOrder] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("screen.ind.order") ?? "[]"); }
+    catch { return []; }
+  });
+  const dragKey = useRef<string | null>(null);
+  useEffect(() => {
+    localStorage.setItem("screen.ind.order", JSON.stringify(order));
+  }, [order]);
 
   useEffect(() => {
     listTrained()
@@ -55,15 +65,67 @@ export function TrainedScreen() {
 
   const cur = metas.find((m) => m.key === indicator);
 
+  // 排好序的清单: 自定义顺序在前, 新增的(order 里没有的)排在后面。
+  // ⚠️ 不能直接按 order 过滤 —— 后端新增指标时 order 里没有它, 会整个消失。
+  const ordered = useMemo(() => {
+    const pos = new Map(order.map((k, i) => [k, i]));
+    return [...metas].sort(
+      (a, b) => (pos.get(a.key) ?? 1e9) - (pos.get(b.key) ?? 1e9)
+    );
+  }, [metas, order]);
+
+  const shown = useMemo(() => {
+    const kw = q.trim().toLowerCase();
+    if (!kw) return ordered;
+    return ordered.filter(
+      (m) => m.label.toLowerCase().includes(kw) ||
+             m.key.toLowerCase().includes(kw) ||
+             (m.desc ?? "").toLowerCase().includes(kw)
+    );
+  }, [ordered, q]);
+
+  // 拖拽换位。⚠️ 只在【没有搜索】时允许 —— 过滤状态下拖动, 落点对应的是
+  // 过滤后的位置, 写回全量顺序会错乱。
+  const canDrag = q.trim() === "";
+  const onDrop = (targetKey: string) => {
+    const from = dragKey.current;
+    dragKey.current = null;
+    if (!from || from === targetKey) return;
+    const keys = ordered.map((m) => m.key);
+    const i = keys.indexOf(from);
+    const j = keys.indexOf(targetKey);
+    if (i < 0 || j < 0) return;
+    keys.splice(j, 0, ...keys.splice(i, 1));
+    setOrder(keys);
+  };
+
   return (
     <div className="trained-screen">
       <div className="ts-side">
         <div className="ts-title">训练指标</div>
+        <input
+          className="ts-search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="搜索指标…"
+        />
+        {order.length > 0 && (
+          <button className="ts-reset" onClick={() => setOrder([])}
+                  title="恢复默认顺序">↺ 默认顺序</button>
+        )}
         {metas.length === 0 && <div className="ts-empty">加载中…</div>}
-        {metas.map((m) => (
+        {metas.length > 0 && shown.length === 0 && (
+          <div className="ts-empty">没有匹配「{q}」的指标</div>
+        )}
+        {shown.map((m) => (
           <button
             key={m.key}
-            className={`ts-ind${indicator === m.key ? " on" : ""}`}
+            className={`ts-ind${indicator === m.key ? " on" : ""}${canDrag ? " draggable" : ""}`}
+            draggable={canDrag}
+            onDragStart={() => { dragKey.current = m.key; }}
+            onDragOver={(e) => { if (canDrag) e.preventDefault(); }}
+            onDrop={(e) => { e.preventDefault(); onDrop(m.key); }}
+            title={canDrag ? "拖动可调整顺序" : "搜索时不能拖动"}
             onClick={() => {
               setIndicator(m.key);
               setGrade(m.default_grade);

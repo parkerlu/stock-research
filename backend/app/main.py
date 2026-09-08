@@ -22,8 +22,38 @@ from app.services.scheduler import start_scheduler, stop_scheduler
 logging.basicConfig(level=logging.INFO)
 
 
+def _selfcheck_commands() -> None:
+    """启动自检: 定时任务用到的命令模块必须都能导入。
+
+    ⚠️ 2026-09-08 一天之内栽了两次同样的坑: 代码写好、逻辑串好、git 也提交了,
+       但【容器镜像里没有那个文件】, 于是那一步静默跳过 ——
+       fill_daily 没拷进来导致日线卡在 2301 只;
+       build_panels 缺失导致三个指标用了四天前的缓存面板。
+       两次都不报错, 都是靠人发现。这里让它启动就喊。
+    """
+    import importlib
+    import logging as _lg
+
+    _log = _lg.getLogger("selfcheck")
+    need = ["ensure_daily", "fill_daily", "build_panels", "update_indicators",
+            "build_shape_scores", "sync_shape_signals", "sync_mmweek_signals",
+            "sync_sar_signals", "sync_breakout_signals"]
+    missing = []
+    for m in need:
+        try:
+            importlib.import_module(f"app.commands.{m}")
+        except Exception as exc:  # noqa: BLE001
+            missing.append(f"{m}({type(exc).__name__})")
+    if missing:
+        _log.error("⚠️ 定时任务依赖的命令缺失或导入失败: %s —— "
+                   "镜像可能没重建, 相关步骤会静默跳过", ", ".join(missing))
+    else:
+        _log.info("启动自检: %d 个命令模块全部可导入", len(need))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    _selfcheck_commands()
     start_scheduler()
     yield
     stop_scheduler()

@@ -71,11 +71,13 @@ class Net(nn.Module):
     """膨胀卷积 —— 膨胀率 1,2,4,8,16,32 叠起来感受野覆盖 200 根。
     网络故意做小: 金融数据信噪比极低, 大网络只会把噪声背下来。"""
 
-    def __init__(self, ch=6, h=48):
+    def __init__(self, ch=6, h=48, dilations=(1, 2, 4, 8, 16, 32), n_rep=1):
         super().__init__()
         self.inp = nn.Conv1d(ch, h, 5, padding=2)
         blocks = []
-        for d in (1, 2, 4, 8, 16, 32):
+        # ⚠️ 本地 CPU 上只能跑 h=48(5万参数), 而 20 轮没跑赢 5 轮 ——
+        #    说明瓶颈不是数据量是【容量】。GPU 上把网络放大才是正解。
+        for d in list(dilations) * n_rep:
             blocks.append(nn.Sequential(
                 nn.Conv1d(h, h, 3, padding=d, dilation=d),
                 nn.GroupNorm(4, h), nn.GELU()))
@@ -97,7 +99,9 @@ def evaluate(net, ohlcv, idx, y, lday, bs=4096, day=None, mkt=None, day_min=0):
     with torch.no_grad():
         for i in range(0, len(idx), bs):
             x = make_batch(ohlcv, idx[i:i + bs], day=day, mkt=mkt, day_min=day_min)
-            sc[i:i + bs] = net(torch.as_tensor(x, device=DEV)).cpu().numpy()
+            with torch.autocast("cuda", dtype=torch.float16, enabled=(DEV == "cuda")):
+                out = net(torch.as_tensor(x, device=DEV))
+            sc[i:i + bs] = out.float().cpu().numpy()
     net.train()
     import pandas as pd
     d = pd.DataFrame({"day": lday, "y": y, "s": sc})
@@ -122,6 +126,9 @@ def main() -> None:
     ap.add_argument("--n-train", type=int, default=800_000)
     ap.add_argument("--n-eval", type=int, default=600_000)
     ap.add_argument("--lr", type=float, default=1e-3)
+    ap.add_argument("--h", type=int, default=48, help="网络宽度")
+    ap.add_argument("--rep", type=int, default=1, help="膨胀块重复次数(深度)")
+    ap.add_argument("--tag", default="", help="模型文件后缀, 便于扫参数")
     a = ap.parse_args()
 
     d = np.load(f"{DIR}/panel.npz")
@@ -139,11 +146,12 @@ def main() -> None:
     log.info("设备 %s | 训练 %s / 测试 %s (样本外 2021-2026)",
              DEV, f"{len(tr_i):,}", f"{len(te_i):,}")
 
-    net = Net(ch=n_ch).to(DEV)
+    net = Net(ch=n_ch, h=a.h, n_rep=a.rep).to(DEV)
     n_par = sum(p.numel() for p in net.parameters())
     log.info("参数量 %s", f"{n_par:,}")
     opt = torch.optim.AdamW(net.parameters(), lr=a.lr, weight_decay=1e-4)
     lossf = nn.HuberLoss(delta=0.05)     # 标签有厚尾, Huber 比 MSE 稳
+    scaler = torch.amp.GradScaler("cuda", enabled=(DEV == "cuda"))
 
     for ep in range(1, a.epochs + 1):
         rng.shuffle(tr_i)
@@ -153,10 +161,14 @@ def main() -> None:
             x = torch.as_tensor(make_batch(ohlcv, idx[b], day=day_all, mkt=mkt,
                                            day_min=day_min), device=DEV)
             t = torch.as_tensor(y[b], device=DEV)
-            loss = lossf(net(x), t)
-            opt.zero_grad(); loss.backward()
+            # ⚠️ T4 有 tensor core, AMP 大约快 2~3 倍; 金融数据精度要求不高
+            with torch.autocast("cuda", dtype=torch.float16, enabled=(DEV == "cuda")):
+                loss = lossf(net(x), t)
+            opt.zero_grad()
+            scaler.scale(loss).backward()
+            scaler.unscale_(opt)
             nn.utils.clip_grad_norm_(net.parameters(), 1.0)
-            opt.step()
+            scaler.step(opt); scaler.update()
             tot += float(loss.detach()); nb += 1
             if nb % 400 == 0:
                 log.info("  ep%d %5d/%d 批 损失 %.5f (%.0f 批/分)",
@@ -167,7 +179,7 @@ def main() -> None:
         log.info("ep%d 样本外 Top1%% %+.2f Top5%% %+.2f Bot20%% %+.2f | 审计 %+.3f",
                  ep, r["Top1%"], r["Top5%"], r["Bot20%"], r["corr"])
         log.info("     逐年 %s", r["yearly"])
-        torch.save(net.state_dict(), f"{DIR}/cnn.pt")
+        torch.save(net.state_dict(), f"{DIR}/cnn{a.tag}.pt")
 
 
 if __name__ == "__main__":

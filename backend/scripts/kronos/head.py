@@ -63,25 +63,49 @@ def main() -> None:
     a = ap.parse_args()
 
     dev = "cuda" if torch.cuda.is_available() else "cpu"
-    E = np.concatenate([np.load(p) for p in sorted(glob.glob(f"{a.emb}/emb_*.npy"))])
+    # ⚠️ 不能 np.concatenate 全部分片: 7.4G 特征 + 拼大盘 = 11G, 再标准化翻倍,
+    #    29G 的机器直接 OOM(实测内核 killed, rss 30.6G)。
+    #    改成: 先建一个 memmap 大矩阵, 逐片写进去, 全程不出现第二份拷贝。
+    import os as _os
     m = np.load(f"{a.emb}/meta.npz")
     y, lday, lcid, is_tr = m["y"], m["lab_day"], m["lab_cid"], m["is_train"]
     day_min = int(m["day_min"])
     MK = np.load(f"{a.emb}/mkt_emb.npy")          # (n_idx, span, D)
-    assert len(E) == len(y), f"特征 {len(E)} 与标签 {len(y)} 不匹配"
+    files = sorted(glob.glob(f"{a.emb}/emb_*.npy"))
+    d0 = np.load(files[0], mmap_mode="r")
+    D_stock, D_mkt = d0.shape[1], MK.shape[2]
+    n_tot = len(y)
+    D = D_stock + MK.shape[0] * D_mkt
+    log.info("特征维 %d (个股 %d + 大盘 %d×%d), 样本 %s",
+             D, D_stock, MK.shape[0], D_mkt, f"{n_tot:,}")
 
-    # 拼上大盘表示 —— 与裸K模型的信息对等
+    path = f"{a.emb}/X.mm"
+    X = np.memmap(path, dtype=np.float32, mode="w+", shape=(n_tot, D))
     di = np.clip(lday - day_min, 0, MK.shape[1] - 1)
-    X = np.concatenate([E] + [MK[k][di] for k in range(MK.shape[0])], axis=1)
-    log.info("特征维 %d (个股 %d + 大盘 %d×%d)", X.shape[1], E.shape[1],
-             MK.shape[0], MK.shape[2])
-    del E, MK
+    off = 0
+    for f in files:
+        part = np.load(f, mmap_mode="r")
+        n = part.shape[0]
+        X[off:off + n, :D_stock] = part
+        sl = di[off:off + n]
+        for k in range(MK.shape[0]):
+            c0 = D_stock + k * D_mkt
+            X[off:off + n, c0:c0 + D_mkt] = MK[k][sl]
+        off += n
+        del part
+    assert off == n_tot, f"分片行数 {off} 与标签 {n_tot} 不符"
+    del MK
+    X.flush()
 
     tr, te = np.flatnonzero(is_tr), np.flatnonzero(~is_tr)
-    mu, sd = X[tr].mean(0), X[tr].std(0) + 1e-6      # ⚠️ 只能用训练集的统计量
-    X = ((X - mu) / sd).astype(np.float32)
+    # ⚠️ 标准化只能用训练集的统计量; 抽样估计即可, 不必全量(省内存)
+    smp = tr[np.random.default_rng(0).choice(len(tr), min(200_000, len(tr)),
+                                             replace=False)]
+    mu = np.asarray(X[smp]).mean(0)
+    sd = np.asarray(X[smp]).std(0) + 1e-6
+    log.info("训练 %s / 测试 %s", f"{len(tr):,}", f"{len(te):,}")
 
-    net = Head(X.shape[1]).to(dev)
+    net = Head(D).to(dev)
     opt = torch.optim.AdamW(net.parameters(), lr=a.lr, weight_decay=1e-4)
     lossf = nn.HuberLoss(delta=0.05)
     rng = np.random.default_rng(42)
@@ -91,13 +115,15 @@ def main() -> None:
         net.train()
         for i in range(0, len(tr), a.bs):
             b = tr[i:i + a.bs]
-            loss = lossf(net(torch.as_tensor(X[b], device=dev)),
+            xb = (np.asarray(X[b]) - mu) / sd
+            loss = lossf(net(torch.as_tensor(xb, device=dev)),
                          torch.as_tensor(y[b], device=dev))
             opt.zero_grad(); loss.backward(); opt.step()
         net.eval()
         with torch.no_grad():
             sc = np.concatenate([
-                net(torch.as_tensor(X[te[i:i + 65536]], device=dev)).cpu().numpy()
+                net(torch.as_tensor(((np.asarray(X[te[i:i + 65536]]) - mu) / sd
+                                     ).astype(np.float32), device=dev)).cpu().numpy()
                 for i in range(0, len(te), 65536)])
         report(f"ep{ep}", sc, y[te], lday[te])
 
