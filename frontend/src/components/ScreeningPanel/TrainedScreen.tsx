@@ -32,15 +32,24 @@ export function TrainedScreen() {
     localStorage.setItem("screen.ind.order", JSON.stringify(order));
   }, [order]);
 
+  // ⚠️ 打开页面默认选【你排在第一位的那个】, 不是后端返回的第一个。
+  //    只在首次加载时定一次 —— 之后拖动排序不应该把当前选择跳走,
+  //    那样正在看的结果会被无声换掉。
+  const pickedOnce = useRef(false);
   useEffect(() => {
     listTrained()
       .then((r) => {
         setMetas(r.indicators);
-        if (r.indicators.length && !r.indicators.some((m) => m.key === indicator)) {
-          setIndicator(r.indicators[0].key);
-          setGrade(r.indicators[0].default_grade);
-          if (r.indicators[0].default_days) setDays(r.indicators[0].default_days);
-        }
+        if (!r.indicators.length || pickedOnce.current) return;
+        pickedOnce.current = true;
+        const pos = new Map(order.map((k, i) => [k, i]));
+        const first = [...r.indicators].sort(
+          (a, b) => (pos.get(a.key) ?? 1e9) - (pos.get(b.key) ?? 1e9)
+        )[0];
+        setIndicator(first.key);
+        setGrade(first.default_grade);
+        // 稀疏指标自带建议窗口 —— 不套用的话切过去就是一片空白
+        setDays(first.default_days ?? 5);
       })
       .catch(() => setMetas([]));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
