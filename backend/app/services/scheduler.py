@@ -310,6 +310,26 @@ async def _settle_paper() -> None:
 async def daily_sync_job():
     """Main scheduled job: sync stocks then ETFs, then settle paper accounts."""
     log.info("====== daily sync triggered at 15:30 ======")
+    # ⚠️ 先按【交易日】整批补, 再让 _sync_stocks 逐只兜底。
+    #    只靠逐只会静默留缺口: 4400 只挨个调 API, 一次限流就少一批,
+    #    界面上看不出来, 只是选股结果变少。2026-09-07 就这样只入库
+    #    3279/5549 只, 当天所有训练指标都出不了完整信号。
+    #    整批一次调用 3 秒补完一天, 逐只要半小时还跑不完。
+    try:
+        from app.commands.fill_daily import fill as _fill_daily
+        import tushare as _ts
+        from app.config import settings as _cfg
+        _pro = _ts.pro_api(_cfg.tushare_token)
+        _end = date.today()
+        _cal = _pro.trade_cal(exchange="SSE",
+                              start_date=(_end - timedelta(days=15)).strftime("%Y%m%d"),
+                              end_date=_end.strftime("%Y%m%d"), is_open="1")
+        _days = sorted(_cal.cal_date.tolist())[-5:]
+        log.info("整批补日线 %s", _days)
+        await _fill_daily(_days)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("整批补日线失败(继续走逐只): %s", exc)
+
     await _sync_stocks()
     await _sync_etfs()
     # 信号增量 + 虚拟盘结算。策略 tdx-dual-kdj —— 缠论已下架(三条未来函数,

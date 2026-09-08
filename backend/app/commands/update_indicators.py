@@ -186,8 +186,19 @@ async def main() -> None:
     # 特征的 rolling 窗口(最长60日)完整 —— 增量算特征要回看60天,
     # 复杂度和全量差不多, 不值得为此引入两套代码路径。
     from app.commands import (build_breakout, build_didian, build_dongli,
-                              build_maimai, build_maimai_weekly, build_pump,
-                              build_sar)
+                              build_maimai, build_maimai_weekly, build_panels,
+                              build_pump, build_sar)
+
+    # ⚠️ 面板必须先重建。买卖很准/主力吸筹/低点组合三个指标读的是
+    #    /app/data/research/panel.npz 与 cyq_panel.npz 这两个【缓存面板】,
+    #    不是直接读库。原来没有任何东西重建它们 —— 面板停在 2026-09-04,
+    #    三个指标每天照常"重算"却永远出不了新信号, 而且不报错。
+    #    2026-09-08 才被用户发现, 已经静默失效四天。
+    try:
+        log.info("--- 面板重建 ---")
+        await build_panels.main()
+    except Exception as exc:  # noqa: BLE001
+        log.exception("面板重建失败(下游三个指标会用旧面板): %s", exc)
 
     # ⚠️ build_dongli 必须在这里跑: 拉升预警 = 动力线 × 吸筹, 动力线不更新
     # 就再也出不了新信号(v3.5 和龙虎榜都因为漏接每日更新静默过期过)。
