@@ -12,6 +12,8 @@ import { FavButton } from "./ChartArea/FavButton";
 import type { MainChartHandle } from "./ChartArea/MainChart";
 import { useTdxIndicators } from "../hooks/useTdxIndicators";
 import { IndicatorMenus } from "./ChartArea/IndicatorMenus";
+import { MAIN_PANE_INDICATORS } from "./ChartArea/indicatorPanes";
+import { StockSectors } from "./ChartArea/StockSectors";
 import { useTrainedSignals } from "../hooks/useTrainedSignals";
 
 type SortKey = "avg_pct" | "up_ratio" | "count" | "max_pct";
@@ -53,6 +55,44 @@ export function SectorView() {
   useEffect(() => {
     localStorage.setItem("sector.trained", JSON.stringify(trained));
   }, [trained]);
+
+  // 标准指标(MA/BOLL/SAR/MACD) —— 板块页原来完全没有这一组。
+  const [stdInd, setStdInd] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("sector.std") ?? "[]"); }
+    catch { return []; }
+  });
+  useEffect(() => {
+    localStorage.setItem("sector.std", JSON.stringify(stdInd));
+  }, [stdInd]);
+
+  // ⚠️ 与图表【对账】而不是"再创建一次" —— klinecharts 主图 isStack=true,
+  //    重复创建会静默叠一层(本项目为此栽过三次: TDX叠4层、MA叠5层)。
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const chart = chartRef.current?.getChart();
+      if (!chart) return;
+      const want = new Set(stdInd);
+      const STD = new Set(["MA", "BOLL", "SAR", "MACD"]);
+      const have = new Map<string, number>();
+      for (const ind of chart.getIndicators()) {
+        if (!STD.has(ind.name)) continue;
+        have.set(ind.name, (have.get(ind.name) ?? 0) + 1);
+      }
+      for (const [name, n] of have) {
+        if (!want.has(name) || n > 1) {
+          for (let i = 0; i < n; i++) chart.removeIndicator({ name });
+          have.delete(name);
+        }
+      }
+      for (const name of want) {
+        if (!have.has(name)) {
+          chart.createIndicator(name, true,
+            { id: MAIN_PANE_INDICATORS.has(name) ? "candle_pane" : undefined });
+        }
+      }
+    }, 100);
+    return () => clearTimeout(t);
+  }, [stdInd, pick, chartTf]);
   const trainedData = useTrainedSignals(pick?.code ?? "", trained);
 
   const tdx = useTdxIndicators({
@@ -278,6 +318,10 @@ export function SectorView() {
               </div>
               <div className="sc-ind">
                 <IndicatorMenus
+                  stdActive={stdInd}
+                  onToggleStd={(n) =>
+                    setStdInd((v) => v.includes(n) ? v.filter((x) => x !== n) : [...v, n])
+                  }
                   tdxAvailable={tdx.available}
                   tdxActive={tdx.active}
                   onToggleTdx={tdx.toggle}
@@ -294,6 +338,9 @@ export function SectorView() {
               </div>
               <button className="sd-close" onClick={() => setPick(null)}>×</button>
             </div>
+            {/* 板块信息条 —— 和行情页同一个组件。看个股K线时想知道它属于
+                哪些板块、当日强弱如何, 板块页更需要这个。 */}
+            {pick && <StockSectors symbol={pick.code} />}
             <div className="sc-body">
               <MainChart ref={chartRef} timeframe={chartTf} className="sc-chart"
                          {...trainedData.props} />

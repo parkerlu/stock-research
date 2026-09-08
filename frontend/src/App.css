@@ -2606,3 +2606,10 @@ body {
 }
 .ts-ind.draggable { position: relative; padding-left: 16px; }
 .ts-ind.draggable:hover::before { color: #6a7488; }
+
+/* 板块页/实时页的「指标」下拉 —— 与「训练」并排, 样式沿用 live-tdx */
+.std-menu .live-tdx-group {
+  padding: 3px 8px 2px;
+  color: #6a7488;
+  font-size: 11px;
+}
