@@ -80,6 +80,8 @@ def create_app() -> FastAPI:
     app.include_router(forecast_router)
     app.include_router(paper_router)
     app.include_router(sectors_router)
+    from app.routers.kronos_pred import router as kronos_router
+    app.include_router(kronos_router)
 
     @app.get("/api/health")
     async def health():

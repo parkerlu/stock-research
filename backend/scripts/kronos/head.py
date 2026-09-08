@@ -97,7 +97,19 @@ def main() -> None:
     del MK
     X.flush()
 
-    tr, te = np.flatnonzero(is_tr), np.flatnonzero(~is_tr)
+    # ⚠️ 三段划分, 与裸K模型同一套流程 —— 否则这轮 Kronos 的数字又是
+    #    "用测试集挑轮次"挑出来的, 和之前一样虚高, 对比毫无意义。
+    #    2026-09-08 发现: 同一网络同一数据, 挑轮次 vs 验证集挑,
+    #    Top5% 从 +0.47 掉到 +0.02, 差一个数量级。
+    yr_all = pd.to_datetime(pd.Series(lday), unit="D").dt.year.to_numpy()
+    tr = np.flatnonzero(is_tr & (yr_all <= 2019))
+    va = np.flatnonzero(is_tr & (yr_all == 2020))
+    te = np.flatnonzero(~is_tr)
+    if len(va) == 0:            # 训练段没有2020, 从训练集尾部切一段当验证
+        tr_sorted = tr[np.argsort(lday[tr])]
+        cut = int(len(tr_sorted) * 0.85)
+        tr, va = tr_sorted[:cut], tr_sorted[cut:]
+    log.info("训练 %s / 验证 %s / 测试 %s", f"{len(tr):,}", f"{len(va):,}", f"{len(te):,}")
     # ⚠️ 标准化只能用训练集的统计量; 抽样估计即可, 不必全量(省内存)
     smp = tr[np.random.default_rng(0).choice(len(tr), min(200_000, len(tr)),
                                              replace=False)]
@@ -110,6 +122,24 @@ def main() -> None:
     lossf = nn.HuberLoss(delta=0.05)
     rng = np.random.default_rng(42)
 
+    def _rank_ic(dd, sc, yy):
+        x = pd.DataFrame({"d": dd, "s": sc, "y": yy})
+        g = x.groupby("d").apply(
+            lambda z: z["s"].corr(z["y"], method="spearman") if len(z) > 20 else np.nan,
+            include_groups=False)
+        return float(np.nanmean(g.to_numpy()))
+
+    def _score(rows):
+        net.eval()
+        with torch.no_grad():
+            o = np.concatenate([
+                net(torch.as_tensor(((np.asarray(X[rows[i:i + 65536]]) - mu) / sd
+                                     ).astype(np.float32), device=dev)).cpu().numpy()
+                for i in range(0, len(rows), 65536)])
+        net.train()
+        return o
+
+    best_ic, best_state, bad = -9e9, None, 0
     for ep in range(1, a.epochs + 1):
         rng.shuffle(tr)
         net.train()
@@ -119,13 +149,21 @@ def main() -> None:
             loss = lossf(net(torch.as_tensor(xb, device=dev)),
                          torch.as_tensor(y[b], device=dev))
             opt.zero_grad(); loss.backward(); opt.step()
-        net.eval()
-        with torch.no_grad():
-            sc = np.concatenate([
-                net(torch.as_tensor(((np.asarray(X[te[i:i + 65536]]) - mu) / sd
-                                     ).astype(np.float32), device=dev)).cpu().numpy()
-                for i in range(0, len(te), 65536)])
-        report(f"ep{ep}", sc, y[te], lday[te])
+        ic = _rank_ic(lday[va], _score(va), y[va])
+        log.info("ep%-2d 验证RankIC %+.4f", ep, ic)
+        # ⚠️ 只看验证集; 测试集在训练全程一次都不碰
+        if ic > best_ic:
+            best_ic, bad = ic, 0
+            best_state = {k: v.detach().clone() for k, v in net.state_dict().items()}
+        else:
+            bad += 1
+            if bad >= 3:
+                log.info("连续3轮没提升, 提前停"); break
+    net.load_state_dict(best_state)
+    sc = _score(te)
+    log.info("验证最优 RankIC %+.4f", best_ic)
+    log.info("测试 RankIC %+.4f", _rank_ic(lday[te], sc, y[te]))
+    report("★最终(验证集选出)", sc, y[te], lday[te])
 
     np.savez("kronos_scores.npz", score=sc, lab_day=lday[te], lab_cid=lcid[te])
     log.info("分数已存 kronos_scores.npz —— 拿回本地跑组合回测")
