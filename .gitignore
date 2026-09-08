@@ -25,3 +25,6 @@ backend/models/lstm_dataset.npz
 backend/models/t0_*.json
 backend/models/models_out/
 backend/data/research/t0_bars.parquet
+
+# Kronos 数据包 —— 184MB, 不进仓库(可由 scripts/rawk/pack.py 重新生成)
+backend/scripts/kronos/kaggle_pack.npz
