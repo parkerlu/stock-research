@@ -21,9 +21,12 @@ from app.services.tdx.indicators import (
     zhuli_lasheng_tiqian,
 )
 
+# ⚠️ multi_kdj(多周期KDJ共振)2026-09-08 从菜单下架 ——
+#    它依赖周内多周期数据, 存在穿越(策略层早就因此下架了, 但指标一直还挂着)。
+#    ⚠️ 文件不能删: didian_zuhe(低点组合)复用了它的公式, 删了会连带炸。
+#    这里只摘菜单入口, import 保留。
 _INDICATORS: dict[str, ModuleType] = {
     ma.name: ma,
-    multi_kdj.name: multi_kdj,
     dongli_xian.name: dongli_xian,
     maimai_henzhun.name: maimai_henzhun,
     didian_zuhe.name: didian_zuhe,
