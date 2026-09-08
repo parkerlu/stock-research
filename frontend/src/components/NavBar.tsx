@@ -21,8 +21,14 @@ export function NavBar({ mode, onModeChange }: Props) {
       <div className="navbar-brand">A股研究平台</div>
       <div className="navbar-tabs">
         {/* 顺序按用户 2026-09-08 的要求排:
-            实时 / 选股 / 股票池 / 板块 / 行情 —— 常用的在前
+            行情 / 实时 / 选股 / 股票池 / 板块 —— 常用的在前
             龙虎榜 / 策略 / 策略池 / 虚拟盘 —— 其次 */}
+        <button
+          className={mode === "quote" ? "active" : ""}
+          onClick={() => onModeChange("quote")}
+        >
+          行情
+        </button>
         <button
           className={mode === "live" ? "active" : ""}
           onClick={() => onModeChange("live")}
@@ -48,12 +54,6 @@ export function NavBar({ mode, onModeChange }: Props) {
           title="概念板块热度 — 上涨占比 / 平均涨幅 / 成分股"
         >
           板块
-        </button>
-        <button
-          className={mode === "quote" ? "active" : ""}
-          onClick={() => onModeChange("quote")}
-        >
-          行情
         </button>
         <button
           className={mode === "toplist" ? "active" : ""}
