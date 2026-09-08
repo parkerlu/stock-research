@@ -52,7 +52,7 @@ def main():
     jd = pd.concat(dl, ignore_index=True); rcorr = jd["avg"].corr(jd["m"])
     t1=acc["Top1%"][1]/max(acc["Top1%"][0],1)*100; t5=acc["Top5%"][1]/max(acc["Top5%"][0],1)*100
     b20=acc["Bot20%"][1]/max(acc["Bot20%"][0],1)*100
-    log.info("all+S     Top1%% %+5.2f  Top5%% %+5.2f  Bot20%% %+5.2f | 负年 %d 最小 %+5.2f | 审计 %+.3f | 新特征占比 %4.1f%% (信号 %４.1f%%) | top新: %s",
+    log.info("all+S     Top1%% %+5.2f  Top5%% %+5.2f  Bot20%% %+5.2f | 负年 %d 最小 %+5.2f | 审计 %+.3f | 新特征占比 %4.1f%% (信号 %4.1f%%) | top新: %s",
              t1,t5,b20,sum(1 for x in yearly if x<0),min(yearly),rcorr,new_share*100,sig_share*100,
              " ".join(f"{k}:{v:.3f}" for k,v in top_new))
     log.info("all+S       逐年: %s", "  ".join(f"{y_}:{v:+.2f}" for y_,v in zip(te_years,yearly)))
