@@ -79,13 +79,35 @@ def build():
     P = np.load(CYQ)
     log.info("面板 %d 天 × %d 只", T, N)
 
-    # ---- 原指标信号: 阶段底部 = 动力线上穿 0.2 ----
-    var2 = _roll(L, 10, np.nanmin)
-    var33 = _roll(Hh, 25, np.nanmax)
+    # ---- 候选信号: 阶段底部 × DIBU ----
+    # ⚠️ 窗口必须与图上画的一致(34/34)。原来这里写的是 LLV(low,10)/HHV(high,25),
+    #    也就是【训练用的"阶段底部"和用户在图上看到的红柱不是同一个东西】——
+    #    2026-09-08 发现, 属于长期存在的静默不一致。
+    var2 = _roll(L, 34, np.nanmin)
+    var33 = _roll(Hh, 34, np.nanmax)
     dongli = _sma_tdx((C - var2) / np.maximum(var33 - var2, 1e-9) * 4, 4, 2)
     dl_prev = np.vstack([np.full((1, N), np.nan), dongli[:-1]])
-    sig = (dl_prev <= 0.2) & (dongli > 0.2)
-    log.info("阶段底部信号 %d", int(sig.sum()))
+    stage_bottom = (dl_prev <= 0.2) & (dongli > 0.2)
+
+    # ⚠️ DIBU(四周期KDJ同时超卖)当初被弃用, 理由是"H=5 时输给随机"——
+    #    那是【短持有期】的结论。H=20 时 DIBU 单独就有 +0.708pp(百万级样本),
+    #    与阶段底部组合后 +0.954pp, 比单用阶段底部(+0.843pp)高 13%,
+    #    负年同样只有 1 个。2026-09-08 用户指出"这个指标很多信号没用到"后复测。
+    def _kdj_k(period, sw):
+        hh = _roll(Hh, period, np.nanmax)
+        ll = _roll(L, period, np.nanmin)
+        rsv = (C - ll) / np.maximum(hh - ll, 1e-9) * 100
+        return _sma_tdx(rsv, sw, 1)
+
+    k13 = _kdj_k(13, 3); k21 = _kdj_k(21, 3)
+    k34 = _kdj_k(34, 3); k55 = _kdj_k(55, 5)
+    d14 = _sma_tdx(k13, 3, 1)
+    d55 = _sma_tdx(k55, 5, 1)
+    dibu = (k13 < 30) & (k21 < 30) & (k34 < 30) & (k55 < 30)
+
+    sig = stage_bottom & dibu
+    log.info("阶段底部 %d, DIBU %d, 组合信号 %d",
+             int(stage_bottom.sum()), int(dibu.sum()), int(sig.sum()))
 
     ret1 = np.full_like(C, np.nan)
     ret1[1:] = C[1:] / C[:-1] - 1
@@ -111,6 +133,19 @@ def build():
         "现价比中位成本": C / np.maximum(c50, 1e-9) - 1,
         "筹码宽度": (c85 - c15) / np.maximum(c50, 1e-9),   # 本指标里重要性第一
         "成本上移20": c50 / np.maximum(_sh(c50, 20), 1e-9) - 1,
+        # ---- 指标自身的连续线(2026-09-08 补) ----
+        # ⚠️ 之前一条都没进特征 —— 模型只知道"信号触发了", 不知道触发时
+        #    KDJ 有多低、动力线走到哪、快慢周期是否背离。这些正是人眼在图上
+        #    看的东西。
+        "动力线": dongli,
+        "动力线变化5": dongli - _sh(dongli, 5),
+        "K13": k13,
+        "D14": d14,
+        "K55": k55,
+        "D55": d55,
+        "K13减D14": k13 - d14,              # 快线金叉/死叉的连续版
+        "K55减D55": k55 - d55,              # 慢线趋势
+        "K13减K55": k13 - k55,              # 快慢周期背离
     }
     names = list(F)
     X_all = np.full((T, N, len(names)), np.nan, dtype=np.float32)
