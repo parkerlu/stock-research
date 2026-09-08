@@ -97,22 +97,16 @@ export function ChartArea({ tradeActions }: Props = {}) {
 
   // 自训练指标 —— 目前只有买卖很准v3, 后续新增的训练指标都挂这里
   const [lhb, setLhb] = useState<{ date: string; net_wan: number }[]>([]);
-  // 龙虎榜默认开 —— 它是基础信息, 但用户可以在「训练」菜单里关掉。
+  // ⚠️ 默认【不开】任何训练指标, 包括龙虎榜(2026-09-08 用户要求)。
+  //    以前默认开龙虎榜, 还写了一段"一次性迁移"硬塞进老用户的存档里 ——
+  //    那等于替用户做主。现在完全听存档, 没有存档就是空。
   const [activeTrained, setActiveTrained] = useState<string[]>(() => {
     try {
       const raw = localStorage.getItem("chart.trained.v1");
       const p = raw ? JSON.parse(raw) : null;
-      if (!Array.isArray(p)) return ["toplist"];
-      // 一次性迁移: 龙虎榜标记以前是常驻的(没有开关), 加开关后老用户的存档里
-      // 没有这一项, 直接按"关"处理会让标记莫名消失。补一次, 之后完全听用户的。
-      const MIG = "chart.trained.toplist.migrated";
-      if (!localStorage.getItem(MIG)) {
-        localStorage.setItem(MIG, "1");
-        if (!p.includes("toplist")) return [...p, "toplist"];
-      }
-      return p;
+      return Array.isArray(p) ? p : [];
     } catch {
-      return ["toplist"];
+      return [];
     }
   });
   const [mmwkSig, setMmwkSig] = useState<

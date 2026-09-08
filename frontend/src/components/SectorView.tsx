@@ -44,7 +44,15 @@ export function SectorView() {
   const [chartTf, setChartTf] = useState<"1d" | "1w" | "1m">("1d");
   const chartRef = useRef<MainChartHandle>(null);
   // 训练指标 —— 清单与取数都在 useTrainedSignals, 三个页面共用一份。
-  const [trained, setTrained] = useState<string[]>([]);
+  // ⚠️ 也要存 localStorage —— 三个页面的行为要一致(2026-09-08 用户要求)。
+  //    默认为空: 不替用户预先打开任何指标。
+  const [trained, setTrained] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("sector.trained") ?? "[]"); }
+    catch { return []; }
+  });
+  useEffect(() => {
+    localStorage.setItem("sector.trained", JSON.stringify(trained));
+  }, [trained]);
   const trainedData = useTrainedSignals(pick?.code ?? "", trained);
 
   const tdx = useTdxIndicators({
