@@ -19,6 +19,7 @@ import asyncio
 import datetime as dt
 import logging
 
+import numpy as np
 import pandas as pd
 import tushare as ts
 from sqlalchemy import text
@@ -51,8 +52,33 @@ async def fill(days: list[str]) -> int:
             if adj is not None and not adj.empty:
                 df = df.merge(adj[["ts_code", "adj_factor"]], on="ts_code", how="left")
             if "adj_factor" not in df.columns:
-                df["adj_factor"] = 1.0
-            df["adj_factor"] = df["adj_factor"].fillna(1.0)
+                df["adj_factor"] = np.nan
+            # ⚠️⚠️ 绝不能把缺失的复权因子填成 1.0 ——
+            #    前复权价 = 原价 × (当日factor / 该股最新factor)。
+            #    某只票的 factor 是 6.96, 那天被填成 1.0, 前复权价就变成
+            #    4.23 × (1/6.96) = 0.61 —— K线上凭空出现一根 0.59 的柱子,
+            #    而且【不报错】。2026-09-08 用户在 002634 上发现, 全库 76 行中招。
+            #    正确做法: 用该股【最近的已知 factor】。复权因子只在除权日变,
+            #    沿用上一个已知值是安全的; 填 1.0 则是灾难性的。
+            miss = df["adj_factor"].isna()
+            if miss.any():
+                codes_miss = df.loc[miss, "ts_code"].tolist()
+                async with eng.connect() as c:
+                    rows_af = (await c.execute(text("""
+                        select distinct on (ts_code) ts_code, adj_factor
+                        from daily_candle
+                        where ts_code = any(:cs) and trade_date < :d
+                        order by ts_code, trade_date desc
+                    """), {"cs": codes_miss,
+                           "d": pd.to_datetime(d).date()})).fetchall()
+                known = {r[0]: float(r[1]) for r in rows_af}
+                df.loc[miss, "adj_factor"] = df.loc[miss, "ts_code"].map(known)
+                still = int(df["adj_factor"].isna().sum())
+                log.warning("%s: %d 只缺复权因子, 用历史值补上 %d 只%s",
+                            d, int(miss.sum()), int(miss.sum()) - still,
+                            f", 仍缺 {still} 只(将跳过)" if still else "")
+            # 仍然拿不到的直接丢弃这一行 —— 宁可缺一根K线, 也不要一根错的
+            df = df[df["adj_factor"].notna()]
             rows = [{"ts_code": r.ts_code,
                      "trade_date": pd.to_datetime(r.trade_date).date(),
                      "open": float(r.open), "high": float(r.high),
