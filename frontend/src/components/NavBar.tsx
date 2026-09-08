@@ -20,24 +20,9 @@ export function NavBar({ mode, onModeChange }: Props) {
     <nav className="app-navbar">
       <div className="navbar-brand">A股研究平台</div>
       <div className="navbar-tabs">
-        <button
-          className={mode === "strategy" ? "active" : ""}
-          onClick={() => onModeChange("strategy")}
-        >
-          策略
-        </button>
-        <button
-          className={mode === "screening" ? "active" : ""}
-          onClick={() => onModeChange("screening")}
-        >
-          选股
-        </button>
-        <button
-          className={mode === "strategy-pool" ? "active" : ""}
-          onClick={() => onModeChange("strategy-pool")}
-        >
-          策略池
-        </button>
+        {/* 顺序按用户 2026-09-08 的要求排:
+            实时 / 选股 / 股票池 / 板块 / 行情 —— 常用的在前
+            龙虎榜 / 策略 / 策略池 / 虚拟盘 —— 其次 */}
         <button
           className={mode === "live" ? "active" : ""}
           onClick={() => onModeChange("live")}
@@ -46,17 +31,16 @@ export function NavBar({ mode, onModeChange }: Props) {
           实时
         </button>
         <button
-          className={mode === "paper" ? "active" : ""}
-          onClick={() => onModeChange("paper")}
-          title="虚拟盘 — chan-2buy 最优配置的实盘跟踪"
+          className={mode === "screening" ? "active" : ""}
+          onClick={() => onModeChange("screening")}
         >
-          虚拟盘
+          选股
         </button>
         <button
-          className={mode === "toplist" ? "active" : ""}
-          onClick={() => onModeChange("toplist")}
+          className={mode === "pool" ? "active" : ""}
+          onClick={() => onModeChange("pool")}
         >
-          龙虎榜
+          股票池
         </button>
         <button
           className={mode === "sector" ? "active" : ""}
@@ -72,10 +56,29 @@ export function NavBar({ mode, onModeChange }: Props) {
           行情
         </button>
         <button
-          className={mode === "pool" ? "active" : ""}
-          onClick={() => onModeChange("pool")}
+          className={mode === "toplist" ? "active" : ""}
+          onClick={() => onModeChange("toplist")}
         >
-          股票池
+          龙虎榜
+        </button>
+        <button
+          className={mode === "strategy" ? "active" : ""}
+          onClick={() => onModeChange("strategy")}
+        >
+          策略
+        </button>
+        <button
+          className={mode === "strategy-pool" ? "active" : ""}
+          onClick={() => onModeChange("strategy-pool")}
+        >
+          策略池
+        </button>
+        <button
+          className={mode === "paper" ? "active" : ""}
+          onClick={() => onModeChange("paper")}
+          title="虚拟盘 — 各策略的实盘跟踪与历史回放"
+        >
+          虚拟盘
         </button>
       </div>
       <div className="navbar-spacer" />
