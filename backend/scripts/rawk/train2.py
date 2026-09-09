@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import time
 
 import numpy as np
@@ -161,6 +162,8 @@ def main() -> None:
     ap.add_argument("--label", default="label3.npz", help="三分类标签文件(rawk.label3 生成)")
     ap.add_argument("--smoke", action="store_true", help="只取几千样本跑通流程")
     ap.add_argument("--nbar", type=int, default=NBAR, help="输入几根K线(对照 100/200/400)")
+    ap.add_argument("--reuse", action="store_true",
+                    help="已有 cnn2<tag>_s<i>.pt 的种子直接加载, 只补训缺的种子(机器中途被回收时用)")
     ap.add_argument("--min-hist", type=int, default=0,
                     help="只用有 >=N 根同股历史的样本 —— nbar 对照时三组用同一批样本才公平")
     a = ap.parse_args()
@@ -234,7 +237,19 @@ def main() -> None:
         lossf = nn.CrossEntropyLoss() if a.cls else nn.HuberLoss(delta=0.5 if a.rank_loss else 0.05)
         best_ic, best_state, bad = -9e9, None, 0
         r2 = np.random.default_rng(si)
-        for ep in range(1, a.epochs + 1):
+        ck = f"{DIR}/cnn2{a.tag}_s{si}.pt"
+        if a.reuse and os.path.exists(ck):
+            # ⚠️ 只复用权重; 验证分数重新算一遍, 保证和现跑的种子同一口径
+            net.load_state_dict(torch.load(ck, map_location=DEV))
+            best_state = {k: v.detach().clone() for k, v in net.state_dict().items()}
+            best_val = predict(net, ohlcv, idx[va], day_all, mkt, day_min, nbar=a.nbar)
+            if a.cls:
+                dv = pd.DataFrame({"d": lday[va], "p": best_val[:, 1], "r": ret3[va]})
+                best_ic = float(dv[dv.groupby("d")["p"].rank(pct=True) >= 0.95].r.mean() * 100)
+            else:
+                best_ic = rank_ic(lday[va], best_val, y[va])
+            log.info("  种子%d 复用已训完的 %s (验证 %+.4f), 跳过训练", si, ck, best_ic)
+        for ep in range(1, 0 if best_state is not None else a.epochs + 1):
             t0 = time.time()
             perm = r2.permutation(len(tr))
             for i in range(0, len(tr), a.bs):
