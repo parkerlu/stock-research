@@ -240,7 +240,7 @@ def main() -> None:
 
         print(f"== walk-forward 滚动选参 ({a.tag}, 仓位 {a.slots}) ==")
         print("年份 | 选参窗口   选中参数        | 该年 笔数  年化     回撤    比值")
-        eq_all, picks, use_all = [], [], []
+        eq_all, picks, use_all, skipped = [], [], [], []
         for y in test_years:
             hist = pool_df[pool_df.yr < y]
             cur = pool_df[pool_df.yr == y]
@@ -266,13 +266,24 @@ def main() -> None:
                 mk = breadth_mask(pool_df, thr)
             r = run(cur, days_all, a.slots, thr, mk, cp)
             if not r:
+                # ⚠️ 绝不能静默 continue: 选参窗口上最优的阈值可能严到下一年
+                #    一笔都触发不了(实测 cls512_dn8 在 2024 选了"前0.5%",
+                #    2025 整年零信号)。静默跳过会让"负年 0/5"看起来很干净,
+                #    而真相是那一年根本没交易 —— 这正是本项目反复栽的静默失效。
+                skipped.append((y, ma, q, cp))
+                print(f"{y} | 该年零信号(沿用的阈值太严: MA{ma or 0} 前{(1 - q) * 100:.1f}%) "
+                      f"—— 跳过, 但这一年【没有被评估】")
                 continue
             picks.append((y, ma, q, cp))
             eq_all.append(r["eq"])
             use_all.append(r["use"])
+            # ⚠️ 回撤趋近 0 时比值会炸(实测 2026 年 6 笔交易算出 4.8e13),
+            #    那不是"策略完美", 是分母没有意义。笔数太少同样不能当结论。
+            rs = "  n/a" if abs(r["mdd"]) < 1.0 else f"{r['ratio']:5.2f}"
+            warn = "  ⚠️笔数过少" if r["n"] < 30 else ""
             print(f"{y} | {int(hist.yr.min())}-{y - 1}  "
                   f"MA{ma or '--':<3} 前{(1 - q) * 100:4.1f}% cap{cp or '-'}| "
-                  f"{r['n']:5d}笔  {r['ann']:+7.1f}%  {r['mdd']:6.1f}%  {r['ratio']:5.2f}")
+                  f"{r['n']:5d}笔  {r['ann']:+7.1f}%  {r['mdd']:6.1f}%  {rs}{warn}")
         if eq_all:
             # ⚠️ 必须把逐年曲线【首尾相接】再算总回撤 —— 每年独立从 1.0 重启的话,
             #    跨年的那段回撤就被切断了, 数字会好看得多但不是真的。
@@ -294,6 +305,9 @@ def main() -> None:
                   f"年化 {ann:+.1f}%  最大回撤 {mdd:.1f}%")
             print(f"  平均仓位利用率 {np.mean([r for r in use_all]) * 100:.0f}%"
                   f"  (100% = 满仓)")
+            if skipped:
+                print(f"  ⚠️ 有 {len(skipped)} 年因零信号未被评估: "
+                      f"{[y for y, *_ in skipped]} —— 下面的数字不覆盖这些年")
             print(f"  比值 {ann / abs(mdd):.2f}  "
                   f"{'✅ 过线' if ann / abs(mdd) >= 1 else '❌ 未过 1.0'}   负年 {neg}/{len(yearly)}")
             print(f"  逐年 {[f'{y}:{v:+.0f}%' for (y, *_), v in zip(picks, yearly)]}")
