@@ -28,7 +28,8 @@ import argparse
 import numpy as np
 import pandas as pd
 
-DIR = "/root/data"
+DIR = "/root/data"          # 5090 上的默认; 本地用 --dir 覆盖
+PANEL = DIR
 COST = 0.003          # 佣金+印花税+滑点, 单边买卖合计的保守估计
 
 
@@ -64,7 +65,7 @@ def crash_mask(drop: float, win: int = 20, idx: int = 0) -> dict[int, bool]:
        walk-forward 越差"(0.78 -> 0.38), 这里就不能再加一个可调项。
        −15%/20日 是常识性的极端跌幅, 不是扫出来的。
     """
-    d = np.load(f"{DIR}/panel.npz")
+    d = np.load(f"{PANEL}/panel.npz")
     mkt, day_min = d["mkt"], int(d["day_min"])
     close = pd.Series(mkt[idx][3].astype(np.float64))
     ret = close / close.shift(win) - 1
@@ -87,7 +88,7 @@ def timing_mask(ma: int, idx: int = 0) -> dict[int, bool]:
     idx=0 中证1000, idx=1 沪深300。选中证1000 是因为选出来的多是小盘股 ——
     拿蓝筹的脸色判断小盘股死活, 项目里已经证明过是错的(换基准 1.91 -> 2.62)。
     """
-    d = np.load(f"{DIR}/panel.npz")
+    d = np.load(f"{PANEL}/panel.npz")
     mkt, day_min = d["mkt"], int(d["day_min"])
     close = pd.Series(mkt[idx][3].astype(np.float64))
     on = (close > close.rolling(ma).mean()).to_numpy()
@@ -157,8 +158,11 @@ def run(te: pd.DataFrame, days_all: np.ndarray, slots: int, thr: float,
 
 
 def main() -> None:
+    global DIR, PANEL
     ap = argparse.ArgumentParser()
     ap.add_argument("tag")
+    ap.add_argument("--dir", default=DIR, help="数据目录(本地容器用 /app/data/research/...)")
+    ap.add_argument("--panel", default=None, help="panel.npz 所在目录, 默认同 --dir")
     ap.add_argument("--label", default="label3_dn8.npz")
     ap.add_argument("--days", default="holddays_dn8.npz")
     ap.add_argument("--slots", type=int, default=20)
@@ -182,6 +186,8 @@ def main() -> None:
     ap.add_argument("--select", action="store_true",
                     help="诚实模式: 在 2020 验证集上网格选 (MA, 阈值), 再拿到测试集跑【一次】")
     a = ap.parse_args()
+    DIR = a.dir
+    PANEL = a.panel or a.dir
 
     o = np.load(f"{DIR}/oos_v2{a.tag}.npz")
     l3 = np.load(f"{DIR}/{a.label}")
