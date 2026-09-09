@@ -210,7 +210,7 @@ def main() -> None:
         y_fit = (s_.groupby("d")["y"].rank(pct=True).to_numpy(np.float32) - 0.5)
         log.info("⚠️ 用排序损失: 标签换成当日分位(居中 ±0.5)")
 
-    te_scores = []
+    te_scores, va_scores = [], []
     for si in range(a.seeds):
         torch.manual_seed(si); np.random.seed(si)
         net = Net(ch=n_ch, h=a.h, n_rep=a.rep, n_out=3 if a.cls else 1).to(DEV)
@@ -250,13 +250,14 @@ def main() -> None:
             if ic > best_ic:
                 best_ic, bad = ic, 0
                 best_state = {k: v.detach().clone() for k, v in net.state_dict().items()}
+                best_val = sv
             else:
                 bad += 1
                 if bad >= 3:
                     log.info("  种子%d 连续3轮没提升, 提前停", si); break
         net.load_state_dict(best_state)
         st = predict(net, ohlcv, idx[te_all], day_all, mkt, day_min)
-        te_scores.append(st)
+        te_scores.append(st); va_scores.append(best_val)
         if a.cls:
             report_cls(f"种子{si} 单模型(验证最优 Top5%期望 {best_ic:+.2f}%)", lday[te_all], st,
                        y3[te_all], ret3[te_all], vol20[te_all], UP, DN)
@@ -271,8 +272,11 @@ def main() -> None:
         # 概率直接平均(同一尺度), 排序按 P(涨)
         pm = np.mean(te_scores, axis=0).astype(np.float32)
         report_cls(f"★ {a.seeds}种子集成", lday[te_all], pm, y3[te_all], ret3[te_all], vol20[te_all], UP, DN)
+        pv = np.mean(va_scores, axis=0).astype(np.float32)
+        # ⚠️ 同时存 2020 验证集的概率 —— 买入阈值只能在这上面定, 不能在测试集上挑
         np.savez(f"{DIR}/oos_v2{a.tag}.npz", score=pm[:, 1], p_up=pm[:, 1], p_dn=pm[:, 2],
-                 lab_day=lday[te_all], lab_cid=d["lab_cid"][te_all])
+                 lab_day=lday[te_all], lab_cid=d["lab_cid"][te_all],
+                 va_p_up=pv[:, 1], va_p_dn=pv[:, 2], va_day=lday[va], va_idx=va, te_idx=te_all)
         log.info("样本外分数已存"); return
     ranks = []
     for s in te_scores:
