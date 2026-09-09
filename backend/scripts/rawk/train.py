@@ -54,7 +54,10 @@ def make_batch(ohlcv, idx, nbar=NBAR, day=None, mkt=None, day_min=0):
     # ---- 真实大盘K线(中证1000 + 沪深300), 同样只给形状 ----
     # ⚠️ 用【各自窗口最后一根收盘】归一化, 与个股同一口径; 这样个股与大盘
     #    的相对强弱由模型自己去算, 我不替它算。
-    if mkt is not None:
+    # ⚠️ mkt=None 时不拼大盘 —— 对照实验用: 判断优势是选股还是择时。
+    #    Kronos-small 用同样的输入学会了押方向(审计 -0.153, 去掉大盘后
+    #    Top1% 从 +0.55 掉到 -0.10), 所以我们自己的模型也必须查同一件事。
+    if mkt is not None and mkt.shape[0] > 0:
         dd = day[rows] - day_min                     # (B, nbar) 每根对应的日索引
         dd = np.clip(dd, 0, mkt.shape[2] - 1)
         for k in range(mkt.shape[0]):
@@ -71,7 +74,7 @@ class Net(nn.Module):
     """膨胀卷积 —— 膨胀率 1,2,4,8,16,32 叠起来感受野覆盖 200 根。
     网络故意做小: 金融数据信噪比极低, 大网络只会把噪声背下来。"""
 
-    def __init__(self, ch=6, h=48, dilations=(1, 2, 4, 8, 16, 32), n_rep=1):
+    def __init__(self, ch=6, h=48, dilations=(1, 2, 4, 8, 16, 32), n_rep=1, n_out=1):
         super().__init__()
         self.inp = nn.Conv1d(ch, h, 5, padding=2)
         blocks = []
@@ -82,7 +85,8 @@ class Net(nn.Module):
                 nn.Conv1d(h, h, 3, padding=d, dilation=d),
                 nn.GroupNorm(4, h), nn.GELU()))
         self.blocks = nn.ModuleList(blocks)
-        self.head = nn.Sequential(nn.Linear(h * 2, 64), nn.GELU(), nn.Linear(64, 1))
+        # n_out=3: 三分类(平/涨/跌) 的 logits; n_out=1: 回归
+        self.head = nn.Sequential(nn.Linear(h * 2, 64), nn.GELU(), nn.Linear(64, n_out))
 
     def forward(self, x):
         z = torch.relu(self.inp(x))
