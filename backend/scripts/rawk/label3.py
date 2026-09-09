@@ -39,6 +39,7 @@ def main() -> None:
     ap.add_argument("--up", type=float, default=0.10)
     ap.add_argument("--dn", type=float, default=0.05)
     ap.add_argument("--hold", type=int, default=10)
+    ap.add_argument("--out", default="label3.npz")
     a = ap.parse_args()
 
     d = np.load(f"{a.dir}/panel.npz")
@@ -89,9 +90,9 @@ def main() -> None:
     log.info("有效 %s (%.1f%%) | 涨 %.1f%%  跌 %.1f%%  平 %.1f%%",
              f"{ok.sum():,}", ok.mean() * 100,
              (v == 1).mean() * 100, (v == 2).mean() * 100, (v == 0).mean() * 100)
-    np.savez(f"{a.dir}/label3.npz", y3=y3, ret3=ret3, vol20=vol20,
+    np.savez(f"{a.dir}/{a.out}", y3=y3, ret3=ret3, vol20=vol20,
              up=a.up, dn=a.dn, hold=H)
-    log.info("存 %s/label3.npz", a.dir)
+    log.info("存 %s/%s", a.dir, a.out)
 
 
 if __name__ == "__main__":

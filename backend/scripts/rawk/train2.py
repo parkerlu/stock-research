@@ -110,7 +110,7 @@ def report(tag, day, score, y):
     return ic
 
 
-def report_cls(tag, day, p, y3, ret3, vol20=None):
+def report_cls(tag, day, p, y3, ret3, vol20=None, up=0.10, dn=0.05):
     """三分类的评价 —— 直接回答用户的问题: 模型说"会涨到+10%"的票里, 真到的有多少。
     每笔期望 = +up*涨率 - dn*跌率 + 平均平盘收益, 这就是盈利标准。"""
     d = pd.DataFrame({"day": day, "pu": p[:, 1], "y": y3, "r": ret3})
@@ -127,8 +127,8 @@ def report_cls(tag, day, p, y3, ret3, vol20=None):
     ev5 = float(g5.r.mean() * 100)
     log.info("%s\n      %s | 负年 %d", tag, " | ".join(rows), int((ys < 0).sum()))
     log.info("      Top5%% 逐年期望%% %s", {int(k): round(float(v), 2) for k, v in ys.items()})
-    # 另一种排法: 按期望值 0.10*P(涨)-0.05*P(跌) 排 —— 同一个模型, 只是不单看 P(涨)
-    d["ev"] = 0.10 * p[:, 1] - 0.05 * p[:, 2]
+    # 另一种排法: 按期望值 up*P(涨)-dn*P(跌) 排 —— 同一个模型, 只是不单看 P(涨)
+    d["ev"] = up * p[:, 1] - dn * p[:, 2]
     d["rk2"] = d.groupby("day")["ev"].rank(pct=True)
     g = d[d.rk2 >= 0.95]
     log.info("      按期望值排 Top5%%: 涨%.1f%% 跌%.1f%% 期望%+.2f%%",
@@ -158,6 +158,7 @@ def main() -> None:
                     help="不给大盘K线 —— 对照实验, 判断优势是选股还是择时")
     ap.add_argument("--cls", action="store_true",
                     help="三分类: 次日开盘买, 10日内先到+10%%=涨 / 先到-5%%=跌 / 都没=平 (label3.npz)")
+    ap.add_argument("--label", default="label3.npz", help="三分类标签文件(rawk.label3 生成)")
     ap.add_argument("--smoke", action="store_true", help="只取几千样本跑通流程")
     a = ap.parse_args()
     global PRED_BS
@@ -172,13 +173,15 @@ def main() -> None:
     n_ch = 6 + mkt.shape[0] * 4
     yr = pd.to_datetime(pd.Series(lday), unit="D").dt.year.to_numpy()
     y3 = ret3 = vol20 = None
+    UP, DN = 0.10, 0.05
     valid = np.ones(len(y), bool)
     if a.cls:
-        l3 = np.load(f"{DIR}/label3.npz")
+        l3 = np.load(f"{DIR}/{a.label}")
         y3, ret3, vol20 = l3["y3"], l3["ret3"], l3["vol20"]
         valid = y3 >= 0
         y = ret3                                  # 报告里的"收益"换成这套出场规则下的真实收益
         a.hold = int(l3["hold"])                  # 净化间隔跟标签持有期走
+        UP, DN = float(l3["up"]), float(l3["dn"])
         log.info("⚠️ 三分类模式: +%.0f%%/-%.0f%%/%d日, 有效 %s | 基准 涨 %.1f%% 跌 %.1f%%",
                  float(l3["up"]) * 100, float(l3["dn"]) * 100, a.hold, f"{valid.sum():,}",
                  (y3[valid] == 1).mean() * 100, (y3[valid] == 2).mean() * 100)
@@ -256,7 +259,7 @@ def main() -> None:
         te_scores.append(st)
         if a.cls:
             report_cls(f"种子{si} 单模型(验证最优 Top5%期望 {best_ic:+.2f}%)", lday[te_all], st,
-                       y3[te_all], ret3[te_all], vol20[te_all])
+                       y3[te_all], ret3[te_all], vol20[te_all], UP, DN)
         else:
             report(f"种子{si} 单模型(验证最优 RankIC {best_ic:+.4f})", lday[te_all], st, y[te_all])
         torch.save(net.state_dict(), f"{DIR}/cnn2{a.tag}_s{si}.pt")
@@ -267,7 +270,7 @@ def main() -> None:
     if a.cls:
         # 概率直接平均(同一尺度), 排序按 P(涨)
         pm = np.mean(te_scores, axis=0).astype(np.float32)
-        report_cls(f"★ {a.seeds}种子集成", lday[te_all], pm, y3[te_all], ret3[te_all], vol20[te_all])
+        report_cls(f"★ {a.seeds}种子集成", lday[te_all], pm, y3[te_all], ret3[te_all], vol20[te_all], UP, DN)
         np.savez(f"{DIR}/oos_v2{a.tag}.npz", score=pm[:, 1], p_up=pm[:, 1], p_dn=pm[:, 2],
                  lab_day=lday[te_all], lab_cid=d["lab_cid"][te_all])
         log.info("样本外分数已存"); return
