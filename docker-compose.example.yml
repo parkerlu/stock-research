@@ -1,0 +1,52 @@
+# 模板 —— 复制成 docker-compose.yml 再用。
+#
+# ⚠️ 真正的 docker-compose.yml / docker-compose.prod.yml 不进仓库(见 .gitignore):
+#    它们里面是明文数据库密码。这里用 ${POSTGRES_PASSWORD} 占位, 值放 .env。
+#
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: stock
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请在 .env 里设置}
+      POSTGRES_DB: stock_db
+    ports:
+      # 只绑本机与 WireGuard 隧道地址 —— 原来是 0.0.0.0, 家里任何设备
+      # 连上 WiFi 都能直连数据库。10.8.0.2 是本机在隧道里的地址,
+      # 供阿里云那台经隧道访问。
+      - "127.0.0.1:5432:5432"
+      - "10.8.0.2:5432:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stock -d stock_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://stock:${POSTGRES_PASSWORD:?请在 .env 里设置}@db:5432/stock_db
+      DATABASE_URL_SYNC: postgresql+psycopg2://stock:${POSTGRES_PASSWORD:?请在 .env 里设置}@db:5432/stock_db
+      TUSHARE_TOKEN: ${TUSHARE_TOKEN:-}
+    volumes:
+      - ./backend/cache:/app/cache:ro
+      - ./backend/models:/app/models:ro
+      - backend_data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "0.0.0.0:80:80"
+    depends_on:
+      - backend
+
+
+volumes:
+  backend_data: {}

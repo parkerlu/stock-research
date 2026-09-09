@@ -26,3 +26,21 @@ backend/models/t0_*.json
 backend/models/models_out/
 backend/data/research/t0_bars.parquet
 
+
+# ⚠️ compose 文件含明文数据库密码, 不进仓库。
+# 新环境按 docker-compose.example.yml 复制一份再填自己的密码。
+docker-compose.yml
+docker-compose.prod.yml
+
+# ⚠️ 模型权重与研究产物一律不进仓库 —— 都是可再生的产物, 且体积会一直涨。
+# 训练脚本在 backend/scripts/, 重跑就能得到; 结论记在 docs/*.md 里。
+backend/models/
+data/postgres/
+*.parquet
+*.npz
+*.npy
+*.pt
+*.pth
+# 策略挖掘的全量结果(每个 700KB, 只是中间产物); REPORT.md 和 top_5 保留
+docs/strategy_mine/**/all_results.json
+docs/strategy_mine/all_results.json
