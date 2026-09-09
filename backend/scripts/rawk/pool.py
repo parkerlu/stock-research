@@ -51,6 +51,27 @@ def breadth_mask(te: pd.DataFrame, thr: float, win: int = 60) -> dict[int, bool]
     return {int(d): bool(v) for d, v in on.items()}
 
 
+def crash_mask(drop: float, win: int = 20, idx: int = 0) -> dict[int, bool]:
+    """尾部保护: 指数近 win 日跌幅超过 drop 时停止建仓, 直到跌幅收窄。
+
+    ⚠️ 与 MA 择时的区别, 也是它存在的理由:
+       MA 择时是【常规】开关, 在震荡市频繁误触发, walk-forward 下整体拖累
+       (固定 MA20 只有 0.28)。而诊断显示 −31% 回撤集中在 2024-01 那一次
+       小微盘踩踏, 属于尾部事件。用只在极端时触发的开关去接尾部, 平时不干预,
+       比"天天判断牛熊"更贴合问题。
+
+    ⚠️ 阈值取先验值(−15% / 20日), 不进选参网格 —— 刚得出的结论是"参数越多
+       walk-forward 越差"(0.78 -> 0.38), 这里就不能再加一个可调项。
+       −15%/20日 是常识性的极端跌幅, 不是扫出来的。
+    """
+    d = np.load(f"{DIR}/panel.npz")
+    mkt, day_min = d["mkt"], int(d["day_min"])
+    close = pd.Series(mkt[idx][3].astype(np.float64))
+    ret = close / close.shift(win) - 1
+    on = (ret > drop).fillna(True).to_numpy()
+    return {day_min + i: bool(v) for i, v in enumerate(on)}
+
+
 def timing_mask(ma: int, idx: int = 0) -> dict[int, bool]:
     """大盘开关: 指数收盘 > 自身 MA(ma) 的交易日才允许建仓。
 
@@ -146,6 +167,8 @@ def main() -> None:
     ap.add_argument("--bench", type=int, default=0, help="0=中证1000, 1=沪深300")
     ap.add_argument("--fixed", action="store_true",
                     help="对照: 强制每笔都持满 hold 天, 用来量化周转带来的差别")
+    ap.add_argument("--crash", type=float, default=0.0,
+                    help="尾部保护: 指数20日跌幅超过该值(如 -0.15)就停止建仓")
     ap.add_argument("--breadth", action="store_true",
                     help="用模型自己的广度做择时(合格只数 > 过去60日中位数)")
     ap.add_argument("--no-cap", action="store_true", help="cap 不进网格, 固定为不限")
@@ -204,6 +227,8 @@ def main() -> None:
         #    看着测试集挑的。
         ma_list = (a.fix_ma,) if a.fix_ma >= 0 else (0, 5, 10, 20, 40, 60)
         masks = {ma: (timing_mask(ma, a.bench) if ma else None) for ma in ma_list}
+        if a.crash:
+            masks = {f"crash{int(a.crash * 100)}": crash_mask(a.crash, 20, a.bench)}
         # ⚠️ cap 也必须进网格。上一轮扫 cap=2/4/8 发现 cap=2 比值 1.57 "过线",
         #    但那是【看着测试集挑的】。凡是能调的都要在选参窗口里定, 否则
         #    就是换个花样重犯 Top5% +0.47 -> +0.02 那个错。
