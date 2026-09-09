@@ -65,9 +65,6 @@ interface Props {
   /** 测量模式: 依次点两根K线出结果, 再点一次开始新一轮 */
   measuring?: boolean;
   onMeasure?: (r: MeasureResult | null) => void;
-  /** Kronos 预测模式: 点一根K线, 回调它的日期与时间戳 */
-  kronosMode?: boolean;
-  onKronosPick?: (d: { date: string; timestamp: number }) => void;
 
   /** 训练指标信号。主图标记类: 颜色即等级(金 v4 > 紫 v3.5 > 红 v3)。
    *  v5 不在这里 —— 因果口径下一年仅约 7.5 个, 放 K 线上常年空白, 只在选股页出现。 */
@@ -167,7 +164,6 @@ function anchorTs(list: { timestamp: number }[], ts: number): number {
 export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
   { timeframe: tfOverride, className, tradeActions, replayDate, forecast, onBarSelected,
     measuring = false, onMeasure,
-    kronosMode = false, onKronosPick,
     maimaiSignals, comboSignals, pumpSignals, didianSignals, signalMark, panes, topList, liftSignals, breakoutSignals, sarSignals, mmweekSignals },
   ref
 ) {
@@ -308,13 +304,9 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
 
   // 测量状态。点击 effect 只在挂载时绑一次, 所以这些要走 ref 而不是闭包捕获
   const measuringRef = useRef(measuring);
-  const kronosRef = useRef(kronosMode);
-  const onKronosRef = useRef(onKronosPick);
   const onMeasureRef = useRef(onMeasure);
   const measureAnchor = useRef<number | null>(null);
   measuringRef.current = measuring;
-  kronosRef.current = kronosMode;
-  onKronosRef.current = onKronosPick;
   onMeasureRef.current = onMeasure;
 
   // reload 与 init 取数的竞态: klinecharts 的 resetData 会强制 _loading=false 再
@@ -681,16 +673,6 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
       });
     };
 
-    /** Kronos 模式: 点哪根就从哪根往后预测 */
-    const handleKronosClick = (idx: number) => {
-      const bars = chart.getDataList() as Array<{ timestamp: number }>;
-      const ts = bars[idx]?.timestamp;
-      if (!ts) return;
-      // ⚠️ 时间戳是 UTC 毫秒, 直接 toISOString 取日期即可 ——
-      //    用本地时区转会整体偏一天(本项目踩过这个坑)。
-      onKronosRef.current?.({ date: new Date(ts).toISOString().slice(0, 10), timestamp: ts });
-    };
-
     /** 第一次点定 A, 第二次点定 B 并算结果, 第三次点重新开始。 */
     const handleMeasureClick = (idx: number) => {
       const bars = chart.getDataList() as Array<{
@@ -771,10 +753,6 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
       if (idx >= 0) {
         if (measuringRef.current) {
           handleMeasureClick(idx);
-          return;
-        }
-        if (kronosRef.current) {
-          handleKronosClick(idx);
           return;
         }
         selectedIndex = idx;

@@ -2,8 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuoteStore } from "../../stores/quoteStore";
 import type { TradeAction } from "../../types/strategy";
 import { MainChart } from "./MainChart";
-import { predictKronos } from "../../api/kronos";
-import { clearKronos, paintKronos } from "./kronosOverlay";
 import type { MainChartHandle, MeasureResult } from "./MainChart";
 import { Toolbar } from "./Toolbar";
 import { LinkedView } from "./LinkedView";
@@ -254,43 +252,6 @@ export function ChartArea({ tradeActions }: Props = {}) {
   const mainChartRef = useRef<MainChartHandle>(null);
   const [tradeIdx, setTradeIdx] = useState(-1);
   const [measuring, setMeasuring] = useState(false);
-  // Kronos 预测: 点一根K线 -> 请求预测 -> 画到图上。
-  // ⚠️ 跑在本地 CPU(约0.7秒/30根), 不依赖那台临时 GPU 机器 —— 抢占式随时释放。
-  const [kronosMode, setKronosMode] = useState(false);
-  const [kronosBusy, setKronosBusy] = useState(false);
-  const [kronosInfo, setKronosInfo] = useState<string | null>(null);
-  const onKronosPick = useCallback(
-    async (d: { date: string; timestamp: number }) => {
-      if (!currentSymbol) return;
-      setKronosBusy(true);
-      setKronosInfo(`正在预测 ${d.date} 之后 30 根 …`);
-      try {
-        const r = await predictKronos({ tsCode: currentSymbol, end: d.date, predLen: 30 });
-        paintKronos(mainChartRef.current?.getChart() ?? null, r, d.timestamp);
-        const last = r.predicted[r.predicted.length - 1];
-        const chg = ((last.close / r.anchor_close - 1) * 100).toFixed(1);
-        if (r.is_historical && r.actual.length) {
-          const ra = r.actual[r.actual.length - 1];
-          const rc = ((ra.close / r.anchor_close - 1) * 100).toFixed(1);
-          setKronosInfo(
-            `${d.date} 起 · 预测30日 ${chg}% · 实际 ${rc}%  (橙虚线=预测, 蓝线=实际)`
-          );
-        } else {
-          setKronosInfo(`${d.date} 起 · 预测30日 ${chg}%  (橙虚线; 无真实数据可对照)`);
-        }
-      } catch (e) {
-        setKronosInfo(`预测失败: ${e instanceof Error ? e.message : String(e)}`);
-      } finally {
-        setKronosBusy(false);
-      }
-    },
-    [currentSymbol]
-  );
-  // 换股票就清掉旧预测 —— 留着会画在别人的K线上
-  useEffect(() => {
-    clearKronos(mainChartRef.current?.getChart() ?? null);
-    setKronosInfo(null);
-  }, [currentSymbol]);
   const [measure, setMeasure] = useState<MeasureResult | null>(null);
 
   const indicatorPaneIds = useRef<Record<string, string>>({});
@@ -458,26 +419,12 @@ export function ChartArea({ tradeActions }: Props = {}) {
         onClearOverlays={handleClearOverlays}
         measuring={measuring}
         onToggleMeasure={() => setMeasuring((v) => !v)}
-        kronosMode={kronosMode}
-        kronosBusy={kronosBusy}
-        onToggleKronos={() => {
-          setKronosMode((v) => {
-            if (v) { clearKronos(mainChartRef.current?.getChart() ?? null); setKronosInfo(null); }
-            return !v;
-          });
-          setMeasuring(false);   // 两个模式互斥, 否则点击会被测量抢走
-        }}
       />
       <div className="chart-info-row">
         <StockSectors symbol={currentSymbol} />
         <TopListBadge symbol={currentSymbol} onData={setLhb} />
       </div>
       {measuring && <MeasureBar result={measure} />}
-      {kronosMode && (
-        <div className="kronos-bar">
-          {kronosInfo ?? "点击任意一根K线, 预测它之后 30 根的走势(历史K线可与真实对照)"}
-        </div>
-      )}
       {hasActions && (
         <div className="trade-nav">
           <button
@@ -524,8 +471,6 @@ export function ChartArea({ tradeActions }: Props = {}) {
             tradeActions={marks}
             replayDate={replayDate}
             measuring={measuring}
-            kronosMode={kronosMode}
-            onKronosPick={onKronosPick}
             onMeasure={setMeasure}
           />
         )}

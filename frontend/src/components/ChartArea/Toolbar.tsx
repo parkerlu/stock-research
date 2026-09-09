@@ -52,9 +52,6 @@ interface Props {
   onClearOverlays: () => void;
   measuring: boolean;
   onToggleMeasure: () => void;
-  kronosMode: boolean;
-  onToggleKronos: () => void;
-  kronosBusy?: boolean;
   /** 自训练指标 —— 与 TDX 移植指标分开管理 */
   activeTrained?: string[];
   onToggleTrained?: (name: string) => void;
@@ -69,9 +66,6 @@ export function Toolbar({
   onClearOverlays,
   measuring,
   onToggleMeasure,
-  kronosMode,
-  onToggleKronos,
-  kronosBusy,
   activeTrained,
   onToggleTrained,
 }: Props) {
@@ -213,14 +207,6 @@ export function Toolbar({
           title="测量: 依次点两根K线, 算出跨度 / 涨跌幅 / 区间极值"
         >
           📏 测量
-        </button>
-        <button
-          className={kronosMode ? "active" : ""}
-          onClick={onToggleKronos}
-          disabled={kronosBusy}
-          title="Kronos 预测: 点一根K线, 用45家交易所预训练的模型预测其后走势。选历史K线可与真实走势对照"
-        >
-          {kronosBusy ? "⏳ 预测中" : "🔮 Kronos"}
         </button>
       </div>
 

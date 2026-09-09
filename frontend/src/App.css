@@ -2614,12 +2614,3 @@ body {
   font-size: 11px;
 }
 
-/* Kronos 预测状态条 —— 和测量条同一位置风格 */
-.kronos-bar {
-  padding: 4px 10px;
-  background: rgba(255, 176, 32, 0.08);
-  border-top: 1px solid rgba(255, 176, 32, 0.25);
-  border-bottom: 1px solid rgba(255, 176, 32, 0.25);
-  color: #d8c49a;
-  font-size: 12px;
-}
