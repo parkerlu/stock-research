@@ -110,6 +110,12 @@ def main() -> None:
             objective="multi:softprob", num_class=3, eval_metric="mlogloss",
             early_stopping_rounds=40, random_state=si, n_jobs=8, tree_method="hist")
         clf.fit(Xtr, ytr, eval_set=[(Xva, yva)], verbose=False)
+        # ⚠️ 必须存模型, 而且要存在【挂载卷】上 —— /app 别处重建镜像就没了
+        #    (本项目已经因此丢过 SAR 回测脚本、形态实验脚本、缓存面板三次)。
+        #    列顺序靠 booster 的 feature_names 固定, 生产端按名字取列,
+        #    不靠调用方记住顺序。
+        clf.get_booster().feature_names = list(names)
+        clf.save_model(f"{DIR}/chips/model{a.tag}_s{si}.json")
         pv = clf.predict_proba(Xva)
         pt = clf.predict_proba(X[te_idx])
         va_scores.append(pv)

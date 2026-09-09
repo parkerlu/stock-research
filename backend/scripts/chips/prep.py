@@ -34,6 +34,8 @@ import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 
+from scripts.chips.features import CYQ_COLS, FEAT_NAMES, bad_rows, chip_feats
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s",
                     datefmt="%H:%M:%S")
 log = logging.getLogger("chips.prep")
@@ -104,41 +106,15 @@ def build(out: str) -> None:
     del cyq
     gc.collect()
 
-    wr = raw["winner_rate"]
-    feats: dict[str, np.ndarray] = {}
-
-    # --- 获利盘族(文档里唯一有效的一族) ---
-    feats["获利盘"] = wr
-    for k in (5, 10, 20):
-        feats[f"获利盘变化{k}"] = wr - shift_within(wr, cid, k)
-    # 获利盘背离 = 获利盘变化 − 价格涨幅。文档: Q10/Q1=2.16, 九宫格控制后 2.09
-    # 含义: 价格没动而获利盘上升 = 有人在低位持续接走浮筹
-    for k in (10, 20):
-        px_chg = (close / shift_within(close, cid, k) - 1) * 100
-        feats[f"获利盘背离{k}"] = feats[f"获利盘变化{k}"] - px_chg
-
-    # --- 成本结构: 只用 cyq 表【内部】的比值 ---
-    # ⚠️⚠️ 绝不能拿 panel 的 close 去除 cyq 的成本价 —— 口径不同:
-    #    panel 存的是 close*adj_factor(后复权), cyq 的 cost_*/his_* 是【原始价】。
-    #    两者相除得到的就是 adj_factor 本身, 不是任何有意义的量, 而且不报错。
-    #    第一版实测: "现价/低位成本" 中位 3.602(应在 1~2)、"历史区间位置"
-    #    中位 1.105 p99 25.19(应在 0~1) —— 全是 adj_factor 的量级。
-    #    这与 2026-09-09 上汽集团那次 K 线错位是同一个病的两种形态。
-    #    改成表内比值后, 复权与否都不影响(分子分母同时缩放)。
-    c5, c15, c50, c85, c95 = (raw["cost_5pct"], raw["cost_15pct"], raw["cost_50pct"],
-                              raw["cost_85pct"], raw["cost_95pct"])
-    wa = raw["weight_avg"]
-    cost_span = np.maximum(c95 - c5, 1e-6)
-    feats["均价在成本区间位置"] = (wa - c5) / cost_span
-    feats["中位/均价"] = c50 / np.maximum(wa, 1e-6)          # 分布偏度
-    feats["上半区宽度"] = (c95 - c50) / np.maximum(c50, 1e-6)
-    feats["下半区宽度"] = (c50 - c5) / np.maximum(c50, 1e-6)
-    span_h = np.maximum(raw["his_high"] - raw["his_low"], 1e-6)
-    feats["均价在历史区间位置"] = (wa - raw["his_low"]) / span_h
-
-    # --- 对照特征: 文档已证伪的集中度(Q10/Q1=1.10), 留着确认它确实没用 ---
-    feats["筹码集中度(对照)"] = (c85 - c15) / np.maximum(c50, 1e-6)
-    feats["筹码宽度(对照)"] = cost_span / np.maximum(c50, 1e-6)
+    # ⚠️ 特征算法只留一份, 见 features.chip_feats —— 训练和生产必须完全同一套。
+    #    以前本项目"同一份东西抄两遍"栽过五次, 而特征算不一致的后果是模型拿到
+    #    另一个分布, 结果变差【且不报错】。
+    long = pd.DataFrame({"gid": cid, "close": close})
+    for c in CYQ_COLS:
+        long[c] = raw[c]
+    F = chip_feats(long, gid="gid")
+    bad = bad_rows(long).to_numpy()
+    feats = {n: F[n].to_numpy() for n in FEAT_NAMES}
 
     names = list(feats)
     X = np.empty((len(idx), len(names)), np.float32)
@@ -147,7 +123,7 @@ def build(out: str) -> None:
     # ⚠️ 清洗: 成本价 <=0 的行(停牌/数据错误)会让比值爆掉 —— 实测"上半区宽度"
     #    均值 153.965 而中位只有 0.132。树模型对单调变换不敏感, 但极端值会挤占
     #    分裂点、也会让特征统计失去可读性。先剔无效行, 再按 p0.1/p99.9 截断。
-    bad_price = ~np.isfinite(c50[idx]) | (c50[idx] <= 0) | (wa[idx] <= 0)
+    bad_price = bad[idx]
     ok = np.isfinite(X).all(1) & ~bad_price
     log.info("剔除成本价异常 %s 行", f"{int(bad_price.sum()):,}")
     for j in range(X.shape[1]):

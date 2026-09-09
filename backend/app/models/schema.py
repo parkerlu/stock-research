@@ -591,6 +591,36 @@ class TopList(Base):
     reason: Mapped[str | None] = mapped_column(String(128))
 
 
+class ChipsScore(Base):
+    """筹码模型每日全市场打分 —— 与形态模型不同, 这个【能】当选股信号用。
+
+    题目与裸K 完全一致: 次日开盘买入, 10 根K线内先碰 +10% 记涨 / 先碰 -8% 记跌。
+    特征只用 tushare cyq_perf 的获利盘族(前6名重要性合计 60.0%)。
+
+    ⚠️ 与形态模型的关键差别 —— 它是【纯选股】:
+       择时 vs 选股拆解显示它的择时贡献是 0(同一批交易日买全市场 +0.37%,
+       等于所有交易日的 +0.37%), 99% 的交易日都在出信号。
+       裸K 那个模型 85% 的交易挤在 10% 的日子里, 靠挑日子挣钱, 所以回撤 −31%;
+       筹码这个仓位不堆在少数几天, 回撤只有 −17.9%。
+
+    ⚠️ 实测(walk-forward + 资金池 + 真实周转, 仓位20):
+       比值 0.89, 年化 +15.9%, 回撤 −17.9%, 六年 2 个负年(都在 2% 以内)。
+       与裸K 共振后 1.07 —— 但共振要跑 CNN 推理, 生产机内存不够, 暂未上线。
+
+    ⚠️ 筹码数据 2018-01 才有, 训练集只有 2018-2019 两年。实测训练样本量存在
+       悬崖(231K 尚可 / 53K 崩到 −0.20), 而这个模型是 200,627, 已经贴着线 ——
+       不要再缩训练窗口。
+    """
+    __tablename__ = "chips_score"
+    ts_code = Column(String(12), primary_key=True)
+    trade_date = Column(Date, primary_key=True)
+    p_up = Column(Numeric(8, 5), nullable=False)      # P(10根K线内先碰+10%)
+    p_dn = Column(Numeric(8, 5), nullable=False)      # P(先碰-8%)
+    ev = Column(Numeric(10, 6), nullable=False)       # 0.10*p_up − 0.08*p_dn − 0.003
+    rank_pct = Column(Numeric(8, 5), nullable=False)  # 当日横截面分位
+    __table_args__ = (Index("ix_chips_date", "trade_date"),)
+
+
 class ShapeScore(Base):
     """形态模型每日全市场打分。
 

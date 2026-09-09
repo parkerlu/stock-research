@@ -37,7 +37,8 @@ def _selfcheck_commands() -> None:
     _log = _lg.getLogger("selfcheck")
     need = ["ensure_daily", "fill_daily", "build_panels", "update_indicators",
             "build_shape_scores", "sync_shape_signals", "sync_mmweek_signals",
-            "sync_sar_signals", "sync_breakout_signals"]
+            "sync_sar_signals", "sync_breakout_signals",
+            "build_chips_scores", "sync_chips_signals"]
     missing = []
     for m in need:
         try:

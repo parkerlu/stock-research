@@ -194,6 +194,14 @@ async def pump_scan(
 # ---- 训练指标选股 ----
 # 信号已在库中(build_maimai / build_pump 盘后算好), 这里直接查, 不跑扫描任务。
 TRAINED_META = [
+    {"key": "chips", "label": "★★★ 筹码模型 (获利盘)",
+     "desc": "XGBoost 三分类, 只用筹码分布的获利盘族。题目: 次日开盘买入, 10根K线内"
+             "先碰+10%记涨/先碰-8%记跌。⚠️ 这是目前【唯一】组合层面接近达标的选股信号: "
+             "walk-forward+资金池+真实周转下 比值 0.89(年化+15.9%/回撤-17.9%), 六年仅2个"
+             "浅负年。而且它是【纯选股】—— 择时贡献为0, 99%的交易日都出信号, 所以回撤"
+             "远低于裸K那种靠挑日子的模型(-31%)。特征重要性前6名全是获利盘族(合计60%), "
+             "筹码集中度垫底(与2026-09-05的结论一致)",
+     "grades": ["强"], "default_grade": "强", "default_days": 5},
     {"key": "mmweek", "label": "买卖很准 周线版",
      "desc": "周线买线>0 的【状态】(不是日线那种边沿)。下周一开盘买入、持有8周, "
              "超同日全市场 +3.39pp, 按周t=5.56, 九格全正; 九年只有 2020/2023 两个浅负年(-1.7/-1.3pp), "
@@ -388,6 +396,48 @@ async def screen_by_trained(
              "price": round(float(r[5]), 2) if r[5] is not None else None,
              "chg": round(float(r[6]) * 100, 2) if r[6] is not None else None,
              "mkt_ok": bool(r[7]) if r[7] is not None else None}
+            for r in rows]}
+
+    if indicator == "chips":
+        # 筹码模型: 每日全市场打分的 Top1%(rank_pct >= 0.99)。
+        # ⚠️ 分位由 build_chips_scores 按【当日横截面】算, 这里只筛不重排 ——
+        #    单只票的绝对分数没有可比性。
+        # ⚠️ ev = 0.10*P(涨) − 0.08*P(跌) − 0.003(手续费), 即"每笔净期望";
+        #    它是排序依据, 不是收益预测。
+        rows = (await db.execute(text("""
+            with px as (
+              select d.ts_code, d.trade_date, d.close, d.adj_factor,
+                     row_number() over (partition by d.ts_code order by d.trade_date desc) rn
+              from daily_candle d
+              where d.trade_date > (select max(trade_date) - interval '20 days' from daily_candle)
+            ),
+            last2 as (
+              select ts_code,
+                     max(close) filter (where rn=1) c1, max(adj_factor) filter (where rn=1) a1,
+                     max(close) filter (where rn=2) c2, max(adj_factor) filter (where rn=2) a2
+              from px where rn <= 2 group by ts_code
+            )
+            select c.ts_code, coalesce(b.name,'') as name, c.trade_date,
+                   c.ev as score, c.rank_pct, '强' as grade,
+                   l.c1 as price, (l.c1*l.a1)/nullif(l.c2*l.a2,0)-1 as chg,
+                   c.p_up, c.p_dn
+            from chips_score c
+            left join stock_basic b on b.ts_code = c.ts_code
+            left join last2 l on l.ts_code = c.ts_code
+            where c.rank_pct >= 0.99
+              and c.trade_date > (select max(trade_date) from chips_score)
+                                 - make_interval(days => :d)
+            order by c.trade_date desc, c.ev desc
+            limit :lim
+        """), {"d": days, "lim": limit})).fetchall()
+        return {"indicator": indicator, "grade": "强", "days": days,
+                "count": len(rows), "items": [
+            {"ts_code": r[0], "name": r[1], "date": str(r[2]),
+             "score": round(float(r[3]), 4) if r[3] is not None else None,
+             "rank_pct": round(float(r[4]), 4), "grade": r[5],
+             "price": round(float(r[6]), 2) if r[6] is not None else None,
+             "chg": round(float(r[7]) * 100, 2) if r[7] is not None else None,
+             "p_up": round(float(r[8]) * 100, 1), "p_dn": round(float(r[9]) * 100, 1)}
             for r in rows]}
 
     if indicator == "liftalert":
@@ -655,6 +705,52 @@ async def liftalert_signals(
     return {"ts_code": ts_code, "count": len(rows), "signals": [
         {"date": str(r[0]), "score": round(float(r[1]), 4),
          "rank_pct": round(float(r[2]), 4), "grade": "强"} for r in rows]}
+
+
+@router.get("/chips/{ts_code}")
+async def chips_signals(
+    ts_code: str,
+    start: str | None = Query(None, description="YYYY-MM-DD"),
+    q: float = Query(0.99, ge=0.5, le=1.0, description="当日分位阈值"),
+    db: AsyncSession = Depends(get_db),
+):
+    """筹码模型买点 —— 每日全市场打分的 Top1%(当日横截面分位)。
+
+    题目与裸K 一致: 次日开盘买入, 10 根K线内先碰 +10% 记涨 / 先碰 -8% 记跌。
+    特征只用 tushare cyq_perf 的获利盘族 —— 重要性前 6 名合计 60.0%,
+    筹码集中度垫底(与 2026-09-05"有效的只有获利盘族"的结论一致, 那次是在
+    完全不同的目标和模型上量的, 属于独立复现)。
+
+    ⚠️ 目前【唯一】组合层面接近达标的选股信号:
+       walk-forward + 资金池 + 真实周转, 仓位20 -> 比值 0.89
+       (年化 +15.9% / 回撤 −17.9%), 六年只有 2 个负年且都在 2% 以内。
+       与裸K 共振后 1.07, 但共振要跑 CNN 推理, 生产机内存不够, 暂未上线。
+
+    ⚠️ 它是【纯选股】, 这是与裸K 那个模型最大的差别:
+       择时 vs 选股拆解显示它的择时贡献为 0(同一批交易日买全市场 +0.37%,
+       等于所有交易日的 +0.37%), 99% 的交易日都出信号。裸K 那个 85% 的交易
+       挤在 10% 的日子里, 靠挑日子挣钱, 所以回撤 −31%。
+
+    ⚠️ score 是 ev = 0.10*P(涨) − 0.08*P(跌) − 0.003(手续费), 即【每笔净期望】,
+       是排序依据不是收益预测。分位由 build_chips_scores 按当日全市场算。
+    """
+
+    sql = ("select trade_date, ev, rank_pct, p_up, p_dn from chips_score "
+           "where ts_code = :c and rank_pct >= :q")
+    params: dict = {"c": ts_code, "q": q}
+    if start:
+        try:
+            params["s"] = date.fromisoformat(start)
+            sql += " and trade_date >= :s"
+        except ValueError:
+            raise HTTPException(status_code=400, detail="start 需为 YYYY-MM-DD")
+    sql += " order by trade_date"
+    rows = (await db.execute(text(sql), params)).fetchall()
+    return {"ts_code": ts_code, "count": len(rows), "signals": [
+        {"date": str(r[0]), "score": round(float(r[1]), 4),
+         "rank_pct": round(float(r[2]), 4), "grade": "强",
+         "p_up": round(float(r[3]) * 100, 1), "p_dn": round(float(r[4]) * 100, 1)}
+        for r in rows]}
 
 
 @router.get("/breakout/{ts_code}")

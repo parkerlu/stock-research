@@ -174,6 +174,23 @@ export async function getBreakoutSignals(
   return json(`${BASE}/indicators/breakout/${tsCode}${q}`);
 }
 
+/** 筹码模型 —— 只用 tushare cyq_perf 的获利盘族, XGBoost 三分类。
+ *  题目: 次日开盘买入, 10根K线内先碰+10%记涨/先碰-8%记跌。
+ *  ⚠️ 目前唯一组合层面接近达标的选股信号: walk-forward+资金池 比值 0.89
+ *  (年化+15.9%/回撤-17.9%), 而且是【纯选股】—— 择时贡献为 0。 */
+export async function getChipsSignals(
+  tsCode: string,
+  start?: string
+): Promise<{
+  ts_code: string;
+  count: number;
+  signals: { date: string; score: number; rank_pct: number; grade: string;
+             p_up: number; p_dn: number }[];
+}> {
+  const q = start ? `?start=${start}` : "";
+  return json(`${BASE}/indicators/chips/${tsCode}${q}`);
+}
+
 /** SAR 预警 —— SAR由空翻多 × 主力吸筹强档。
  *  ⚠️ 必须配大盘择时(中证1000>MA20): 裸跑比值 0.29, 加择时 1.74, 胜率 52.5%。 */
 export async function getSarSignals(

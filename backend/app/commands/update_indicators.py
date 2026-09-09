@@ -239,7 +239,8 @@ async def main() -> None:
     #    build_shape_scores 依赖上面刚算完的 daily_candle, 也依赖挂载卷上的
     #    模型文件 /app/data/research/shape/*.json —— 那个目录必须是挂载的,
     #    放 /app 别处重建镜像就没了。
-    from app.commands import (build_shape_scores, sync_breakout_signals,
+    from app.commands import (build_chips_scores, build_shape_scores,
+                              sync_breakout_signals, sync_chips_signals,
                               sync_mmweek_signals, sync_sar_signals,
                               sync_shape_signals)
     await _run("形态模型打分", build_shape_scores, ["x", "--days", "5"])
@@ -250,6 +251,12 @@ async def main() -> None:
     # 形态模型自己当日线策略 —— Top1%。回测判据没过(0.24), 建账户是为了
     # 向前验; 回测已经骗过我一次(v4 的 1.70 全来自买不到的一字涨停)。
     await _run("形态模型信号", sync_shape_signals, ["x"])
+
+    # 筹码模型 —— 目前唯一组合层面接近达标的选股信号(比值 0.89, 纯选股)。
+    # ⚠️ 打分必须在同步信号之前: 信号按 chips_score 的当日分位筛。
+    # ⚠️ 也必须在上面 fetch_cyq_recent 之后 —— 它要用当天新拉的筹码。
+    await _run("筹码模型打分", build_chips_scores, ["x", "--days", "5"])
+    await _run("筹码模型信号", sync_chips_signals, ["x"])
 
     eng = create_async_engine(settings.database_url)
     async with eng.connect() as c:

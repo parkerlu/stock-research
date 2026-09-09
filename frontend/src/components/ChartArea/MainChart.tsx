@@ -80,6 +80,8 @@ interface Props {
   /** 买卖很准 周线版 —— 【状态】不是买点, 画副图色带而非三角 */
   mmweekSignals?: { date: string; value: number; grade: string }[];
   /** SAR预警 —— 趋势型, 紫色三角(与突破绿/拉升青区分) */
+  /** 筹码模型买点 —— 目前唯一组合层面接近达标的选股信号(比值 0.89, 纯选股) */
+  chipsSignals?: { date: string; score: number; rank_pct: number; grade: string }[];
   sarSignals?: { date: string; score: number; rank_pct: number; grade: string }[];
   /** 突破预警 —— 趋势型, 亮绿色三角 */
   breakoutSignals?: { date: string; score: number; rank_pct: number; grade: string }[];
@@ -164,7 +166,8 @@ function anchorTs(list: { timestamp: number }[], ts: number): number {
 export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
   { timeframe: tfOverride, className, tradeActions, replayDate, forecast, onBarSelected,
     measuring = false, onMeasure,
-    maimaiSignals, comboSignals, pumpSignals, didianSignals, signalMark, panes, topList, liftSignals, breakoutSignals, sarSignals, mmweekSignals },
+    maimaiSignals, comboSignals, pumpSignals, didianSignals, signalMark, panes, topList, liftSignals, breakoutSignals, sarSignals, mmweekSignals,
+    chipsSignals },
   ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -239,6 +242,12 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
     selMarkRef.current = signalMark;
     return paintSelectedSignal(chartRef.current, signalMark);
   }, [signalMark]);
+
+  // 筹码模型用橙金色, 与其它训练指标区分开 —— 它是选股信号, 不是形态确认
+  useEffect(() => {
+    trainedRef.current["chips"] = { sig: chipsSignals, color: "#f59e0b" };
+    return paintTrainedMarkers(chartRef.current, "chips", chipsSignals, "#f59e0b");
+  }, [chipsSignals]);
 
   useEffect(() => {
     trainedRef.current["sar"] = { sig: sarSignals, color: "#c084fc" };
