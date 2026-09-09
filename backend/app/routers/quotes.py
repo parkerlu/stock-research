@@ -28,8 +28,12 @@ _manager: DataSourceManager | None = None
 def get_manager() -> DataSourceManager:
     global _manager
     if _manager is None:
-        # 腾讯放最前: 实时快照走它 (毫秒级, 支持批量);
-        # 它的 fetch_daily 返回空, 历史类调用会无开销穿透到 TuShare。
+        # 腾讯放最前: 实时快照走它 (毫秒级, 支持批量)。
+        # ⚠️ 它的 fetch_daily 【不再返回空】(8c344fd 起会给前复权日线),
+        #    所以历史类调用不会再穿透到 TuShare。而它给的是"前复权价 +
+        #    adj_factor=1.0", 与 daily_candle 的"原始价 + 绝对 factor"口径
+        #    不同 —— 入库前必须过 quote_service._rows_for_db 挡一道,
+        #    否则最新一根 factor=1.0 会把整段历史抬高 N 倍(2026-09-09 上汽)。
         _manager = DataSourceManager(
             TencentProvider(),
             TuShareProvider(token=settings.tushare_token),

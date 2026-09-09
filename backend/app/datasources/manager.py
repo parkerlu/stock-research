@@ -12,8 +12,12 @@ class DataSourceManager:
     """按顺序尝试多个数据源, 前一个失败/返回空就换下一个。
 
     典型链路: Tencent(实时) → TuShare(历史) → AKShare(兜底)。
-    Tencent 不支持 fetch_daily/fetch_stock_basic, 会立刻返回空 DataFrame,
-    因此历史类调用会无网络开销地穿透到 TuShare。
+    Tencent 不支持 fetch_stock_basic, 会立刻返回空 DataFrame 并穿透到 TuShare。
+
+    ⚠️ fetch_daily 曾经也是空实现, 8c344fd 起腾讯【会返回数据】了, 于是历史
+       日线的第一顺位变成了腾讯。它给前复权价 + adj_factor=1.0, 与库里
+       "原始价 + TuShare 绝对 factor" 不是一个口径, 直接入库会毁掉整段历史的
+       复权(2026-09-09 上汽集团)。落库路径统一走 quote_service._rows_for_db。
     """
 
     def __init__(self, *providers: DataProvider,

@@ -4,7 +4,7 @@ import time
 from datetime import date, timedelta
 from itertools import groupby
 
-from sqlalchemy import func, select, and_
+from sqlalchemy import func, select, and_, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -71,6 +71,47 @@ def aggregate_monthly(rows: list[dict]) -> list[dict]:
     return _aggregate(rows, _month_key)
 
 
+async def _rows_for_db(db: AsyncSession, ts_code: str, df) -> list[dict]:
+    """把数据源返回的 DataFrame 变成可入库的行, 并挡掉【复权口径不一致】的行。
+
+    ⚠️ 2026-09-09 用户在上汽集团/美湖股份的 K 线上发现: daily_candle 是
+       "原始价 + TuShare 绝对 adj_factor" 口径, 而 TencentProvider.fetch_daily
+       (8c344fd 新实现) 给的是"前复权价 + adj_factor=1.0"。两种口径进同一张表,
+       最新一根的 factor 就成了 1.0, 而前复权价 = close × factor / 最新factor
+       —— 上汽的 factor 是 11.34, 于是【整段历史被抬高 11 倍】, 图上今天这根
+       变成一根贴地的柱子。close 本身是对的, 错的只有 adj_factor, 而且不报错。
+
+       这不是 09-08 那个 fillna(1.0) 的复发 —— 那个在 fill_daily 里已修。
+       这是新增数据源时【调用方的假设没跟着改】: manager 的注释当时还写着
+       "腾讯 fetch_daily 返回空, 历史类调用会穿透到 TuShare"。
+
+       腾讯给不出绝对 factor(它只给复权后的价), 所以这里不做换算, 直接
+       丢弃这一行 —— 与 fill_daily 同一条原则: 宁可缺一根K线, 也不要一根错的。
+       缺的那根由收盘同步 / ensure_daily 用 TuShare 整批补上。
+
+    判据是"该股在这一天之前已经有过 ≠1.0 的 factor"。不能只看 ==1.0:
+    新股上市初期、从未分红的票, factor 本来就该是 1.0(实测 160 万行合法)。
+    """
+    rows = df.to_dict("records")
+    if not rows:
+        return []
+    first_adj = (await db.execute(text(
+        "select min(trade_date) from daily_candle "
+        "where ts_code = :c and adj_factor <> 1.0"), {"c": ts_code})).scalar()
+    if first_adj is None:
+        return rows
+    keep, drop = [], 0
+    for r in rows:
+        if float(r.get("adj_factor", 1.0)) == 1.0 and r["trade_date"] >= first_adj:
+            drop += 1
+            continue
+        keep.append(r)
+    if drop:
+        log.warning("%s: 丢弃 %d 行复权口径不一致的K线(adj_factor=1.0, 但该股 "
+                    "%s 起就有真实复权因子) —— 等 TuShare 整批补", ts_code, drop, first_adj)
+    return keep
+
+
 async def get_candles(
     db: AsyncSession,
     manager: DataSourceManager,
@@ -94,10 +135,11 @@ async def get_candles(
     if not cached_dates:
         df = await manager.fetch_daily(ts_code, start, end)
         if not df.empty:
-            rows = df.to_dict("records")
-            stmt_upsert = pg_insert(DailyCandle).values(rows)
-            stmt_upsert = stmt_upsert.on_conflict_do_nothing(index_elements=["ts_code", "trade_date"])
-            await db.execute(stmt_upsert)
+            rows = await _rows_for_db(db, ts_code, df)
+            if rows:
+                stmt_upsert = pg_insert(DailyCandle).values(rows)
+                stmt_upsert = stmt_upsert.on_conflict_do_nothing(index_elements=["ts_code", "trade_date"])
+                await db.execute(stmt_upsert)
             await db.commit()
             result = await db.execute(
                 select(DailyCandle)
@@ -118,10 +160,11 @@ async def get_candles(
                 fetch_end = first_cached - timedelta(days=1)
                 df = await manager.fetch_daily(ts_code, start, fetch_end)
                 if not df.empty:
-                    rows = df.to_dict("records")
-                    stmt_upsert = pg_insert(DailyCandle).values(rows)
-                    stmt_upsert = stmt_upsert.on_conflict_do_nothing(index_elements=["ts_code", "trade_date"])
-                    await db.execute(stmt_upsert)
+                    rows = await _rows_for_db(db, ts_code, df)
+                    if rows:
+                        stmt_upsert = pg_insert(DailyCandle).values(rows)
+                        stmt_upsert = stmt_upsert.on_conflict_do_nothing(index_elements=["ts_code", "trade_date"])
+                        await db.execute(stmt_upsert)
                     need_reload = True
             except Exception:
                 pass  # Use existing cache if data source fails
@@ -141,10 +184,11 @@ async def get_candles(
                 fetch_start = last_cached - timedelta(days=10)
                 df = await manager.fetch_daily(ts_code, fetch_start, end)
                 if not df.empty:
-                    rows = df.to_dict("records")
-                    stmt_upsert = pg_insert(DailyCandle).values(rows)
-                    stmt_upsert = stmt_upsert.on_conflict_do_nothing(index_elements=["ts_code", "trade_date"])
-                    await db.execute(stmt_upsert)
+                    rows = await _rows_for_db(db, ts_code, df)
+                    if rows:
+                        stmt_upsert = pg_insert(DailyCandle).values(rows)
+                        stmt_upsert = stmt_upsert.on_conflict_do_nothing(index_elements=["ts_code", "trade_date"])
+                        await db.execute(stmt_upsert)
                     need_reload = True
                     log.info("补K线 %s: %s ~ %s, %d 根", ts_code, fetch_start, end, len(rows))
                 else:

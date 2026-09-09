@@ -185,6 +185,35 @@ async def main() -> None:
     # 目前直接调 build_*(全量), 因为单次几分钟可接受, 且能保证
     # 特征的 rolling 窗口(最长60日)完整 —— 增量算特征要回看60天,
     # 复杂度和全量差不多, 不值得为此引入两套代码路径。
+    import sys as _sys
+
+    async def _run(name, mod, argv=None):
+        """跑一个子命令。
+
+        ⚠️ argv 必须换掉, 哪怕子命令"不需要参数"。子命令的 main() 里几乎都有
+           自己的 argparse, 直接调就会读到【外层】的 sys.argv:
+           2026-09-09 实测 scheduler 传 ["update_indicators","--days","10"],
+           build_panels 只认 --y0 -> argparse 报 unrecognized arguments。
+
+        ⚠️ 必须连 SystemExit 一起拦。argparse 报错走的是 sys.exit(2), 而
+           SystemExit 继承 BaseException, 【不是 Exception 的子类】——
+           原来的 except Exception 拦不住, 于是一个参数不匹配就把整个
+           update_indicators 打断: 面板重建之后的三个指标重算、形态打分
+           全都没跑, 而外层日志只看到一行 usage。pump/didian 因此停在 09-07。
+        """
+        old_argv = _sys.argv
+        try:
+            _sys.argv = argv or [name]
+            log.info("--- %s ---", name)
+            await mod.main()
+        except SystemExit as exc:
+            log.error("%s 退出码 %s —— 多半是参数对不上, 检查它的 argparse",
+                      name, exc.code)
+        except Exception as exc:  # noqa: BLE001
+            log.exception("%s 失败: %s", name, exc)
+        finally:
+            _sys.argv = old_argv
+
     from app.commands import (build_breakout, build_didian, build_dongli,
                               build_maimai, build_maimai_weekly, build_panels,
                               build_pump, build_sar)
@@ -194,11 +223,7 @@ async def main() -> None:
     #    不是直接读库。原来没有任何东西重建它们 —— 面板停在 2026-09-04,
     #    三个指标每天照常"重算"却永远出不了新信号, 而且不报错。
     #    2026-09-08 才被用户发现, 已经静默失效四天。
-    try:
-        log.info("--- 面板重建 ---")
-        await build_panels.main()
-    except Exception as exc:  # noqa: BLE001
-        log.exception("面板重建失败(下游三个指标会用旧面板): %s", exc)
+    await _run("面板重建", build_panels)
 
     # ⚠️ build_dongli 必须在这里跑: 拉升预警 = 动力线 × 吸筹, 动力线不更新
     # 就再也出不了新信号(v3.5 和龙虎榜都因为漏接每日更新静默过期过)。
@@ -207,11 +232,7 @@ async def main() -> None:
                       ("突破预警", build_breakout),
                       ("SAR预警", build_sar),
                       ("买卖很准周线", build_maimai_weekly)]:
-        try:
-            log.info("--- %s 重算 ---", name)
-            await mod.main()
-        except Exception as exc:  # noqa: BLE001
-            log.exception("%s 重算失败: %s", name, exc)
+        await _run(f"{name} 重算", mod)
 
     # 形态模型每日打分 + 各策略的信号同步。
     # ⚠️ 顺序不能颠倒: 打分要先有, mmweek_f(过滤版)才 join 得上 shape_score。
@@ -221,19 +242,6 @@ async def main() -> None:
     from app.commands import (build_shape_scores, sync_breakout_signals,
                               sync_mmweek_signals, sync_sar_signals,
                               sync_shape_signals)
-    import sys as _sys
-
-    async def _run(name, mod, argv):
-        old_argv = _sys.argv
-        try:
-            _sys.argv = argv
-            log.info("--- %s ---", name)
-            await mod.main()
-        except Exception as exc:  # noqa: BLE001
-            log.exception("%s 失败: %s", name, exc)
-        finally:
-            _sys.argv = old_argv
-
     await _run("形态模型打分", build_shape_scores, ["x", "--days", "5"])
     await _run("突破预警信号", sync_breakout_signals, ["x"])
     await _run("SAR预警信号", sync_sar_signals, ["x"])

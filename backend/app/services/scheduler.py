@@ -387,6 +387,11 @@ async def daily_sync_job():
             await update_indicators()
         finally:
             sys.argv = argv
+    # ⚠️ SystemExit 要单独拦: argparse 报错走 sys.exit(), 而 SystemExit 继承
+    #    BaseException, except Exception 拦不住, 会把整个 job 打断
+    #    (2026-09-09: build_panels 读到 --days 就退出, 后面全没跑)。
+    except SystemExit as exc:
+        log.error("训练指标更新以退出码 %s 结束 —— 检查子命令参数", exc.code)
     except Exception as exc:                      # noqa: BLE001
         log.exception("训练指标更新失败: %s", exc)
 
@@ -416,11 +421,6 @@ async def hourly_index_bars_job() -> None:
         log.exception("指数分钟K线补片失败: %s", exc)
 
 
-def start_scheduler():
-    global _scheduler
-    if _scheduler is not None:
-        return
-    _scheduler = AsyncIOScheduler(timezone="Asia/Shanghai")
 async def ensure_daily_job() -> None:
     """数据完整性自愈 —— 每小时跑, 自己判断该不该补。
 
@@ -469,9 +469,18 @@ async def ensure_daily_job() -> None:
                 await upd()
             finally:
                 _s.argv = argv
+    except SystemExit as exc:
+        log.error("指标补算以退出码 %s 结束 —— 检查子命令参数", exc.code)
     except Exception as exc:       # noqa: BLE001
         log.exception("指标补算失败: %s", exc)
 
+
+
+def start_scheduler():
+    global _scheduler
+    if _scheduler is not None:
+        return
+    _scheduler = AsyncIOScheduler(timezone="Asia/Shanghai")
 
     # ⚠️ 每小时的完整性自愈 —— 放在最前面注册, 它是其它一切的前提
     _scheduler.add_job(
@@ -493,7 +502,21 @@ async def ensure_daily_job() -> None:
         replace_existing=True,
     )
     _scheduler.start()
-    log.info("scheduler started — daily sync at 15:30 CST")
+    # ⚠️ 自检: 任务必须真的注册上了才算启动成功。
+    #    2026-09-09 踩过 —— ensure_daily_job 的 def 插在了 start_scheduler()
+    #    函数体中间, 把它腰斩: add_job/start() 全落进了 ensure_daily_job 里,
+    #    而那个函数因为注册代码在它自己体内, 永远不会被调用。于是调度器
+    #    对象建了、任务一个没有、【一条错误日志都没有】, 白跑两天:
+    #    15:30 收盘同步没跑、每小时自愈没跑, 当天库里只有 10 只票。
+    #    光靠 "scheduler started" 这句日志是查不出来的 —— 它本身也没打印。
+    jobs = {j.id for j in _scheduler.get_jobs()}
+    want = {"ensure_daily", "daily_sync", "index_bars_hourly"}
+    if jobs != want:
+        log.error("⚠️ 定时任务注册不全: 期望 %s, 实际 %s —— 收盘同步/自愈不会跑",
+                  sorted(want), sorted(jobs))
+    else:
+        log.info("scheduler started — %d 个任务已注册: %s",
+                 len(jobs), ", ".join(sorted(jobs)))
 
 
 def stop_scheduler():
