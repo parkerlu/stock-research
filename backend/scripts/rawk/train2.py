@@ -77,12 +77,12 @@ PRED_BS = 4096
 
 
 @torch.no_grad()
-def predict(net, ohlcv, idx, day_all, mkt, day_min, bs=None):
+def predict(net, ohlcv, idx, day_all, mkt, day_min, bs=None, nbar=NBAR):
     bs = bs or PRED_BS
     net.eval()
     out = None
     for i in range(0, len(idx), bs):
-        x = make_batch(ohlcv, idx[i:i + bs], day=day_all, mkt=mkt, day_min=day_min)
+        x = make_batch(ohlcv, idx[i:i + bs], nbar=nbar, day=day_all, mkt=mkt, day_min=day_min)
         with torch.autocast("cuda", dtype=torch.float16, enabled=(DEV == "cuda")):
             o = net(torch.as_tensor(x, device=DEV))
         if o.ndim == 2:                       # 三分类: 输出概率 (B,3)
@@ -160,6 +160,9 @@ def main() -> None:
                     help="三分类: 次日开盘买, 10日内先到+10%%=涨 / 先到-5%%=跌 / 都没=平 (label3.npz)")
     ap.add_argument("--label", default="label3.npz", help="三分类标签文件(rawk.label3 生成)")
     ap.add_argument("--smoke", action="store_true", help="只取几千样本跑通流程")
+    ap.add_argument("--nbar", type=int, default=NBAR, help="输入几根K线(对照 100/200/400)")
+    ap.add_argument("--min-hist", type=int, default=0,
+                    help="只用有 >=N 根同股历史的样本 —— nbar 对照时三组用同一批样本才公平")
     a = ap.parse_args()
     global PRED_BS
     PRED_BS = min(4096, a.bs * 2)
@@ -185,6 +188,17 @@ def main() -> None:
         log.info("⚠️ 三分类模式: +%.0f%%/-%.0f%%/%d日, 有效 %s | 基准 涨 %.1f%% 跌 %.1f%%",
                  float(l3["up"]) * 100, float(l3["dn"]) * 100, a.hold, f"{valid.sum():,}",
                  (y3[valid] == 1).mean() * 100, (y3[valid] == 2).mean() * 100)
+
+    # ⚠️ nbar 对照: 三组样本必须完全一样, 否则 400 根组少了新股, 不可比
+    min_hist = max(a.min_hist, a.nbar)
+    if min_hist > NBAR:
+        bounds = np.searchsorted(d["cid"], np.arange(int(d["cid"].max()) + 2))
+        enough = idx - min_hist + 1 >= bounds[d["lab_cid"]]
+        log.info("⚠️ 要求 >=%d 根同股历史: 样本 %s -> %s", min_hist,
+                 f"{valid.sum():,}", f"{(valid & enough).sum():,}")
+        valid = valid & enough
+    dil = (1, 2, 4, 8, 16, 32, 64) if a.nbar >= 256 else (1, 2, 4, 8, 16, 32)
+    log.info("输入 %d 根K线, 膨胀 %s (感受野 %d)", a.nbar, dil, 5 + 2 * sum(dil))
 
     # ⚠️ 三段划分: 验证集只用来挑轮次, 测试集只在最后碰一次
     tr_all = np.flatnonzero((yr <= 2019) & valid)
@@ -213,7 +227,7 @@ def main() -> None:
     te_scores, va_scores = [], []
     for si in range(a.seeds):
         torch.manual_seed(si); np.random.seed(si)
-        net = Net(ch=n_ch, h=a.h, n_rep=a.rep, n_out=3 if a.cls else 1).to(DEV)
+        net = Net(ch=n_ch, h=a.h, dilations=dil, n_rep=a.rep, n_out=3 if a.cls else 1).to(DEV)
         opt = torch.optim.AdamW(net.parameters(), lr=a.lr, weight_decay=1e-4)
         scaler = torch.amp.GradScaler("cuda", enabled=(DEV == "cuda"))
         # ⚠️ delta 要和标签尺度匹配: 原始超额在 ±0.05 量级, 分位在 ±0.5
@@ -225,7 +239,7 @@ def main() -> None:
             perm = r2.permutation(len(tr))
             for i in range(0, len(tr), a.bs):
                 b = tr[perm[i:i + a.bs]]
-                x = torch.as_tensor(make_batch(ohlcv, idx[b], day=day_all,
+                x = torch.as_tensor(make_batch(ohlcv, idx[b], nbar=a.nbar, day=day_all,
                                                mkt=mkt, day_min=day_min), device=DEV)
                 t = (torch.as_tensor(y3[b].astype(np.int64), device=DEV) if a.cls
                      else torch.as_tensor(y_fit[b], device=DEV))
@@ -234,7 +248,7 @@ def main() -> None:
                 opt.zero_grad(); scaler.scale(loss).backward()
                 scaler.unscale_(opt); nn.utils.clip_grad_norm_(net.parameters(), 1.0)
                 scaler.step(opt); scaler.update()
-            sv = predict(net, ohlcv, idx[va], day_all, mkt, day_min)
+            sv = predict(net, ohlcv, idx[va], day_all, mkt, day_min, nbar=a.nbar)
             if a.cls:
                 # ⚠️ 挑轮次的标准 = 验证集 Top5% 每笔期望收益 —— 就是盈利标准本身
                 dv = pd.DataFrame({"d": lday[va], "p": sv[:, 1], "r": ret3[va]})
@@ -256,7 +270,7 @@ def main() -> None:
                 if bad >= 3:
                     log.info("  种子%d 连续3轮没提升, 提前停", si); break
         net.load_state_dict(best_state)
-        st = predict(net, ohlcv, idx[te_all], day_all, mkt, day_min)
+        st = predict(net, ohlcv, idx[te_all], day_all, mkt, day_min, nbar=a.nbar)
         te_scores.append(st); va_scores.append(best_val)
         if a.cls:
             report_cls(f"种子{si} 单模型(验证最优 Top5%期望 {best_ic:+.2f}%)", lday[te_all], st,
