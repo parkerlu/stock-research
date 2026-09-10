@@ -9,6 +9,7 @@ import type { CSSProperties } from "react";
 import { useQuoteStore } from "../../stores/quoteStore";
 import { getMinute, getT0Signals } from "../../api/quotes";
 import { useTrainedSignals } from "../../hooks/useTrainedSignals";
+import { ChipsToday } from "./ChipsToday";
 import { syncSymbol } from "../../api/system";
 import type { MinuteData, T0Trade, Timeframe } from "../../types/quote";
 import { MinuteChart } from "./MinuteChart";
@@ -293,6 +294,11 @@ export function LiveView() {
       </div>
 
       <StockSectors symbol={currentSymbol} />
+
+      {/* 今日筹码买点 —— 全市场 Top1%, 点一下切过去看盘。
+          ⚠️ 之所以需要它: 信号每天只有约 54 只, 落在自选股上的概率很低
+          (实测 12 只自选里只有 4 只在过去 70 天出现过), 光把标记接进来不够用。 */}
+      <ChipsToday />
 
       {/* 左分时 / 右日K, 中间可拖动的分割线 */}
       <div

@@ -277,12 +277,23 @@ async def _settle_paper() -> None:
         )).scalars().all()
         if not accounts:
             return
-        end = (await db.execute(
+        # ⚠️⚠️ 结算只推进到【倒数第二个】交易日 —— 2026-09-10 修正。
+        #    默认 entry_mode 是 next_open: run_day(T) 用 T 日的信号, 但成交价是
+        #    T+1 的开盘价。最新交易日的次日还没发生, scan_signals 因此返回 0
+        #    (实测 09-09 -> 0 个, 09-08 -> 28 个), 于是当天一笔都买不进;
+        #    而 run_day 对已结算日期幂等, 第二天也不会重来 ——
+        #    结果是【每天的信号都被永久浪费】, 而且不报错。
+        #    回放时没暴露, 是因为历史数据里 T+1 的行情早就在库里了。
+        #    代价: 净值和出场记录比最新交易日滞后一天。对虚拟盘无实质影响
+        #    (出场仍按 T 日的 OHLC 判定, 只是记录晚一天写)。
+        last2 = (await db.execute(
             select(DailyCandle.trade_date)
-            .order_by(DailyCandle.trade_date.desc()).limit(1)
-        )).scalar_one_or_none()
-        if not end:
+            .group_by(DailyCandle.trade_date)
+            .order_by(DailyCandle.trade_date.desc()).limit(2)
+        )).scalars().all()
+        if len(last2) < 2:
             return
+        end = last2[1]
         for acct in accounts:
             # ⚠️ 还没结算过时, 起始日本身也要算进去。原来一律用 > start, 于是
             # started_on 落在交易日的账户会跳过自己的第一天 —— 实操盘定在
@@ -349,10 +360,12 @@ async def daily_sync_job():
         log.info("信号增量: %s", await build_signals(PAPER_STRATEGY, since=last))
     except Exception as exc:                      # noqa: BLE001
         log.exception("signal build failed: %s", exc)
-    # 拉升预警的信号增量 —— 必须在结算之前, 否则虚拟盘拿不到当天的新信号。
-    # ⚠️ 它依赖 dongli_signal + pump_signal, 而这两张表在下面的 update_indicators
-    # 里才更新, 所以这里写的是【昨天及以前】的信号; 今天的信号明天补上, 而
-    # 虚拟盘本来就是 next_open(信号日次日开盘买), 时序正好对得上。
+    # 拉升预警的信号增量。
+    # ⚠️ 它依赖 dongli_signal + pump_signal, 而这两张表要到下面的 update_indicators
+    # 才更新, 所以这一次写的是【昨天及以前】的信号。今天的信号由 update_indicators
+    # 跑完后的那次结算之前补不上 —— 但结算已经移到最后, 且 run_day 幂等,
+    # 明天推进时会带上。要彻底对齐, 应该把 sync_liftalert_signals 也并进
+    # update_indicators 的信号同步段(那里已有突破/SAR/周线版/形态/筹码五路)。
     try:
         from app.commands.sync_liftalert_signals import main as sync_lift
         import sys as _sys
@@ -364,12 +377,6 @@ async def daily_sync_job():
             _sys.argv = _argv
     except Exception as exc:                      # noqa: BLE001
         log.exception("拉升预警信号同步失败: %s", exc)
-
-    try:
-        await _settle_paper()
-    except Exception as exc:                      # noqa: BLE001
-        # 虚拟盘出错不影响行情同步 —— run_day 对已结算日期幂等, 下次补上
-        log.exception("paper settlement failed: %s", exc)
 
     # 训练指标(买卖很准v3 / 主力吸筹 / 低点组合v2) —— 拉当日筹码后重算评分。
     # 放在最后: 依赖当日 K 线已入库, 且失败不该影响前面任何一步。
@@ -394,6 +401,22 @@ async def daily_sync_job():
         log.error("训练指标更新以退出码 %s 结束 —— 检查子命令参数", exc.code)
     except Exception as exc:                      # noqa: BLE001
         log.exception("训练指标更新失败: %s", exc)
+
+    # ⚠️⚠️ 结算必须排在 update_indicators 【之后】—— 2026-09-10 修正。
+    #    scan_signals 找的是 `trade_date == 当天` 的信号, 而当天的信号是在
+    #    update_indicators 里生成的。原来结算排在它前面, 于是 run_day(T) 跑的
+    #    时候 T 日信号还不存在 -> 当天不买入; 而 run_day 对已结算日期幂等,
+    #    第二天也不会补 -> 【当天的信号永远用不上】。
+    #    这个顺序以前之所以没暴露, 是靠一个巧合: 15:30 收盘数据还没发全时
+    #    max(daily_candle) 还停在 T-1, 结算推进的是 T-1(它的信号昨天已生成)。
+    #    但第一步的 fill_daily 恰恰会把当日数据补进来, 这个巧合并不可靠。
+    #    移到最后之后, 时序变成确定的: 补行情 -> 算当日信号 -> 结算推进到当日。
+    #    仍然满足原注释的要求(排在行情同步之后, 否则用的是昨天的价格)。
+    try:
+        await _settle_paper()
+    except Exception as exc:                      # noqa: BLE001
+        # 虚拟盘出错不影响前面任何一步 —— run_day 对已结算日期幂等, 下次补上
+        log.exception("paper settlement failed: %s", exc)
 
     log.info("====== daily sync complete ======")
 

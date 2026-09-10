@@ -25,6 +25,9 @@ export interface ScreenItem {
   grade: string;
   price: number | null;
   chg: number | null;
+  /** 筹码模型独有: 模型给的涨/跌概率(%) */
+  p_up?: number;
+  p_dn?: number;
 }
 
 /** 可用于选股的训练指标清单 */
@@ -36,8 +39,10 @@ export async function listTrained(): Promise<{ indicators: TrainedMeta[] }> {
 export async function screenByTrained(
   indicator: string,
   grade: string,
-  days: number
+  days: number,
+  limit?: number
 ): Promise<{ indicator: string; grade: string; days: number; count: number; items: ScreenItem[] }> {
   const q = new URLSearchParams({ indicator, grade, days: String(days) });
+  if (limit) q.set("limit", String(limit));
   return json(`${BASE}/indicators/trained/screen?${q}`);
 }

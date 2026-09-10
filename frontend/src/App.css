@@ -2614,3 +2614,27 @@ body {
   font-size: 11px;
 }
 
+
+/* ===== 今日筹码买点(实时页) ===== */
+.chips-today { border-bottom: 1px solid var(--border); background: var(--panel); }
+.chips-today-toggle {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 5px 10px; background: none; border: 0; cursor: pointer;
+  color: var(--text); font-size: 12px; text-align: left;
+}
+.chips-today-toggle:hover { background: var(--hover); }
+.chips-today-day { color: var(--muted); font-size: 11px; font-weight: 400; }
+.chips-today-list {
+  display: flex; flex-wrap: wrap; gap: 5px; padding: 2px 10px 8px;
+}
+.chips-today-empty { color: var(--muted); font-size: 12px; padding: 2px 0; }
+.chips-chip {
+  display: inline-flex; align-items: baseline; gap: 5px;
+  padding: 3px 8px; border: 1px solid var(--border); border-radius: 4px;
+  background: var(--bg); color: var(--text); font-size: 12px; cursor: pointer;
+  white-space: nowrap;
+}
+.chips-chip:hover { border-color: #f59e0b; }
+.chips-chip.on { border-color: #f59e0b; background: rgba(245, 158, 11, .12); }
+.chips-chip-name { font-weight: 500; }
+.chips-chip-ev { color: #f59e0b; font-size: 11px; font-family: ui-monospace, monospace; }
