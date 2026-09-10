@@ -34,10 +34,10 @@ import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 
-from scripts.chips.features import (CYQ_COLS, DB_COLS, FEAT_NAMES,
+from scripts.chips.features import (ADV_NAMES, CYQ_COLS, DB_COLS, FEAT_NAMES,
                                     SHAPE_NAMES, TURNOVER_NAMES,
-                                    add_shape_feats, add_turnover_feats,
-                                    bad_rows, chip_feats)
+                                    add_advanced_feats, add_shape_feats,
+                                    add_turnover_feats, bad_rows, chip_feats)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s",
                     datefmt="%H:%M:%S")
@@ -63,7 +63,7 @@ def shift_within(arr: np.ndarray, cid: np.ndarray, k: int) -> np.ndarray:
     return out
 
 
-def build(out: str, with_db: bool, with_shape: bool) -> None:
+def build(out: str, with_db: bool, with_shape: bool, with_adv: bool) -> None:
     d = np.load(f"{DIR}/rawk/panel.npz")
     cid, day, idx = d["cid"], d["day"], d["idx"].astype(np.int64)
     ohlcv = d["ohlcv"]
@@ -148,6 +148,7 @@ def build(out: str, with_db: bool, with_shape: bool) -> None:
         T = add_turnover_feats(dblong, gid="gid")
         for nm in TURNOVER_NAMES:
             feats[nm] = T[nm].to_numpy()
+        dbraw = dblong[["turnover_rate"]].copy()   # advanced 还要用原始换手率
         del dblong, T
         gc.collect()
 
@@ -176,6 +177,22 @@ def build(out: str, with_db: bool, with_shape: bool) -> None:
         gc.collect()
         log.info("形态特征 %d 个算完(分 %d 批)", len(SHAPE_NAMES),
                  (int(cid.max()) + step) // step)
+
+    # ---- 研报/制度性特征(CGO、筹码形状、换手斜率、涨停族、龙虎榜条件) ----
+    # ⚠️ 需要同时有筹码(cost_*/weight_avg)、换手率、OHLC —— 三者都在上面备齐了
+    if with_adv:
+        adv_long = pd.DataFrame({"gid": cid,
+                                 "c": ohlcv[:, 3], "h": ohlcv[:, 1], "l": ohlcv[:, 2]})
+        for c_ in ("cost_5pct", "cost_15pct", "cost_50pct", "cost_85pct",
+                   "cost_95pct", "weight_avg"):
+            adv_long[c_] = raw[c_]
+        adv_long["turnover_rate"] = dbraw["turnover_rate"]
+        A = add_advanced_feats(adv_long, gid="gid")
+        for nm in ADV_NAMES:
+            feats[nm] = A[nm].to_numpy()
+        del adv_long, A
+        gc.collect()
+        log.info("研报特征 %d 个算完", len(ADV_NAMES))
 
     names = list(feats)
     X = np.empty((len(idx), len(names)), np.float32)
@@ -209,8 +226,10 @@ def main() -> None:
                     help="加换手率族(daily_basic) —— 对照实验用")
     ap.add_argument("--with-shape", action="store_true",
                     help="加经典起爆形态族 —— 对照实验用")
+    ap.add_argument("--with-adv", action="store_true",
+                    help="加研报/制度性特征(CGO/筹码形状/涨停族/龙虎榜条件)")
     a = ap.parse_args()
-    build(a.out, a.with_db, a.with_shape)
+    build(a.out, a.with_db, a.with_shape, a.with_adv)
 
 
 if __name__ == "__main__":

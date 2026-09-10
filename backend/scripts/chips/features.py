@@ -155,6 +155,107 @@ def add_shape_feats(df: pd.DataFrame, gid: str = "gid") -> pd.DataFrame:
     return out[SHAPE_NAMES].astype(np.float32)
 
 
+ADV_NAMES = [
+    "CGO", "筹码偏度代理", "上尾厚度", "腰部集中度",
+    "换手斜率5_60", "换手变异系数20",
+    "涨停次数20", "低换手涨停20", "炸板次数20", "龙虎榜触发20",
+]
+
+
+def add_advanced_feats(df: pd.DataFrame, gid: str = "gid") -> pd.DataFrame:
+    """外部研报/制度性特征 —— 2026-09-10 据网络检索结果实现。
+
+    只收录【有明确公式】或【有回测数据支撑】的, 拒绝自媒体的定性描述。
+    检索中明确判定"无法量化"的(长期地量后首次放量、假破位、启动信号的
+    绝对换手率阈值)一律不做 —— 那些在中文互联网上没有任何可编码定义,
+    所有通达信公式源码都被截断在变量声明处, 且无一有回测。
+
+    各特征来源与依据:
+
+    1. CGO(资本利得突出量) —— 广发证券《行为金融因子研究之一》2017-06
+       原式: 权重 w_{t-n} = V_{t-n}·Π(1−V_{t-i}), RP = Σw·P/Σw, CGO=(P−RP)/P
+       回测 2007-2017 中证500: 低 CGO 组年均超额 8~15%, 高 CGO 组仅 2~8%。
+       ⚠️ 这里用 cyq_perf 的 weight_avg 作 RP 的现成代理 —— tushare 的筹码
+          分布同样是换手率衰减算的, 两者机制一致。
+       ⚠️ 广发的结论方向是"CGO 越低未来收益越高"(处置效应), 而我们的目标是
+          右尾爆发, 方向未必一致 —— 但符号信息本身有价值, 让模型自己学。
+
+    2. 筹码分布形状(偏度/峰度的分位数代理) —— 中信建投《筹码分布因子系统构建》
+       报告称 kurtosis 族 IC −3.74% / 年化 13.53%, chip_distri 族 IC +3.96% /
+       年化 20.10%, 且【筹码因子在中证1000/500 上显著优于沪深300】——
+       正好是起爆模型的股票池。
+       ⚠️ 报告未披露因子的数学定义(38页原文在付费墙后), 这里是用 5 个分位点
+          做的形状近似, 不是原factor。
+       ⚠️ 与已证伪的"筹码集中度"(只用 85/15)不是同一个量: 这里用到 95/5 和
+          50, 描述的是分布的尾部与偏斜, 不是腰部宽度。
+
+    3. 换手率斜率与变异系数 —— 华泰《单因子测试之换手率类因子》
+       研报明确提示同类不同周期高度相关需去冗余, 所以这里做的是与已有
+       "换手相对N日"正交的形式: 斜率(短期/长期之比)与离散度(std/mean)。
+
+    4. 涨停形态族 —— 雪球统计(可信度较低, 但可自行验证):
+       换手率<3% 的涨停次日胜率 80.2%, 换手率>50% 的仅 45.5%。
+       ⚠️ 这些是【次日】尺度的统计, 我们的标签是 20 日 +30%, 不能直接套用;
+          作为"过去 N 日内出现过几次"的特征则合适。
+       ⚠️ 涨跌停幅度按板块分: 主板 10%, 创业板/科创板 20%(2020-08 起),
+          这里用 9.8% 的宽松判据 + 20% 判据同时覆盖, 不做精确的板块判定 ——
+          精确判定要 ts_code 前缀 + 日期, 留待需要时再加。
+
+    5. 龙虎榜触发条件 —— 交易所披露规则本身是公开可复现的:
+       日涨跌幅偏离值 ±7% / 换手率 20% / 振幅 15%。
+       ⚠️ 这是【免费的制度性特征】: 不需要龙虎榜数据本身, 只要算出"今天是否
+          触发披露条件"。上榜是 T 日盘后公布, 无前视问题。
+    """
+    g = df.groupby(gid, sort=False)
+    c_ = df["c"]
+    out = pd.DataFrame(index=df.index)
+
+    # --- 1. CGO (用 weight_avg 作参考价格 RP) ---
+    wa = df["weight_avg"].clip(lower=1e-6)
+    out["CGO"] = (c_ - wa) / c_.clip(lower=1e-6)
+
+    # --- 2. 筹码分布形状 ---
+    c5, c50, c85, c95 = (df["cost_5pct"], df["cost_50pct"],
+                         df["cost_85pct"], df["cost_95pct"])
+    span = (c95 - c5).clip(lower=1e-6)
+    # 中位数 vs 加权均值的偏离 = 偏度代理(分布右偏时均值 > 中位数)
+    out["筹码偏度代理"] = (c50 - wa) / wa
+    # 上尾厚度: 95~85 相对 85~50 —— 高位筹码的尾部有多重
+    out["上尾厚度"] = (c95 - c85) / (c85 - c50).clip(lower=1e-6)
+    # 腰部集中 vs 全域宽度 = 峰度代理
+    out["腰部集中度"] = (c85 - df["cost_15pct"]) / span
+
+    # --- 3. 换手率斜率与离散度 ---
+    t5 = g["turnover_rate"].transform(lambda x: x.rolling(5, min_periods=2).mean())
+    t60 = g["turnover_rate"].transform(lambda x: x.rolling(60, min_periods=10).mean())
+    out["换手斜率5_60"] = t5 / t60.clip(lower=1e-6)
+    t20m = g["turnover_rate"].transform(lambda x: x.rolling(20, min_periods=5).mean())
+    t20s = g["turnover_rate"].transform(lambda x: x.rolling(20, min_periods=5).std())
+    out["换手变异系数20"] = t20s / t20m.clip(lower=1e-6)
+
+    # --- 4. 涨停形态族 ---
+    prev_c = g["c"].shift(1)
+    pct = c_ / prev_c.clip(lower=1e-6) - 1
+    up_limit = ((pct >= 0.098) & (pct < 0.115)) | (pct >= 0.198)   # 主板 / 双创
+    intraday_limit = (df["h"] / prev_c.clip(lower=1e-6) - 1 >= 0.098)
+    zhaban = intraday_limit & ~up_limit                             # 摸过涨停但没收在涨停
+    low_turn_limit = up_limit & (df["turnover_rate"] < 3.0)
+    for nm, ser in [("涨停次数20", up_limit), ("低换手涨停20", low_turn_limit),
+                    ("炸板次数20", zhaban)]:
+        tmp = pd.DataFrame({"g": df[gid], "v": ser.astype(np.float32)})
+        out[nm] = tmp.groupby("g")["v"].transform(
+            lambda x: x.rolling(20, min_periods=5).sum())
+
+    # --- 5. 龙虎榜披露条件(制度性, 免费) ---
+    amp = (df["h"] - df["l"]) / prev_c.clip(lower=1e-6)
+    lhb = (pct.abs() >= 0.07) | (df["turnover_rate"] >= 20.0) | (amp >= 0.15)
+    tmp = pd.DataFrame({"g": df[gid], "v": lhb.astype(np.float32)})
+    out["龙虎榜触发20"] = tmp.groupby("g")["v"].transform(
+        lambda x: x.rolling(20, min_periods=5).sum())
+
+    return out[ADV_NAMES].astype(np.float32)
+
+
 def chip_feats(df: pd.DataFrame, gid: str = "gid") -> pd.DataFrame:
     """算 13 个筹码特征。df 需含 gid / close / CYQ_COLS，按 (gid, 日期) 升序。
 
