@@ -93,6 +93,14 @@ function toMarks(rows: PaperTrade[], code: string): TradeAction[] {
     })));
 }
 
+/** 策略 key -> 中文名。⚠️ 与后端 DEMO_STRATEGIES 的 label 对齐, 改一处要改两处;
+ *  真要彻底统一应该让前端直接用 /api/paper/strategies 的返回。 */
+const STRAT_LABEL: Record<string, string> = {
+  chips: "筹码模型", shape: "形态模型", liftalert: "拉升预警",
+  mmweek: "周线版", mmweek_f: "周线版(过滤)", breakout: "突破预警",
+  sar: "SAR预警", "tdx-dual-kdj": "⚠️已下架",
+};
+
 export function PaperPanel() {
   const [cfg, setCfg] = useState<PaperConfig | null>(null);
   const [st, setSt] = useState<PaperStatus | null>(null);
@@ -162,7 +170,14 @@ export function PaperPanel() {
   const syncedFor = useRef<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playRef = useRef(false);
-  const isDemo = acct === DEMO_ACCOUNT;
+  const isDemo = acct.startsWith("demo");
+  // 当前 tab 下该显示哪些账户 —— 实操盘与演示盘分开, 不能混
+  const visibleAccts = accts.filter((x) => x.name.startsWith("demo") === isDemo);
+  // ⚠️ 只有主演示盘("demo")能"重新开始"。demo-xxx-回测 是几年期的历史回放
+  //    (1097 笔 / 772 笔), 而重置按钮写死 resetPaper(DEMO_ACCOUNT) ——
+  //    选中它们时若还显示这个按钮, 点下去会把主演示盘清掉, 而用户以为
+  //    重置的是当前这个。
+  const canReset = acct === DEMO_ACCOUNT;
   const setCurrentStock = useQuoteStore((s) => s.setCurrentStock);
   const jumpToDate = useQuoteStore((s) => s.jumpToDate);
   const setReplayDate = useQuoteStore((s) => s.setReplayDate);
@@ -315,10 +330,16 @@ export function PaperPanel() {
               演示回放
             </button>
           </div>
-          {accts.length > 0 && (
+          {/* ⚠️ 按当前 tab 分开列: 实操盘只列自动推进的, 演示回放只列 demo。
+              以前混在一起, 在"实操盘"下也能选到 demo-xxx-回测(那些是几年回放、
+              收益动辄 +165%), 摆在实操盘旁边极易被当成实盘业绩。
+              ⚠️ 也不再放空的占位 option —— 它在"当前账户不在列表里"时会被选中
+              并打勾(2026-09-10 用户截图就是这个状态), 看起来像选了, 其实页面
+              显示的是隐藏的 live-2026。现在 acct 始终落在列表内, 无需占位。 */}
+          {visibleAccts.length > 0 && (
             <select
               className="pp-acct-sel"
-              value={accts.some((x) => x.name === acct) ? acct : ""}
+              value={visibleAccts.some((x) => x.name === acct) ? acct : visibleAccts[0].name}
               onChange={(e) => {
                 const v = e.target.value;
                 if (!v) return;
@@ -326,12 +347,12 @@ export function PaperPanel() {
                 setAcct(v);
                 reload(v);
               }}
-              title="策略账户 —— 只列在跑的; 被证伪的已停用"
+              title={isDemo ? "演示账户 —— 手动回放用" : "实操盘 —— 每晚自动推进"}
             >
-              <option value="">策略账户…</option>
-              {accts.map((x) => (
+              {visibleAccts.map((x) => (
                 <option key={x.id} value={x.name}>
-                  {x.name} · {x.pnl_pct >= 0 ? "+" : ""}{x.pnl_pct}% · {x.trades}笔
+                  {STRAT_LABEL[x.strategy] ?? x.strategy ?? "无策略"}
+                  {" · "}{x.name} · {x.pnl_pct >= 0 ? "+" : ""}{x.pnl_pct}% · {x.trades}笔
                 </option>
               ))}
             </select>
@@ -343,7 +364,7 @@ export function PaperPanel() {
           )}
         </div>
         <div className="pp-actions">
-          {isDemo ? (
+          {isDemo && canReset ? (
             <span className="pp-asof">
               <select className="pp-date" value={demoStrat}
                       title="回放哪个策略 —— 出场规则跟随该策略的训练标签"
