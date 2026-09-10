@@ -138,6 +138,19 @@ async def status(name: str = DEFAULT_ACCOUNT):
             )).all()
             px_map = {c: (float(v), str(d)) for c, v, d in rows}
 
+        # ⚠️ 止盈价必须读【该账户自己的】config, 不能用 DEFAULT_CONFIG ——
+        #    2026-09-10 用户发现: 周线版账户显示"止盈 30.37"而现价 30.90 却不卖,
+        #    看起来像撮合出错。实际上那个账户是 tier1_pct=9.99(不止盈, 只按持有期
+        #    出场, 因为周线版是状态指标, 中途止盈会破坏它 8 周持有的验证口径),
+        #    而接口拿 DEFAULT_CONFIG 的 0.04 去算, 显示成了 +4%。
+        #    现在七个账户各有各的规则(起爆 +30% / 筹码 +10% / 周线版不止盈),
+        #    全都被显示成 +4% —— 数据没错, 是显示在误导人。
+        acfg = {**pt.DEFAULT_CONFIG, **(acct.config or {})}
+        t1p, t2p = float(acfg["tier1_pct"]), float(acfg["tier2_pct"])
+        # 9.99 这种哨兵值代表"不设此档", 显示成 None 让前端画横杠, 不要印出天价
+        t1p = None if t1p >= 5 else t1p
+        t2p = None if t2p >= 5 else t2p
+
         holdings, closed = [], []
         market_value = 0.0
         for p in positions:
@@ -158,8 +171,11 @@ async def status(name: str = DEFAULT_ACCOUNT):
                     "float_pnl_pct": round((px / entry - 1) * 100, 2),
                     "realized_pnl": round(float(p.realized_pnl or 0), 2),
                     "stop_price": float(p.stop_price),
-                    "tier1_price": round(entry * (1 + pt.DEFAULT_CONFIG["tier1_pct"]), 4),
-                    "tier2_price": round(entry * (1 + pt.DEFAULT_CONFIG["tier2_pct"]), 4),
+                    "tier1_price": round(entry * (1 + t1p), 4) if t1p else None,
+                    "tier2_price": round(entry * (1 + t2p), 4) if t2p else None,
+                    # 止损同理: stop_pct=0.99 代表不止损, 存进库的 stop_price
+                    # 会是买价的 1%(实际打不到), 显示成 None 比印 0.29 清楚
+                    "no_stop": float(acfg["stop_pct"]) >= 0.5,
                     "tier1_done": p.tier1_done,
                     "hold_days": (as_of_date - p.open_date).days,
                 })

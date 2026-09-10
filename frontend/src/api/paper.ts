@@ -18,8 +18,12 @@ export interface Holding {
   float_pnl_pct: number;
   realized_pnl: number;
   stop_price: number;
-  tier1_price: number;
-  tier2_price: number;
+  /** 该账户不设止损时(stop_pct>=0.5)为 true —— 此时 stop_price 是买价的 1%,
+   *  打不到, 直接显示横杠而不是印一个吓人的 0.29 */
+  no_stop?: boolean;
+  /** null = 该账户不设这一档止盈(如周线版只按持有期出场) */
+  tier1_price: number | null;
+  tier2_price: number | null;
   tier1_done: boolean;
   hold_days: number;
 }

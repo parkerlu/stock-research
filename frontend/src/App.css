@@ -2641,3 +2641,6 @@ body {
 
 /* 演示盘: 策略起点不匹配的提示 */
 .pp-warn { color: #f59e0b; font-size: 11px; margin: 0 4px; white-space: nowrap; }
+
+/* 虚拟盘: 不适用的止损/止盈显示成横杠 */
+.pp-na { color: var(--muted); cursor: help; }

@@ -536,9 +536,20 @@ export function PaperPanel() {
                     <b>{h.float_pnl_pct >= 0 ? "+" : ""}{h.float_pnl_pct.toFixed(2)}%</b>
                     <em>{h.float_pnl >= 0 ? "+" : ""}{money(h.float_pnl)}</em>
                   </td>
-                  <td className="down">{h.stop_price.toFixed(2)}</td>
+                  {/* ⚠️ 不设止损/止盈的账户要显示横杠, 不能印一个打不到的价格。
+                      周线版是状态指标, 只按持有期出场 —— 以前这里拿全局默认的
+                      +4% 去算, 结果现价超过"止盈价"却不卖, 看着像撮合出错。 */}
+                  <td className="down">
+                    {h.no_stop ? <span className="pp-na" title="该策略不设止损, 只按持有期出场">—</span>
+                               : h.stop_price.toFixed(2)}
+                  </td>
                   <td className="up">
-                    {h.tier1_done ? h.tier2_price.toFixed(2) : h.tier1_price.toFixed(2)}
+                    {(() => {
+                      const v = h.tier1_done ? h.tier2_price : h.tier1_price;
+                      return v == null
+                        ? <span className="pp-na" title="该策略不设止盈, 只按持有期出场">—</span>
+                        : v.toFixed(2);
+                    })()}
                   </td>
                 </tr>
               ))}
