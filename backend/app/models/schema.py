@@ -591,6 +591,32 @@ class TopList(Base):
     reason: Mapped[str | None] = mapped_column(String(128))
 
 
+class ComboScore(Base):
+    """共振打分 = 筹码模型 × 裸K CNN —— 目前【唯一】组合层面过线的东西。
+
+    walk-forward + 资金池 + 真实周转, 仓位20: 比值 1.07
+    (年化 +27.7% / 回撤 −26.0%), 六年零负年。单用: 筹码 0.89 / 裸K 0.78。
+
+    ⚠️ 组合方式(两边 EV 等权平均)过了诚实复核: 在 2020 验证集上比
+       avg/rank/min = 5.74/2.62/1.66, 选出 avg 后测试集只跑一次 -> 1.07。
+       不是在测试集上挑的 —— 这一步是本项目最贵教训的直接产物。
+
+    ⚠️ 为什么共振有效: 两模型当日横截面分位相关只有 +0.021, 几乎正交。
+       纯选股超额超加: 筹码 +0.33pp、裸K +0.37pp -> 合起来 +0.45pp。
+
+    ⚠️ ev_rawk / ev_chips 分开存, 是为了能随时回查"这一票是谁在推" ——
+       如果哪天共振失效, 要先知道是哪一边先坏的。
+    """
+    __tablename__ = "combo_score"
+    ts_code = Column(String(12), primary_key=True)
+    trade_date = Column(Date, primary_key=True)
+    ev_rawk = Column(Numeric(10, 6), nullable=False)
+    ev_chips = Column(Numeric(10, 6), nullable=False)
+    ev = Column(Numeric(10, 6), nullable=False)
+    rank_pct = Column(Numeric(8, 5), nullable=False)
+    __table_args__ = (Index("ix_combo_date", "trade_date"),)
+
+
 class ChipsScore(Base):
     """筹码模型每日全市场打分 —— 与形态模型不同, 这个【能】当选股信号用。
 
