@@ -102,16 +102,35 @@ export function PaperPanel() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [showRules, setShowRules] = useState(false);
-  const [acct, setAcct] = useState<string>(LIVE_ACCOUNT);
+  // ⚠️ 默认账户不能写死 LIVE_ACCOUNT("live-2026") —— 2026-09-10 用户发现:
+  //    那个账户用的是【已下架】的 tdx-dual-kdj(周内多周期穿越), 而且
+  //    is_active=false 所以【不在下拉列表里】。结果"什么都不选"时页面显示的
+  //    是一个本该停用的账户的净值, 看起来却像当前实盘。
+  //    改成落到列表里第一个可用账户, 列表为空时才回退到常量。
+  const [acct, setAcct] = useState<string>(
+    () => localStorage.getItem("paper.acct") ?? LIVE_ACCOUNT);
   // 账户列表从后端拿 —— 以前是两个写死的按钮(live-2026 / demo), 结果新建的
   // 账户在页面上根本点不到。⚠️ 后端只返回 is_active 的。
   const [accts, setAccts] = useState<
     { id: number; name: string; strategy: string; trades: number; pnl_pct: number }[]
   >([]);
+  const [acctLoaded, setAcctLoaded] = useState(false);
   useEffect(() => {
     getPaperAccounts()
-      .then((r) => setAccts(r.accounts))
-      .catch(() => setAccts([]));
+      .then((r) => {
+        setAccts(r.accounts);
+        // 选中的账户不在可用列表里(如已停用的 live-2026) -> 挑一个有内容的。
+        // ⚠️ 不能直接取 accounts[0]: 那是按 id 排的, 很可能是个 0 笔交易的
+        //    账户, 打开页面一片空白。优先选有交易记录的。
+        setAcct((cur) => {
+          if (!r.accounts.length || r.accounts.some((x) => x.name === cur)) return cur;
+          const live = r.accounts.filter((x) => !x.name.startsWith("demo"));
+          const pool = live.length ? live : r.accounts;
+          return (pool.find((x) => (x.trades ?? 0) > 0) ?? pool[0]).name;
+        });
+      })
+      .catch(() => setAccts([]))
+      .finally(() => setAcctLoaded(true));
   }, []);
   const [signals, setSignals] = useState<SignalPick[]>([]);
   const [playing, setPlaying] = useState(false);
@@ -232,11 +251,18 @@ export function PaperPanel() {
 
   useEffect(() => {
     getPaperConfig().then(setCfg).catch(() => setCfg(null));
-    reload(acct);
+    // ⚠️ 等账户列表回来再取数 —— 否则会先用写死的 LIVE_ACCOUNT 拉一次,
+    //    用户会看到那个已停用账户的净值闪一下(甚至停在上面)。
+    if (acctLoaded) {
+      localStorage.setItem("paper.acct", acct);
+      reload(acct);
+    }
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [reload]);
+    // ⚠️ 依赖必须带 acctLoaded/acct: 账户列表是异步回来的, 只依赖 reload
+    //    的话列表把 acct 换掉之后不会重新取数, 页面停在旧账户上。
+  }, [reload, acctLoaded, acct]);
 
   const poll = (id: string) => {
     getPaperRun(id).then((j) => {
