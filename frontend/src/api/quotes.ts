@@ -174,6 +174,22 @@ export async function getBreakoutSignals(
   return json(`${BASE}/indicators/breakout/${tsCode}${q}`);
 }
 
+/** 共振 = 筹码模型 × 裸K CNN 的 EV 等权平均。
+ *  ⚠️ 目前唯一组合层面过线的: 比值 1.07(年化+27.7%/回撤−26.0%), 六年零负年。
+ *  两模型当日分位相关仅 +0.021, 几乎正交。 */
+export async function getComboCkSignals(
+  tsCode: string,
+  start?: string
+): Promise<{
+  ts_code: string;
+  count: number;
+  signals: { date: string; score: number; rank_pct: number; grade: string;
+             ev_chips: number; ev_rawk: number }[];
+}> {
+  const q = start ? `?start=${start}` : "";
+  return json(`${BASE}/indicators/combo_ck/${tsCode}${q}`);
+}
+
 /** 筹码模型 —— 只用 tushare cyq_perf 的获利盘族, XGBoost 三分类。
  *  题目: 次日开盘买入, 10根K线内先碰+10%记涨/先碰-8%记跌。
  *  ⚠️ 目前唯一组合层面接近达标的选股信号: walk-forward+资金池 比值 0.89

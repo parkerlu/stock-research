@@ -9,7 +9,8 @@
  */
 import { useEffect, useState } from "react";
 import {
-  getBreakoutSignals, getChipsSignals, getComboSignals, getDidianSignals,
+  getBreakoutSignals, getChipsSignals, getComboCkSignals, getComboSignals,
+  getDidianSignals,
   getLiftAlertSignals,
   getMaimaiSignals, getMmWeekSignals, getPumpSignals, getSarSignals,
 } from "../api/quotes";
@@ -25,6 +26,8 @@ export interface TrainedMeta {
 
 /** 唯一的训练指标清单。⚠️ 新增指标只改这里, 三个页面自动跟上。 */
 export const TRAINED_INDICATORS: TrainedMeta[] = [
+  { name: "combo_ck", label: "★★★ 共振(筹码×裸K)",
+    desc: "两模型EV等权平均 · 唯一组合过线的: 比值1.07(年化+27.7%/回撤−26.0%) · 六年零负年 · 两者分位相关仅+0.021" },
   { name: "chips", label: "★★★ 筹码模型",
     desc: "获利盘族×XGBoost · 10根K线内触及+10% · 组合比值0.89(年化+15.9%/回撤-17.9%) · 纯选股, 择时贡献为0" },
   { name: "sar", label: "★★★ SAR预警",
@@ -65,6 +68,7 @@ export function useTrainedSignals(symbol: string, active: string[]) {
     if (!symbol) { setSig({}); setLhb([]); return; }
     let live = true;
     const fetchers: Record<string, (c: string) => Promise<{ signals: Sig[] }>> = {
+      combo_ck: getComboCkSignals as never,
       chips: getChipsSignals as never,
       sar: getSarSignals, breakout: getBreakoutSignals, liftalert: getLiftAlertSignals,
       mmweek: getMmWeekSignals, combo: getComboSignals, didian: getDidianSignals,
@@ -89,6 +93,7 @@ export function useTrainedSignals(symbol: string, active: string[]) {
   return {
     lhb,
     props: {
+      comboCkSignals: pick("combo_ck") as never,
       chipsSignals: pick("chips") as never,
       sarSignals: pick("sar") as never,
       breakoutSignals: pick("breakout") as never,

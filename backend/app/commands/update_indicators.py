@@ -239,8 +239,9 @@ async def main() -> None:
     #    build_shape_scores 依赖上面刚算完的 daily_candle, 也依赖挂载卷上的
     #    模型文件 /app/data/research/shape/*.json —— 那个目录必须是挂载的,
     #    放 /app 别处重建镜像就没了。
-    from app.commands import (build_chips_scores, build_shape_scores,
-                              sync_breakout_signals, sync_chips_signals,
+    from app.commands import (build_chips_scores, build_combo_scores,
+                              build_shape_scores, sync_breakout_signals,
+                              sync_chips_signals, sync_combo_signals,
                               sync_mmweek_signals, sync_sar_signals,
                               sync_shape_signals)
     await _run("形态模型打分", build_shape_scores, ["x", "--days", "5"])
@@ -257,6 +258,13 @@ async def main() -> None:
     # ⚠️ 也必须在上面 fetch_cyq_recent 之后 —— 它要用当天新拉的筹码。
     await _run("筹码模型打分", build_chips_scores, ["x", "--days", "5"])
     await _run("筹码模型信号", sync_chips_signals, ["x"])
+
+    # 共振(筹码 × 裸K) —— 唯一组合层面过线的(比值 1.07)。
+    # ⚠️ 必须排在筹码打分之后: 它要读 chips_score 才能做等权平均。
+    # ⚠️ 这一步要跑 CNN 推理, 全市场一天约 3.7 分钟 / 743MB —— 是整条链里
+    #    最慢的一环, 所以只补当天(--days 1), 不做多日回补。
+    await _run("共振打分", build_combo_scores, ["x", "--days", "1"])
+    await _run("共振信号", sync_combo_signals, ["x"])
 
     eng = create_async_engine(settings.database_url)
     async with eng.connect() as c:

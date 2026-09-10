@@ -194,6 +194,14 @@ async def pump_scan(
 # ---- 训练指标选股 ----
 # 信号已在库中(build_maimai / build_pump 盘后算好), 这里直接查, 不跑扫描任务。
 TRAINED_META = [
+    {"key": "combo_ck", "label": "★★★ 共振 (筹码×裸K)",
+     "desc": "筹码模型与裸K CNN 的 EV 等权平均 —— 目前【唯一】组合层面过线的: "
+             "walk-forward+资金池+真实周转 比值 1.07(年化+27.7%/回撤−26.0%), 六年零负年。"
+             "单用: 筹码 0.89 / 裸K 0.78。⚠️ 组合方式过了诚实复核(在2020验证集上比 "
+             "avg/rank/min = 5.74/2.62/1.66 选出 avg, 测试集只跑一次)。"
+             "两模型当日分位相关仅 +0.021 几乎正交 —— 一个看400根K线形态, "
+             "一个看持仓成本结构, 纯选股超额超加(+0.33 与 +0.37 合成 +0.45)",
+     "grades": ["强"], "default_grade": "强", "default_days": 5},
     {"key": "chips", "label": "★★★ 筹码模型 (获利盘)",
      "desc": "XGBoost 三分类, 只用筹码分布的获利盘族。题目: 次日开盘买入, 10根K线内"
              "先碰+10%记涨/先碰-8%记跌。⚠️ 这是目前【唯一】组合层面接近达标的选股信号: "
@@ -396,6 +404,45 @@ async def screen_by_trained(
              "price": round(float(r[5]), 2) if r[5] is not None else None,
              "chg": round(float(r[6]) * 100, 2) if r[6] is not None else None,
              "mkt_ok": bool(r[7]) if r[7] is not None else None}
+            for r in rows]}
+
+    if indicator == "combo_ck":
+        # 共振 = 筹码 EV 与裸K EV 等权平均, 取当日横截面 Top1%。
+        # ⚠️ 分位由 build_combo_scores 按当日全市场算, 这里只筛不重排。
+        rows = (await db.execute(text("""
+            with px as (
+              select d.ts_code, d.trade_date, d.close, d.adj_factor,
+                     row_number() over (partition by d.ts_code order by d.trade_date desc) rn
+              from daily_candle d
+              where d.trade_date > (select max(trade_date) - interval '20 days' from daily_candle)
+            ),
+            last2 as (
+              select ts_code,
+                     max(close) filter (where rn=1) c1, max(adj_factor) filter (where rn=1) a1,
+                     max(close) filter (where rn=2) c2, max(adj_factor) filter (where rn=2) a2
+              from px where rn <= 2 group by ts_code
+            )
+            select c.ts_code, coalesce(b.name,'') as name, c.trade_date,
+                   c.ev as score, c.rank_pct, '强' as grade,
+                   l.c1 as price, (l.c1*l.a1)/nullif(l.c2*l.a2,0)-1 as chg,
+                   c.ev_chips, c.ev_rawk
+            from combo_score c
+            left join stock_basic b on b.ts_code = c.ts_code
+            left join last2 l on l.ts_code = c.ts_code
+            where c.rank_pct >= 0.99
+              and c.trade_date > (select max(trade_date) from combo_score)
+                                 - make_interval(days => :d)
+            order by c.trade_date desc, c.ev desc
+            limit :lim
+        """), {"d": days, "lim": limit})).fetchall()
+        return {"indicator": indicator, "grade": "强", "days": days,
+                "count": len(rows), "items": [
+            {"ts_code": r[0], "name": r[1], "date": str(r[2]),
+             "score": round(float(r[3]), 4) if r[3] is not None else None,
+             "rank_pct": round(float(r[4]), 4), "grade": r[5],
+             "price": round(float(r[6]), 2) if r[6] is not None else None,
+             "chg": round(float(r[7]) * 100, 2) if r[7] is not None else None,
+             "ev_chips": round(float(r[8]) * 100, 2), "ev_rawk": round(float(r[9]) * 100, 2)}
             for r in rows]}
 
     if indicator == "chips":
@@ -705,6 +752,46 @@ async def liftalert_signals(
     return {"ts_code": ts_code, "count": len(rows), "signals": [
         {"date": str(r[0]), "score": round(float(r[1]), 4),
          "rank_pct": round(float(r[2]), 4), "grade": "强"} for r in rows]}
+
+
+@router.get("/combo_ck/{ts_code}")
+async def combo_ck_signals(
+    ts_code: str,
+    start: str | None = Query(None, description="YYYY-MM-DD"),
+    q: float = Query(0.99, ge=0.5, le=1.0),
+    db: AsyncSession = Depends(get_db),
+):
+    """共振买点 = 筹码模型 × 裸K CNN 的 EV 等权平均, 当日全市场 Top1%。
+
+    ⚠️ 目前【唯一】组合层面过线的信号: walk-forward + 资金池 + 真实周转,
+       仓位20 -> 比值 1.07(年化 +27.7% / 回撤 −26.0%), 六年零负年。
+       单用: 筹码 0.89 / 裸K 0.78。
+
+    ⚠️ 组合方式(等权平均)过了诚实复核: 在 2020 验证集上比 avg/rank/min
+       = 5.74/2.62/1.66, 选出 avg 后测试集只跑一次。不是在测试集上挑的。
+
+    ⚠️ 两模型当日横截面分位相关仅 +0.021, 几乎正交 —— 一个看 400 根K线的
+       形态, 一个看持仓成本结构。纯选股超额是超加的: +0.33pp 与 +0.37pp
+       合起来 +0.45pp。
+
+    返回里 ev_chips / ev_rawk 分开给, 好回查"这一票是谁在推"。
+    """
+    sql = ("select trade_date, ev, rank_pct, ev_chips, ev_rawk from combo_score "
+           "where ts_code = :c and rank_pct >= :q")
+    params: dict = {"c": ts_code, "q": q}
+    if start:
+        try:
+            params["s"] = date.fromisoformat(start)
+            sql += " and trade_date >= :s"
+        except ValueError:
+            raise HTTPException(status_code=400, detail="start 需为 YYYY-MM-DD")
+    sql += " order by trade_date"
+    rows = (await db.execute(text(sql), params)).fetchall()
+    return {"ts_code": ts_code, "count": len(rows), "signals": [
+        {"date": str(r[0]), "score": round(float(r[1]), 4),
+         "rank_pct": round(float(r[2]), 4), "grade": "强",
+         "ev_chips": round(float(r[3]) * 100, 2), "ev_rawk": round(float(r[4]) * 100, 2)}
+        for r in rows]}
 
 
 @router.get("/chips/{ts_code}")

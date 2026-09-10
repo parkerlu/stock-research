@@ -80,7 +80,9 @@ interface Props {
   /** 买卖很准 周线版 —— 【状态】不是买点, 画副图色带而非三角 */
   mmweekSignals?: { date: string; value: number; grade: string }[];
   /** SAR预警 —— 趋势型, 紫色三角(与突破绿/拉升青区分) */
-  /** 筹码模型买点 —— 目前唯一组合层面接近达标的选股信号(比值 0.89, 纯选股) */
+  /** 共振买点(筹码×裸K) —— 唯一组合层面过线的, 比值 1.07 */
+  comboCkSignals?: { date: string; score: number; rank_pct: number; grade: string }[];
+  /** 筹码模型买点 —— 纯选股, 比值 0.89 */
   chipsSignals?: { date: string; score: number; rank_pct: number; grade: string }[];
   sarSignals?: { date: string; score: number; rank_pct: number; grade: string }[];
   /** 突破预警 —— 趋势型, 亮绿色三角 */
@@ -167,7 +169,7 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
   { timeframe: tfOverride, className, tradeActions, replayDate, forecast, onBarSelected,
     measuring = false, onMeasure,
     maimaiSignals, comboSignals, pumpSignals, didianSignals, signalMark, panes, topList, liftSignals, breakoutSignals, sarSignals, mmweekSignals,
-    chipsSignals },
+    chipsSignals, comboCkSignals },
   ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -242,6 +244,12 @@ export const MainChart = forwardRef<MainChartHandle, Props>(function MainChart(
     selMarkRef.current = signalMark;
     return paintSelectedSignal(chartRef.current, signalMark);
   }, [signalMark]);
+
+  // 共振用洋红 —— 它是目前唯一过线的, 视觉上要压过其它标记
+  useEffect(() => {
+    trainedRef.current["combock"] = { sig: comboCkSignals, color: "#e879f9" };
+    return paintTrainedMarkers(chartRef.current, "combock", comboCkSignals, "#e879f9");
+  }, [comboCkSignals]);
 
   // 筹码模型用橙金色, 与其它训练指标区分开 —— 它是选股信号, 不是形态确认
   useEffect(() => {
