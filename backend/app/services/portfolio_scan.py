@@ -49,7 +49,10 @@ MIN_BARS = 130
 
 # ⚠️ 分批扫描, 不要改回"一次性拉全市场"。
 # 曾经的写法是单条 SQL 拉全部 ~5500 只 × 400 天 ≈ 140 万行再 groupby, 本地
-# 24G 内存上 21 秒跑完, 但生产机只有 1.6G —— 直接把机器压到 SSH 都连不上。
+# 24G 内存上 21 秒跑完, 但当时生产机只有 1.6G —— 直接把机器压到 SSH 都连不上。
+# ⚠️ 生产机后来升到 8G(见 docker-compose.prod.yml 的 shared_buffers 注释),
+#    但【分批仍然要保留】: 省下来的内存现在给 postgres 的 1G shared_buffers
+#    和模型推理用(裸K CNN 单次全市场推理峰值约 743MB)。
 # 现在按票分块: 取一批 -> 算完 -> 释放, 峰值内存只跟 CHUNK 有关, 与全市场
 # 规模无关。代价是慢一些(生产约 1~2 分钟), 换来的是内存可预测。
 CHUNK = 300              # 每批股票数
@@ -214,7 +217,8 @@ def rank_picks(buckets: dict[str, list[dict]], top_n: int) -> list[dict]:
 
 
 
-# 同时只允许一个扫描 —— 两个并发扫描会让峰值内存翻倍, 在 1.6G 的机器上致命
+# 同时只允许一个扫描 —— 两个并发扫描会让峰值内存翻倍。机器已升到 8G, 但
+# 现在要和 postgres(1G) + CNN 推理(743MB) 分这 8G, 并发扫描依然不划算
 _scan_lock = asyncio.Semaphore(MAX_CONCURRENT)
 
 
