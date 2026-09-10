@@ -104,10 +104,19 @@ export const stepPaper = (name: string, days = 1) =>
     });
 
 /** 演示盘: 清空并从指定日期重新开始 */
-export const resetPaper = (name: string, start: string, capital = 100000, slots = 10) =>
-  json<{ name: string; started_on: string }>(`${BASE}/reset`, {
+/** 演示盘可选的策略 + 各自信号起点 —— 起点决定能回放到哪年 */
+export interface DemoStrategy { key: string; label: string; since: string }
+export const getDemoStrategies = () =>
+  json<{ min_date: string; items: DemoStrategy[] }>(`${BASE}/strategies`,
+                                                    { method: "GET" });
+
+/** ⚠️ strategy 必须传: 不传的话账户继承 DEFAULT_CONFIG 的 strategy=None,
+ *  点"下一日"日期会走但一笔都不买, 而且不报错。 */
+export const resetPaper = (name: string, start: string, strategy: string,
+                           capital = 100000, slots = 10) =>
+  json<{ name: string; started_on: string; strategy: string }>(`${BASE}/reset`, {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, start, capital, slots }),
+    body: JSON.stringify({ name, start, capital, slots, strategy }),
   });
 
 export interface SignalPick {

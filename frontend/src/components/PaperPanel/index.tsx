@@ -11,6 +11,7 @@ import {
   getPaperSignals,
   getPaperStatus,
   getPaperTrades,
+  getDemoStrategies,
   resetPaper,
   runPaper,
   stepPaper,
@@ -116,8 +117,27 @@ export function PaperPanel() {
   const [playing, setPlaying] = useState(false);
   // 推进一天要等后端撮合, 慢的时候几秒 —— 不给反馈会让人以为点没生效
   const [stepping, setStepping] = useState(false);
+  // 演示盘的策略选择。⚠️ 以前没有这个: reset 出来的账户继承 DEFAULT_CONFIG 的
+  // strategy=None, 点"下一日"日期在走但一笔都不买, 而且不报错
+  // (2026-09-10 用户从 2025-01-01 点到 2025-02-12 什么都没有)。
+  const [strategies, setStrategies] = useState<
+    { key: string; label: string; since: string }[]>([]);
+  // 最早可回放日由后端给 —— chips 的历史打分只补到 2024-12, 再往前没有信号
+  const [minDate, setMinDate] = useState("2025-01-01");
+  const [demoStrat, setDemoStrat] = useState(
+    () => localStorage.getItem("paper.demoStrat") ?? "liftalert");
+  useEffect(() => {
+    getDemoStrategies().then((r) => {
+      setStrategies(r.items);
+      if (r.min_date) setMinDate(r.min_date);
+    }).catch(() => {});
+  }, []);
+  useEffect(() => { localStorage.setItem("paper.demoStrat", demoStrat); }, [demoStrat]);
+  const stratMeta = strategies.find((x) => x.key === demoStrat);
   const [speed, setSpeed] = useState(600);
-  const [startDate, setStartDate] = useState("2020-01-02");
+  const [startDate, setStartDate] = useState("2025-01-01");   // ⚠️ 与后端 DEMO_MIN_DATE 一致
+  // 起点早于该策略的信号起点 -> 前面那段必然空跑, 直接提示而不是让人点半天
+  const tooEarly = !!stratMeta && startDate < `${stratMeta.since}-01`;
   // 起始日期框跟随账户实际起点 —— 否则重置后框里还留着上次手打的日期,
   // 会出现"框里 2026/01/01, 当前 2022-06-09"这种自相矛盾的显示。
   const syncedFor = useRef<string | null>(null);
@@ -299,13 +319,27 @@ export function PaperPanel() {
         <div className="pp-actions">
           {isDemo ? (
             <span className="pp-asof">
+              <select className="pp-date" value={demoStrat}
+                      title="回放哪个策略 —— 出场规则跟随该策略的训练标签"
+                      onChange={(e) => setDemoStrat(e.target.value)}>
+                {strategies.map((x) => (
+                  <option key={x.key} value={x.key}>{x.label}</option>
+                ))}
+              </select>
               从
-              <input type="date" className="pp-date" value={startDate}
-                     onChange={(e) => setStartDate(e.target.value)} />
+              <input type="date" className="pp-date" value={startDate} min={minDate}
+                     title={`最早可回放 ${minDate}`}
+                     onChange={(e) => setStartDate(
+                       e.target.value < minDate ? minDate : e.target.value)} />
+              {tooEarly && (
+                <span className="pp-warn" title="该策略在这个日期还没有信号, 回放会空跑">
+                  ⚠️ {stratMeta?.label}的信号从 {stratMeta?.since} 才有
+                </span>
+              )}
               <button className="pp-reset-btn" title="清空并从这一天重新开始 (10 万本金 / 10 仓位)"
                       onClick={async () => {
                         setPlaying(false);
-                        await resetPaper(DEMO_ACCOUNT, startDate);
+                        await resetPaper(DEMO_ACCOUNT, startDate, demoStrat);
                         await reload(DEMO_ACCOUNT);
                       }}>重新开始</button>
             </span>
