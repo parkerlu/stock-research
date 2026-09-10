@@ -35,7 +35,8 @@ import pandas as pd
 import pyarrow.parquet as pq
 
 from scripts.chips.features import (CYQ_COLS, DB_COLS, FEAT_NAMES,
-                                    TURNOVER_NAMES, add_turnover_feats,
+                                    SHAPE_NAMES, TURNOVER_NAMES,
+                                    add_shape_feats, add_turnover_feats,
                                     bad_rows, chip_feats)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s",
@@ -62,10 +63,11 @@ def shift_within(arr: np.ndarray, cid: np.ndarray, k: int) -> np.ndarray:
     return out
 
 
-def build(out: str, with_db: bool) -> None:
+def build(out: str, with_db: bool, with_shape: bool) -> None:
     d = np.load(f"{DIR}/rawk/panel.npz")
     cid, day, idx = d["cid"], d["day"], d["idx"].astype(np.int64)
-    close = d["ohlcv"][:, 3].astype(np.float32)
+    ohlcv = d["ohlcv"]
+    close = ohlcv[:, 3].astype(np.float32)
     n_bar = len(close)
     log.info("面板: K线 %s, 样本 %s, 股票 %d",
              f"{n_bar:,}", f"{len(idx):,}", len(np.unique(cid)))
@@ -149,6 +151,32 @@ def build(out: str, with_db: bool) -> None:
         del dblong, T
         gc.collect()
 
+    # ---- 经典起爆形态族(用户提出的横盘突破/洗盘反身/老鸭头/量价配合) ----
+    # ⚠️ 直接用面板里的后复权 OHLCV, 不再跨表 —— 同一张表内不存在口径问题
+    if with_shape:
+        # ⚠️ 必须分批: 13 个 rolling 特征在 1184 万行上一次性算会 OOM(实测被 Killed)。
+        #    按 cid 分段切, 每段是完整的若干只股票 —— 不能按行数硬切, 那会把
+        #    同一只票拦腰截断, rolling 窗口跨不过去, 结果错而不报错。
+        for nm in SHAPE_NAMES:
+            feats[nm] = np.full(n_bar, np.nan, np.float32)
+        bounds = np.searchsorted(cid, np.arange(int(cid.max()) + 2))
+        step = 400
+        for c0 in range(0, int(cid.max()) + 1, step):
+            c1 = min(c0 + step, int(cid.max()) + 1)
+            lo, hi = int(bounds[c0]), int(bounds[c1])
+            if hi <= lo:
+                continue
+            sl = slice(lo, hi)
+            chunk = pd.DataFrame({"gid": cid[sl], "o": ohlcv[sl, 0], "h": ohlcv[sl, 1],
+                                  "l": ohlcv[sl, 2], "c": ohlcv[sl, 3], "v": ohlcv[sl, 4]})
+            S = add_shape_feats(chunk, gid="gid")
+            for nm in SHAPE_NAMES:
+                feats[nm][sl] = S[nm].to_numpy()
+            del chunk, S
+        gc.collect()
+        log.info("形态特征 %d 个算完(分 %d 批)", len(SHAPE_NAMES),
+                 (int(cid.max()) + step) // step)
+
     names = list(feats)
     X = np.empty((len(idx), len(names)), np.float32)
     for j, nm in enumerate(names):
@@ -179,8 +207,10 @@ def main() -> None:
     ap.add_argument("--out", default="chips_feat.npz")
     ap.add_argument("--with-db", action="store_true",
                     help="加换手率族(daily_basic) —— 对照实验用")
+    ap.add_argument("--with-shape", action="store_true",
+                    help="加经典起爆形态族 —— 对照实验用")
     a = ap.parse_args()
-    build(a.out, a.with_db)
+    build(a.out, a.with_db, a.with_shape)
 
 
 if __name__ == "__main__":

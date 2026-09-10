@@ -223,6 +223,10 @@ async def main() -> None:
     #    不是直接读库。原来没有任何东西重建它们 —— 面板停在 2026-09-04,
     #    三个指标每天照常"重算"却永远出不了新信号, 而且不报错。
     #    2026-09-08 才被用户发现, 已经静默失效四天。
+    # ⚠️ 换手率必须先拉: 起爆模型的输入。少一天就少一天的信号, 而且不报错。
+    from app.commands import fetch_daily_basic
+    await _run("拉换手率", fetch_daily_basic, ["x", "--days", "5"])
+
     await _run("面板重建", build_panels)
 
     # ⚠️ build_dongli 必须在这里跑: 拉升预警 = 动力线 × 吸筹, 动力线不更新
@@ -239,8 +243,9 @@ async def main() -> None:
     #    build_shape_scores 依赖上面刚算完的 daily_candle, 也依赖挂载卷上的
     #    模型文件 /app/data/research/shape/*.json —— 那个目录必须是挂载的,
     #    放 /app 别处重建镜像就没了。
-    from app.commands import (build_chips_scores, build_combo_scores,
-                              build_shape_scores, sync_breakout_signals,
+    from app.commands import (build_boom_scores, build_chips_scores,
+                              build_combo_scores, build_shape_scores,
+                              sync_boom_signals, sync_breakout_signals,
                               sync_chips_signals, sync_combo_signals,
                               sync_mmweek_signals, sync_sar_signals,
                               sync_shape_signals)
@@ -265,6 +270,12 @@ async def main() -> None:
     #    最慢的一环, 所以只补当天(--days 1), 不做多日回补。
     await _run("共振打分", build_combo_scores, ["x", "--days", "1"])
     await _run("共振信号", sync_combo_signals, ["x"])
+
+    # 起爆模型 —— 目前通过全部防伪检验的最好策略(walk-forward 2.11 /
+    # 带流动性约束 2.31)。⚠️ 它依赖 daily_basic 的换手率, 所以要排在
+    # fetch_daily_basic 之后; 信号侧还要读 index_daily 做择时。
+    await _run("起爆模型打分", build_boom_scores, ["x", "--days", "5"])
+    await _run("起爆模型信号", sync_boom_signals, ["x"])
 
     eng = create_async_engine(settings.database_url)
     async with eng.connect() as c:

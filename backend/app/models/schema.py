@@ -591,6 +591,36 @@ class TopList(Base):
     reason: Mapped[str | None] = mapped_column(String(128))
 
 
+class BoomScore(Base):
+    """起爆模型每日全市场打分 —— 2026-09-10 起, 目前通过全部防伪检验的最好策略。
+
+    标签: 次日开盘买入, 20 个交易日内最高价触及 +30% 记涨 / 先碰 −8% 记跌。
+    特征: 筹码 13 + 换手率 9 = 22 个。
+
+    ⚠️ 实测(walk-forward 滚动选参 + 资金池 + 真实周转, 20 仓位):
+       比值 2.11, 年化 +42.2%, 回撤 −20.0%, 六年零负年, 六年都选中 MA10 择时。
+       加流动性约束(20日均额 >2000万, 92% 信号满足): 比值 2.31 / 年化 +41.9%。
+
+    ⚠️ 四道防伪检验(形态模型 v4 的假 1.70 正是没做这些):
+       随机对照 0.43 · 一字涨停 0.16% · 流动性中位 5717 万 · walk-forward 逐年滚动
+
+    ⚠️ 择时是策略的一部分不是可选项: 不择时 1.15 / MA10 3.37。
+       起爆票是高波动小盘股, 与中证1000 高度同步, 大盘开关对它特别灵。
+       择时在 sync_boom_signals 里做, 不在打分层。
+
+    ⚠️ 命中率只有 11.8%(基准 7.8%) —— 八成半的时候是错的, 靠 30:8 的赔率赚钱。
+       水下时间占 45%, 最长连续 8 个月。执行它需要的心理承受力远超普通策略。
+    """
+    __tablename__ = "boom_score"
+    ts_code = Column(String(12), primary_key=True)
+    trade_date = Column(Date, primary_key=True)
+    p_up = Column(Numeric(8, 5), nullable=False)      # P(20根K线内触及+30%)
+    p_dn = Column(Numeric(8, 5), nullable=False)      # P(先碰-8%)
+    ev = Column(Numeric(10, 6), nullable=False)       # 0.30*p_up − 0.08*p_dn − 0.003
+    rank_pct = Column(Numeric(8, 5), nullable=False)
+    __table_args__ = (Index("ix_boom_date", "trade_date"),)
+
+
 class ComboScore(Base):
     """共振打分 = 筹码模型 × 裸K CNN —— 目前【唯一】组合层面过线的东西。
 

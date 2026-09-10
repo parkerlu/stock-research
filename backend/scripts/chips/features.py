@@ -80,6 +80,81 @@ def add_turnover_feats(df: pd.DataFrame, gid: str = "gid") -> pd.DataFrame:
     return out[TURNOVER_NAMES].astype(np.float32)
 
 
+SHAPE_NAMES = [
+    "横盘压缩60", "横盘压缩20", "距60日高点", "距20日高点", "距60日低点",
+    "均线纠缠度", "站上均线数", "回踩不破深度",
+    "涨跌量能比", "缩量回踩", "放量突破", "长下影", "洗盘反身",
+]
+
+
+def add_shape_feats(df: pd.DataFrame, gid: str = "gid") -> pd.DataFrame:
+    """经典起爆前形态 —— 2026-09-10 用户提出的几类, 量化成特征。
+
+    用户描述的原型:
+      1. 长期横盘, 突然突破上限      -> 横盘压缩 + 距高点距离
+      2. 大跌洗盘, 逼出筹码后反身    -> 长下影 + 洗盘反身
+      3. 老鸭头                     -> 均线纠缠后发散 + 回踩不破
+      4. 放量拉升 -> 缩量回踩 -> 再放量 -> 涨跌量能比 + 缩量回踩 + 放量突破
+
+    ⚠️ 与项目以前做法的关键区别: 以前是把这些形态当【信号】(触发就买),
+       实测效果有限(突破预警裸跑比值 0.17)。这里当【特征】喂给模型, 让它
+       自己去权衡组合 —— 换手率今天刚验证过这条路(方向判别力 +77%)。
+
+    ⚠️ 全部无量纲: 比值或占比, 不含绝对价格/绝对量。否则模型会学到
+       "贵的票"和"大盘股"这类静态差异, 那是市值的代理变量不是形态。
+
+    ⚠️ 输入 df 需含 gid / o,h,l,c,v(后复权价), 按 (gid,日期) 升序。
+    """
+    g = df.groupby(gid, sort=False)
+    o_, h_, l_, c_, v_ = df["o"], df["h"], df["l"], df["c"], df["v"]
+    out = pd.DataFrame(index=df.index)
+
+    def roll(col, k, fn):
+        return g[col].transform(lambda x: getattr(x.rolling(k, min_periods=max(3, k // 4)), fn)())
+
+    for k in (20, 60):
+        hi = roll("h", k, "max")
+        lo = roll("l", k, "min")
+        ma = roll("c", k, "mean").clip(lower=1e-6)
+        # 横盘压缩: 区间宽度/均价。越小说明盘得越紧, 突破时爆发力越强
+        out[f"横盘压缩{k}"] = (hi - lo) / ma
+        out[f"距{k}日高点"] = c_ / hi.clip(lower=1e-6)
+    out["距60日低点"] = c_ / roll("l", 60, "min").clip(lower=1e-6)
+
+    # 老鸭头的基础: 均线先纠缠(发散度低)再发散, 且回踩不破
+    ma5, ma10, ma20 = roll("c", 5, "mean"), roll("c", 10, "mean"), roll("c", 20, "mean")
+    mmax = pd.concat([ma5, ma10, ma20], axis=1).max(axis=1)
+    mmin = pd.concat([ma5, ma10, ma20], axis=1).min(axis=1)
+    out["均线纠缠度"] = (mmax - mmin) / c_.clip(lower=1e-6)
+    out["站上均线数"] = ((c_ > ma5).astype(np.float32) + (c_ > ma10).astype(np.float32)
+                        + (c_ > ma20).astype(np.float32))
+    # 回踩不破: 近5日最低点相对 MA10 的位置 —— >1 说明回踩没破均线
+    out["回踩不破深度"] = roll("l", 5, "min") / ma10.clip(lower=1e-6)
+
+    # 量价配合: 上涨日的量 vs 下跌日的量。>1 = 放量涨、缩量跌(健康)
+    prev_c = g["c"].shift(1)
+    up_day = (c_ > prev_c).astype(np.float32)
+    vma = roll("v", 20, "mean").clip(lower=1e-6)
+    vr = v_ / vma
+    tmp = pd.DataFrame({"gid": df[gid], "u": vr * up_day, "d": vr * (1 - up_day)})
+    tg = tmp.groupby("gid", sort=False)
+    up_v = tg["u"].transform(lambda x: x.rolling(20, min_periods=5).sum())
+    dn_v = tg["d"].transform(lambda x: x.rolling(20, min_periods=5).sum())
+    out["涨跌量能比"] = up_v / dn_v.clip(lower=1e-6)
+    # 缩量回踩: 今天跌 且 量明显小于均量
+    out["缩量回踩"] = np.where((c_ < prev_c) & (vr < 0.8), 1.0 - vr, 0.0)
+    # 放量突破: 今天涨 且 放量 且 创20日新高
+    hi20 = roll("h", 20, "max")
+    out["放量突破"] = np.where((c_ > prev_c) & (vr > 1.5) & (h_ >= hi20 * 0.995), vr, 0.0)
+    # 长下影: 下影线占全天振幅的比例 —— 洗盘的典型形态
+    rng = (h_ - l_).clip(lower=1e-6)
+    out["长下影"] = (pd.concat([o_, c_], axis=1).min(axis=1) - l_) / rng
+    # 洗盘反身: 当天最低跌破前一日收盘 3% 以上, 但收盘收回来
+    out["洗盘反身"] = np.where((l_ < prev_c * 0.97) & (c_ > prev_c * 0.995),
+                              (c_ - l_) / rng, 0.0)
+    return out[SHAPE_NAMES].astype(np.float32)
+
+
 def chip_feats(df: pd.DataFrame, gid: str = "gid") -> pd.DataFrame:
     """算 13 个筹码特征。df 需含 gid / close / CYQ_COLS，按 (gid, 日期) 升序。
 

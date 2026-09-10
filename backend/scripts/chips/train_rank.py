@@ -55,6 +55,7 @@ def main() -> None:
     f = np.load(f"{DIR}/chips/{a.feat}", allow_pickle=True)
     X, ok_feat = f["X"], f["ok"]
     names = [str(x) for x in f["names"]]
+    log.info("特征 %d 个: %s...", len(names), ", ".join(names[:4]))
     l3 = np.load(f"{DIR}/rawk/{a.label}")
     y3, ret3, hold = l3["y3"], l3["ret3"], int(l3["hold"])
     up, dn = float(l3["up"]), float(l3["dn"])
@@ -115,6 +116,10 @@ def main() -> None:
             pv, pt = clf.predict_proba(X[va_ix]), clf.predict_proba(X[te_idx])
             sv = up * pv[:, 1] - dn * pv[:, 2]
             st = up * pt[:, 1] - dn * pt[:, 2]
+        # ⚠️ 存到挂载卷 —— /app 别处重建镜像就没了(本项目已因此丢过三次东西)。
+        #    列顺序靠 booster 的 feature_names 固定, 生产端按名字取列。
+        clf.get_booster().feature_names = list(names)
+        clf.save_model(f"{DIR}/chips/model{a.tag}_s{si}.json")
         va_scores.append(sv)
         te_scores.append(st)
         d = pd.DataFrame({"d": lab_day[va_ix], "s": sv, "r": ret3[va_ix],

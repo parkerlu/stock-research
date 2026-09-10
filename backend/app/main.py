@@ -39,7 +39,8 @@ def _selfcheck_commands() -> None:
             "build_shape_scores", "sync_shape_signals", "sync_mmweek_signals",
             "sync_sar_signals", "sync_breakout_signals",
             "build_chips_scores", "sync_chips_signals",
-            "build_combo_scores", "sync_combo_signals"]
+            "build_combo_scores", "sync_combo_signals",
+            "build_boom_scores", "sync_boom_signals", "fetch_daily_basic"]
     missing = []
     for m in need:
         try:
