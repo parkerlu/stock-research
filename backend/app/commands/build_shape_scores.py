@@ -54,7 +54,10 @@ async def main() -> None:
         codes = [r[0] for r in (await c.execute(text(
             "select distinct ts_code from daily_candle where trade_date > :s"),
             {"s": end - timedelta(days=30)})).fetchall()]
-    start = end - timedelta(days=WARMUP_DAYS)
+    # ⚠️ 取数窗口 = 打分范围 + 预热。只减 WARMUP 的话, --days 一旦超过窗口内的
+    #    交易日数(约 180), 早几天就【静默少打分】而不是报错。
+    #    2026-09-10 补算历史形态分时发现, build_chips_scores 当初也是这个 bug。
+    start = end - timedelta(days=WARMUP_DAYS + int(a.days * 1.6) + 5)
     log.info("全市场 %d 只, 取 %s ~ %s 算特征", len(codes), start, end)
 
     parts = []

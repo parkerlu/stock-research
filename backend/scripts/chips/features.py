@@ -23,12 +23,61 @@ import pandas as pd
 CYQ_COLS = ["winner_rate", "cost_5pct", "cost_15pct", "cost_50pct",
             "cost_85pct", "cost_95pct", "weight_avg", "his_low", "his_high"]
 
+# daily_basic 的列(换手率族)。2026-09-10 加 —— 见 add_turnover_feats 的说明
+DB_COLS = ["turnover_rate", "turnover_rate_f", "volume_ratio",
+           "float_share", "free_share", "circ_mv"]
+
 FEAT_NAMES = [
     "获利盘", "获利盘变化5", "获利盘变化10", "获利盘变化20",
     "获利盘背离10", "获利盘背离20",
     "均价在成本区间位置", "中位/均价", "上半区宽度", "下半区宽度",
     "均价在历史区间位置", "筹码集中度(对照)", "筹码宽度(对照)",
 ]
+
+
+TURNOVER_NAMES = [
+    "换手率", "自由换手率", "量比",
+    "换手相对20日", "换手相对60日", "换手20日趋势",
+    "自由换手相对60日", "换手波动20日", "流通市值对数",
+]
+
+
+def add_turnover_feats(df: pd.DataFrame, gid: str = "gid") -> pd.DataFrame:
+    """换手率族 —— 2026-09-10 加, 目标是补【方向】信息。
+
+    ⚠️ 为什么要加(问题的量化):
+       裸K 与筹码模型的共同瓶颈是【方向判别力只有 ±4pt】—— 在真的会动的票里,
+       模型最看多的 Top10% 涨占比 52.7%, 最看空的 Bot10% 44.1%, 基准 48.4%。
+       也就是它 70% 的本事在"哪只票要动了", 只有 30% 在"往哪动"。
+       而此前喂给模型的量是【绝对成交量】: 只能看出"放量了", 看不出"谁在放量"。
+       小盘股换手 20% 与大盘股换手 0.5% 可能是同样的成交额, 含义完全不同。
+
+    ⚠️ 每个指标都要【相对它自己的历史】归一化, 不能直接用原值:
+       直接用换手率, 模型学到的会是"小盘股换手天生高"这种【静态】差异 ——
+       那是市值的代理变量, 不是方向信号。要的是"这只票今天的换手, 相对它
+       自己平时算不算异常"。这与筹码族只用表内比值是同一个道理。
+
+    ⚠️ 市值只保留对数流通市值一个: 它是已知的风格因子, 放进去是为了让模型
+       能把"小盘效应"与真正的换手异常区分开, 而不是让它去押小盘。
+    """
+    g = df.groupby(gid, sort=False)
+    tr = df["turnover_rate"]
+    out = pd.DataFrame(index=df.index)
+    out["换手率"] = tr
+    out["自由换手率"] = df["turnover_rate_f"]
+    out["量比"] = df["volume_ratio"]
+    for k in (20, 60):
+        ma = g["turnover_rate"].transform(lambda x: x.rolling(k, min_periods=5).mean())
+        out[f"换手相对{k}日"] = tr / ma.clip(lower=1e-6)
+    ma20 = g["turnover_rate"].transform(lambda x: x.rolling(20, min_periods=5).mean())
+    ma60 = g["turnover_rate"].transform(lambda x: x.rolling(60, min_periods=10).mean())
+    out["换手20日趋势"] = ma20 / ma60.clip(lower=1e-6)
+    maf60 = g["turnover_rate_f"].transform(lambda x: x.rolling(60, min_periods=10).mean())
+    out["自由换手相对60日"] = df["turnover_rate_f"] / maf60.clip(lower=1e-6)
+    out["换手波动20日"] = (g["turnover_rate"].transform(
+        lambda x: x.rolling(20, min_periods=5).std()) / ma20.clip(lower=1e-6))
+    out["流通市值对数"] = np.log(df["circ_mv"].clip(lower=1.0))
+    return out[TURNOVER_NAMES].astype(np.float32)
 
 
 def chip_feats(df: pd.DataFrame, gid: str = "gid") -> pd.DataFrame:

@@ -34,7 +34,9 @@ import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 
-from scripts.chips.features import CYQ_COLS, FEAT_NAMES, bad_rows, chip_feats
+from scripts.chips.features import (CYQ_COLS, DB_COLS, FEAT_NAMES,
+                                    TURNOVER_NAMES, add_turnover_feats,
+                                    bad_rows, chip_feats)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s",
                     datefmt="%H:%M:%S")
@@ -60,7 +62,7 @@ def shift_within(arr: np.ndarray, cid: np.ndarray, k: int) -> np.ndarray:
     return out
 
 
-def build(out: str) -> None:
+def build(out: str, with_db: bool) -> None:
     d = np.load(f"{DIR}/rawk/panel.npz")
     cid, day, idx = d["cid"], d["day"], d["idx"].astype(np.int64)
     close = d["ohlcv"][:, 3].astype(np.float32)
@@ -116,6 +118,37 @@ def build(out: str) -> None:
     bad = bad_rows(long).to_numpy()
     feats = {n: F[n].to_numpy() for n in FEAT_NAMES}
 
+    # ---- 换手率族(daily_basic) ----
+    # ⚠️ 与筹码同一套 (cid, day) 复合键对齐, 不是按顺序假设 —— 两张表的股票
+    #    覆盖和起止日都不同, 按顺序拼会整体错位而【不报错】。
+    if with_db:
+        db = pd.read_parquet(f"{DIR}/daily_basic.parquet")
+        db["cid"] = db["ts_code"].map(cmap)
+        db = db.dropna(subset=["cid"])
+        db["cid"] = db["cid"].astype(np.int32)
+        db["day"] = ((pd.to_datetime(db["trade_date"]) - pd.Timestamp("1970-01-01"))
+                     .dt.days.astype(np.int32))
+        key_db = db["cid"].to_numpy(np.int64) * 100000 + db["day"].to_numpy(np.int64)
+        od = np.argsort(key_db)
+        key_db = key_db[od]
+        pd_ = np.clip(np.searchsorted(key_db, key_px), 0, len(key_db) - 1)
+        hit_db = key_db[pd_] == key_px
+        log.info("面板K线里有 daily_basic 的: %s (%.1f%%)",
+                 f"{hit_db.sum():,}", hit_db.mean() * 100)
+        dblong = pd.DataFrame({"gid": cid})
+        for c in DB_COLS:
+            v = np.full(n_bar, np.nan, np.float32)
+            src = db[c].to_numpy(np.float32)[od]
+            v[hit_db] = src[pd_[hit_db]]
+            dblong[c] = v
+        del db
+        gc.collect()
+        T = add_turnover_feats(dblong, gid="gid")
+        for nm in TURNOVER_NAMES:
+            feats[nm] = T[nm].to_numpy()
+        del dblong, T
+        gc.collect()
+
     names = list(feats)
     X = np.empty((len(idx), len(names)), np.float32)
     for j, nm in enumerate(names):
@@ -144,8 +177,10 @@ def build(out: str) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="chips_feat.npz")
+    ap.add_argument("--with-db", action="store_true",
+                    help="加换手率族(daily_basic) —— 对照实验用")
     a = ap.parse_args()
-    build(a.out)
+    build(a.out, a.with_db)
 
 
 if __name__ == "__main__":
