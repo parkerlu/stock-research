@@ -1,5 +1,4 @@
 export type AppMode =
-  | "strategy"
   | "screening"
   | "strategy-pool"
   | "live"
@@ -22,7 +21,10 @@ export function NavBar({ mode, onModeChange }: Props) {
       <div className="navbar-tabs">
         {/* 顺序按用户 2026-09-08 的要求排:
             行情 / 实时 / 选股 / 股票池 / 板块 —— 常用的在前
-            龙虎榜 / 策略 / 策略池 / 虚拟盘 —— 其次 */}
+            龙虎榜 / 策略池 / 虚拟盘 —— 其次。
+            ⚠️ 2026-09-10 去掉了"策略"页: 那里显示的是策略工厂跑出来的
+            101 条单票参数组合, 与现在这套全市场模型选股不是一回事,
+            留着会让人以为策略池里有一百多个策略。数据已一并清除。 */}
         <button
           className={mode === "quote" ? "active" : ""}
           onClick={() => onModeChange("quote")}
@@ -60,12 +62,6 @@ export function NavBar({ mode, onModeChange }: Props) {
           onClick={() => onModeChange("toplist")}
         >
           龙虎榜
-        </button>
-        <button
-          className={mode === "strategy" ? "active" : ""}
-          onClick={() => onModeChange("strategy")}
-        >
-          策略
         </button>
         <button
           className={mode === "strategy-pool" ? "active" : ""}

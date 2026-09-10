@@ -61,6 +61,10 @@ async def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--days", type=int, default=5)
     ap.add_argument("--date", default=None, help="只打某一天, 用来对账")
+    ap.add_argument("--until", default=None,
+                    help="从这一天【往前】数 --days 个交易日 —— 分段补历史用。"
+                         "⚠️ 一次性 --days 800 以上会 OOM(三表合并 500 万行), "
+                         "补长历史必须分段: --until 2025-01-14 --days 400 这样倒着推")
     a = ap.parse_args()
 
     models = []
@@ -77,6 +81,8 @@ async def main() -> None:
     eng = create_async_engine(settings.database_url)
     async with eng.connect() as c:
         end = (await c.execute(text("select max(trade_date) from daily_candle"))).scalar()
+        if a.until:
+            end = date.fromisoformat(a.until)
         # ⚠️ ST 在算分位【之前】剔除, 不是展示时过滤 —— 否则 Top1% 被 ST 占掉
         #    (筹码模型上实测过 32.7%), 真正可买的只剩三分之二
         st = {r[0] for r in (await c.execute(text(
@@ -138,21 +144,28 @@ async def main() -> None:
     out["ev"] = UP * out.p_up - DN * out.p_dn - COST
     out["rank_pct"] = out.groupby("trade_date")["ev"].rank(pct=True)
 
-    payload = [{"ts_code": r.ts_code, "trade_date": r.trade_date,
-                "p_up": round(float(r.p_up), 5), "p_dn": round(float(r.p_dn), 5),
-                "ev": round(float(r.ev), 6), "rank_pct": round(float(r.rank_pct), 5)}
-               for r in out.itertuples()]
+    # ⚠️ 分批【构造】再写, 不要一次性做出整个 payload ——
+    #    200 万行 × 6 字段的 dict 列表约占 1GB, 补长历史时会 OOM(实测 exit 137)。
+    #    现在只在每一批时把那 3000 行转成 dict, 峰值内存与批大小成正比。
+    n_written = 0
+    recs = out[["ts_code", "trade_date", "p_up", "p_dn", "ev", "rank_pct"]]
     async with eng.begin() as c:
-        for i in range(0, len(payload), CH):
-            st_ = pg_insert(BoomScore).values(payload[i:i + CH])
+        for i in range(0, len(recs), CH):
+            chunk = recs.iloc[i:i + CH]
+            batch = [{"ts_code": t, "trade_date": d,
+                      "p_up": round(float(u), 5), "p_dn": round(float(w), 5),
+                      "ev": round(float(e), 6), "rank_pct": round(float(rk), 5)}
+                     for t, d, u, w, e, rk in chunk.itertuples(index=False, name=None)]
+            st_ = pg_insert(BoomScore).values(batch)
             await c.execute(st_.on_conflict_do_update(
                 index_elements=["ts_code", "trade_date"],
                 set_={"p_up": st_.excluded.p_up, "p_dn": st_.excluded.p_dn,
                       "ev": st_.excluded.ev, "rank_pct": st_.excluded.rank_pct}))
+            n_written += len(batch)
         n = (await c.execute(text(
             "select count(*), min(trade_date), max(trade_date) from boom_score"))).fetchone()
     log.info("写入 %s 条; 表内合计 %s, %s ~ %s",
-             f"{len(payload):,}", f"{n[0]:,}", n[1], n[2])
+             f"{n_written:,}", f"{n[0]:,}", n[1], n[2])
     last = out[out.trade_date == want[-1]]
     top = last[last.rank_pct >= 0.99].nlargest(8, "ev")
     log.info("%s 的 Top: %s", want[-1], ", ".join(

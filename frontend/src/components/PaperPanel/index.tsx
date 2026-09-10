@@ -16,6 +16,7 @@ import {
   runPaper,
   stepPaper,
 } from "../../api/paper";
+import type { DemoStrategy } from "../../api/paper";
 import type {
   EquityPoint,
   PaperConfig,
@@ -147,8 +148,8 @@ export function PaperPanel() {
   // 演示盘的策略选择。⚠️ 以前没有这个: reset 出来的账户继承 DEFAULT_CONFIG 的
   // strategy=None, 点"下一日"日期在走但一笔都不买, 而且不报错
   // (2026-09-10 用户从 2025-01-01 点到 2025-02-12 什么都没有)。
-  const [strategies, setStrategies] = useState<
-    { key: string; label: string; since: string }[]>([]);
+  // ⚠️ 类型跟着策略池走 —— 它是策略的唯一定义源, 这里不再自己声明形状
+  const [strategies, setStrategies] = useState<DemoStrategy[]>([]);
   // 最早可回放日由后端给 —— chips 的历史打分只补到 2024-12, 再往前没有信号
   const [minDate, setMinDate] = useState("2025-01-01");
   const [demoStrat, setDemoStrat] = useState(
@@ -370,7 +371,7 @@ export function PaperPanel() {
                       title="回放哪个策略 —— 出场规则跟随该策略的训练标签"
                       onChange={(e) => setDemoStrat(e.target.value)}>
                 {strategies.map((x) => (
-                  <option key={x.key} value={x.key}>{x.label}</option>
+                  <option key={x.key} value={x.key}>{x.name}</option>
                 ))}
               </select>
               从
@@ -380,7 +381,7 @@ export function PaperPanel() {
                        e.target.value < minDate ? minDate : e.target.value)} />
               {tooEarly && (
                 <span className="pp-warn" title="该策略在这个日期还没有信号, 回放会空跑">
-                  ⚠️ {stratMeta?.label}的信号从 {stratMeta?.since} 才有
+                  ⚠️ {stratMeta?.name}的信号从 {stratMeta?.since} 才有
                 </span>
               )}
               <button className="pp-reset-btn" title="清空并从这一天重新开始 (10 万本金 / 10 仓位)"

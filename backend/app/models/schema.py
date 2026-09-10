@@ -591,6 +591,40 @@ class TopList(Base):
     reason: Mapped[str | None] = mapped_column(String(128))
 
 
+class StrategyPool(Base):
+    """策略池 —— 策略的【唯一定义源】(2026-09-10 重构)。
+
+    在此之前策略的定义散在三处: 演示回放的下拉硬编码在 paper.py 的
+    DEMO_STRATEGIES、实操盘的规则散在每个账户的 config、说明写在各命令的
+    docstring 里。改一个策略要动三处, 而且没人知道该以哪个为准。
+    现在: 这张表定义策略, 演示回放与实操盘都从它取。
+
+    ⚠️ since 字段是【该策略信号表的真实起点】, 不是拍脑袋写的:
+       演示回放要用它来提示"这个策略只能回放到哪年", 否则用户选了更早的日期
+       会点半天什么都不出来(2026-09-10 就发生过, 选 2025-01 回放一个只有
+       2026-06 起信号的策略, 点到 2025-02 一笔都没有)。
+       每次补算历史信号后必须同步更新这个字段。
+
+    ⚠️ 出场规则(stop_pct/tier1_pct/...)必须与该策略【训练标签】一致。
+       规则一改, 模型优化的东西和账户执行的东西就不是一回事了 ——
+       本项目已因此栽过两次(形态模型 v4 的假 1.70、SAR/突破的 2.62)。
+       tier1_pct=9.99 这类哨兵值代表"不设此档"(如周线版是状态指标,
+       只按持有期出场, 中途止盈会破坏它 8 周持有的验证口径)。
+    """
+    __tablename__ = "strategy_pool"
+    key = Column(String(32), primary_key=True)        # = strategy_signal.strategy
+    name = Column(String(60), nullable=False)         # 显示名
+    summary = Column(String(200), nullable=False)     # 一句话: 抓什么
+    detail = Column(Text, nullable=False)             # 为什么有效 / 验证过什么 / 已知短板
+    since = Column(String(7), nullable=False)         # 信号起点 YYYY-MM
+    ratio = Column(Numeric(6, 2))                     # 组合比值(年化/回撤), 没验过留空
+    config = Column(JSON, nullable=False)             # 出场规则, 建账户时直接用
+    slots = Column(Integer, nullable=False, default=20)
+    is_live = Column(Boolean, nullable=False, default=False)   # 是否在实操盘跑
+    sort_order = Column(Integer, nullable=False, default=100)
+    __table_args__ = (Index("ix_pool_live", "is_live"),)
+
+
 class BoomScore(Base):
     """起爆模型每日全市场打分 —— 2026-09-10 起, 目前通过全部防伪检验的最好策略。
 

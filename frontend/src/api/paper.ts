@@ -109,7 +109,17 @@ export const stepPaper = (name: string, days = 1) =>
 
 /** 演示盘: 清空并从指定日期重新开始 */
 /** 演示盘可选的策略 + 各自信号起点 —— 起点决定能回放到哪年 */
-export interface DemoStrategy { key: string; label: string; since: string }
+export interface DemoStrategy {
+  key: string;
+  name: string;
+  summary: string;
+  detail: string;
+  since: string;
+  ratio: number | null;
+  config: Record<string, unknown>;
+  slots: number;
+  is_live: boolean;
+}
 export const getDemoStrategies = () =>
   json<{ min_date: string; items: DemoStrategy[] }>(`${BASE}/strategies`,
                                                     { method: "GET" });

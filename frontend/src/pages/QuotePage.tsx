@@ -3,7 +3,6 @@ import { NavBar } from "../components/NavBar";
 import type { AppMode } from "../components/NavBar";
 import { SearchPanel } from "../components/SearchPanel";
 import { PoolPanel } from "../components/PoolPanel";
-import { StrategyPanel } from "../components/StrategyPanel";
 import { StrategyPoolPanel } from "../components/StrategyPoolPanel";
 import { SystemPanel } from "../components/SystemPanel";
 import { ChartArea } from "../components/ChartArea";
@@ -19,7 +18,9 @@ export function QuotePage() {
   const [mode, setMode] = useState<AppMode>("live");
   const tradeActions = useStrategyStore((s) => s.tradeActions);
   // tradeActions show on chart in strategy AND screening modes
-  const actions = mode === "strategy" || mode === "screening" ? tradeActions : null;
+  // ⚠️ "策略"页已于 2026-09-10 移除(策略工厂的单票参数组合与现在这套
+  //    全市场模型选股不是一回事), tradeActions 现在只服务选股页。
+  const actions = mode === "screening" ? tradeActions : null;
 
   return (
     <div className="app-layout">
@@ -31,18 +32,6 @@ export function QuotePage() {
           <>
             <PoolPanel />
             <ChartArea />
-          </>
-        ) : mode === "strategy" ? (
-          <>
-            <SearchPanel />
-            <div className="strategy-main">
-              <div className="strategy-chart">
-                <ChartArea tradeActions={actions} />
-              </div>
-              <div className="strategy-table-area">
-                <StrategyPanel />
-              </div>
-            </div>
           </>
         ) : mode === "screening" ? (
           <>

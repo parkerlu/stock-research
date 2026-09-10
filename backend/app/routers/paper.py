@@ -313,45 +313,30 @@ class StepRequest(BaseModel):
     days: int = 1               # 一次推进几个交易日
 
 
-# 演示盘可选的策略 —— 每个都带自己的出场规则。
-# ⚠️ 出场规则必须与该策略【训练标签】一致, 否则回放出来的东西和模型优化的目标
-#    不是一回事(形态模型那次就专门为此对齐过 +15%/−8%/20交易日)。
-# ⚠️ since 是该策略信号表的起点, 前端拿它提示"能回放到哪年" —— 否则用户选
-#    2025 回放 chips, 点半天什么都不出来(它的信号只到 2026-06)。
-DEMO_STRATEGIES: dict[str, dict] = {
-    "chips": {"label": "筹码模型", "since": "2025-01",
-              "cfg": {"stop_pct": 0.08, "tier1_pct": 0.10, "tier1_frac": 1.0,
-                      "tier2_pct": 9.99, "max_hold_days": 15, "breakeven": False}},
-    "liftalert": {"label": "拉升预警", "since": "2019-01",
-                  "cfg": {"stop_pct": 0.06, "tier1_pct": 0.10, "tier1_frac": 1.0,
-                          "tier2_pct": 9.99, "max_hold_days": 15, "breakeven": False}},
-    "mmweek": {"label": "买卖很准 周线版", "since": "2017-02",
-               "cfg": {"stop_pct": 0.08, "tier1_pct": 0.15, "tier1_frac": 1.0,
-                       "tier2_pct": 9.99, "max_hold_days": 60, "breakeven": False}},
-    "breakout": {"label": "突破预警", "since": "2019-01",
-                 "cfg": {"stop_pct": 0.06, "tier1_pct": 0.15, "tier1_frac": 1.0,
-                         "tier2_pct": 9.99, "max_hold_days": 15, "breakeven": False}},
-    "sar": {"label": "SAR预警", "since": "2019-01",
-            "cfg": {"stop_pct": 0.06, "tier1_pct": 0.15, "tier1_frac": 1.0,
-                    "tier2_pct": 9.99, "max_hold_days": 15, "breakeven": False}},
-    "shape": {"label": "形态模型", "since": "2026-06",
-              "cfg": {"stop_pct": 0.08, "tier1_pct": 0.15, "tier1_frac": 1.0,
-                      "tier2_pct": 9.99, "max_hold_days": 18, "breakeven": False}},
-}
+# ⚠️ 策略定义已搬到 strategy_pool 表(2026-09-10 重构) —— 这里不再硬编码。
+#    以前散在三处: 这个 DEMO_STRATEGIES、每个账户的 config、各命令的 docstring,
+#    改一个策略要动三处而且没人知道以哪个为准。现在策略池是唯一定义源,
+#    演示回放和实操盘都从它取。
+DEMO_MIN_DATE = "2019-01-01"       # 演示回放的最早可选日; 各策略自己的 since 更严格
 
 
-# 演示盘统一的最早可回放日。⚠️ 不是随便定的: chips 的历史打分补到了
-# 2024-12-16, 再往前它就没有信号; 其它策略虽然有更早的信号, 但统一起点
-# 才好横向对比同一段行情下各策略的表现。
-DEMO_MIN_DATE = "2025-01-01"
+async def _pool(db, live_only: bool = False) -> list[dict]:
+    sql = "select key,name,summary,detail,since,ratio,config,slots,is_live from strategy_pool"
+    if live_only:
+        sql += " where is_live"
+    sql += " order by sort_order"
+    rows = (await db.execute(text(sql))).fetchall()
+    return [{"key": r[0], "name": r[1], "summary": r[2], "detail": r[3],
+             "since": r[4], "ratio": float(r[5]) if r[5] is not None else None,
+             "config": r[6], "slots": r[7], "is_live": r[8]} for r in rows]
 
 
 @router.get("/strategies")
 async def demo_strategies():
-    """演示盘可选的策略 + 各自的信号起点 + 统一的最早可回放日。"""
-    return {"min_date": DEMO_MIN_DATE,
-            "items": [{"key": k, "label": v["label"], "since": v["since"]}
-                      for k, v in DEMO_STRATEGIES.items()]}
+    """策略池 —— 演示回放的下拉与实操盘的建账户都用这一份。"""
+    async with async_session() as db:
+        items = await _pool(db)
+    return {"min_date": DEMO_MIN_DATE, "items": items}
 
 
 class ResetRequest(BaseModel):
@@ -377,11 +362,14 @@ async def reset(req: ResetRequest):
         #    空着), scan_signals 查 strategy='' 永远返回 0 条 —— 表现就是
         #    "点下一日, 日期在走但一笔都不买", 而且不报错。
         #    2026-09-10 用户从 2025-01-01 回放, 点到 2025-02-12 什么都没有。
-        meta = DEMO_STRATEGIES.get(req.strategy)
+        pool = {p["key"]: p for p in await _pool(db)}
+        meta = pool.get(req.strategy)
         if not meta:
-            raise HTTPException(400, f"未知策略 {req.strategy}; 可选 {list(DEMO_STRATEGIES)}")
+            raise HTTPException(400, f"未知策略 {req.strategy}; 可选 {list(pool)}")
+        # ⚠️ 出场规则直接用策略池里的 config —— 它与该策略的训练标签一致。
+        #    规则一改, 模型优化的东西和账户执行的东西就不是一回事了。
         acct.config = {**acct.config, "strategy": req.strategy,
-                       "strategy_signal": req.strategy, **meta["cfg"]}
+                       "strategy_signal": req.strategy, **meta["config"]}
         await db.commit()
         return {"id": acct.id, "name": acct.name, "capital": float(acct.initial_capital),
                 "slots": acct.slots, "started_on": str(acct.started_on),

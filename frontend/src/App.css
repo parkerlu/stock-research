@@ -2644,3 +2644,64 @@ body {
 
 /* 虚拟盘: 不适用的止损/止盈显示成横杠 */
 .pp-na { color: var(--muted); cursor: help; }
+
+/* ===== 全局滚动条 =====
+ * ⚠️ 以前只给 .screening-strategy-list / .hits-list 单独设过样式, 其余地方
+ *    全是浏览器默认 —— 在深色界面上就是一条刺眼的白条(2026-09-10 用户在
+ *    虚拟盘"最近动作"列表上发现)。这里兜底, 各组件的专属样式仍然优先。 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 6px;
+  /* 用透明边框把滑块"收窄", 视觉上不贴边, 比直接减 width 好看 */
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: #3a3a58; background-clip: content-box; }
+*::-webkit-scrollbar-corner { background: transparent; }
+
+/* ===== 策略池(2026-09-10 重写) —— 策略的唯一定义源, 也是说明页 ===== */
+.pool-page { flex: 1; overflow: auto; padding: 20px 24px 60px; }
+.pool-head h2 { margin: 0 0 8px; font-size: 20px; color: var(--text-primary); }
+.pool-head p { margin: 0 0 20px; color: var(--text-secondary); font-size: 13px; line-height: 1.8; }
+.pool-head b { color: var(--accent); font-weight: 600; }
+.pool-err { color: var(--up); padding: 12px; }
+.pool-empty { color: var(--text-muted); padding: 20px; }
+.pool-list { display: flex; flex-direction: column; gap: 10px; max-width: 1000px; }
+.pool-card {
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg-secondary); overflow: hidden;
+}
+.pool-card.on { border-color: #3a3a60; }
+.pool-card-head {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 12px 14px 6px; background: none; border: 0; cursor: pointer;
+  color: var(--text-primary); text-align: left; font-size: 14px;
+}
+.pool-card-head:hover { background: rgba(255,255,255,.02); }
+.pool-tri { color: var(--text-muted); font-size: 11px; }
+.pool-name { font-weight: 600; font-size: 15px; }
+.pool-ratio {
+  font-family: ui-monospace, monospace; font-size: 12px;
+  color: var(--text-secondary); padding: 2px 8px; border-radius: 999px;
+  background: var(--bg-tertiary);
+}
+.pool-ratio.pass { color: #4caf50; background: rgba(76,175,80,.12); }
+.pool-ratio em { font-style: normal; margin-left: 5px; font-size: 11px; }
+.pool-since { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+.pool-live {
+  font-size: 11px; color: var(--up); background: rgba(233,69,96,.14);
+  padding: 2px 7px; border-radius: 999px;
+}
+.pool-summary { padding: 0 14px 12px 34px; color: var(--text-secondary); font-size: 13px; line-height: 1.7; }
+.pool-detail {
+  margin: 0; padding: 14px 18px 16px 34px; border-top: 1px solid var(--border);
+  background: var(--bg-primary); color: var(--text-primary);
+  font: 400 12.5px/1.9 ui-monospace, "SF Mono", Menlo, monospace;
+  white-space: pre-wrap; word-break: break-word;
+}
